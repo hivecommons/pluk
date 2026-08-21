@@ -100,7 +100,7 @@ export function bundledPatternsDir(): string {
 
 const CLAUDE_PATTERNS = `
 IDLE_PATTERN='❯\\s*$|^\\$ $'
-WORKING_PATTERNS='◐|◑|◒|◓|◉|◎|○|● Read|● Write|● Edit|● Bash|● Agent|● Working|esc to interrupt|↳ '
+WORKING_PATTERNS='esc to interrupt|● Working|↳ '
 RATE_LIMIT_PATTERN='out of extra usage|Claude usage limit|monthly limit|quota exhausted|rate limit reached'
 LOGIN_PATTERN='anthropic\\.com/login|Please log in|authentication required'
 TRUST_DIALOG_PATTERN='Do you trust the files'

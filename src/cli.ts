@@ -23,7 +23,7 @@ ${ANSI_CYAN}Usage:${ANSI_RESET}
   pluk attach <session> [--cli=claude] [--rationguard] [--rebuttal=send] [--dangerous] [--verbose]
   pluk sessions [--run-dir=<path>] [--json]
   pluk subscribe <session> [--filter=type1,type2] [--from-beginning] [--verbose]
-  pluk watch <session> [--cli=claude] [--filter=type1,type2] [--include-raw]
+  pluk watch <session> [--cli=claude] [--filter=type1,type2] [--include-raw] [--capture[=ms]]
   pluk send <session> --text="<text>" [--enter] [--literal]
   pluk patterns [--cli=claude]
   pluk version
@@ -32,7 +32,7 @@ ${ANSI_CYAN}Commands:${ANSI_RESET}
   attach      Create tmux session, start AI CLI, wire pluk + rationguard
   sessions    List active pluk-monitored sessions
   subscribe   Tail a pluk JSONL log file (from Go binary or other publisher)
-  watch       Classify stdin line-by-line (pipe terminal output directly)
+  watch       Classify stdin line-by-line, or poll whole tmux frames (--capture)
   send        Send text to a tmux session (inject rebuttals, commands)
   patterns    Show loaded patterns for a CLI
   version     Print version
@@ -133,12 +133,17 @@ function cmdWatch(args: string[]): void {
   process.stdout.on('error', () => {});
   process.stdin.on('error', () => {});
 
+  const capture = flags['capture'];
+
   const watcher = watch({
     session,
     cli,
     patternsDir: flags['patterns-dir'],
     filter,
     includeRaw: flags['include-raw'] === 'true',
+    mode: capture ? 'capture' : 'stream',
+    pane: flags['pane'],
+    captureIntervalMs: capture && capture !== 'true' ? Number(capture) : undefined,
     onEvent(event) {
       try {
         console.log(JSON.stringify(event));

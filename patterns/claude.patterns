@@ -1,7 +1,16 @@
 # claude.patterns — Claude Code CLI output patterns
 
 IDLE_PATTERN='❯\s*$|^\$ $'
-WORKING_PATTERNS='◐|◑|◒|◓|◉|◎|○|● Read|● Write|● Edit|● Bash|● Agent|● Working|esc to interrupt|↳ '
+# NOTE (#17): the `❯` input box is drawn continuously, including mid-turn, so
+# the classifier only trusts it when no working evidence is fresh. The real
+# working discriminator is the status-row hint `esc to interrupt`, present
+# while working and absent at rest. Dead spinner glyphs (◐◑◒◓◉◎○) were removed:
+# they never appear (Claude cycles ✻ ✶ ✽ ✢ · *), and those glyphs CANNOT be
+# used instead because Claude reuses them in completed-turn summaries
+# ("✻ Brewed for 9m 52s"), which would mark finished turns as working.
+# `● Read|● Write|…` were removed as unreachable: TOOL_START_PATTERN matches
+# the same lines first and returns before the state machine.
+WORKING_PATTERNS='esc to interrupt|● Working|↳ '
 RATE_LIMIT_PATTERN='out of extra usage|Claude usage limit|monthly limit|quota exhausted|rate limit reached'
 LOGIN_PATTERN='anthropic\.com/login|Please log in|authentication required'
 TRUST_DIALOG_PATTERN='Do you trust the files'
