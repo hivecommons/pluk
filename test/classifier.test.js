@@ -1,4 +1,4 @@
-// Regression tests for https://github.com/kubestellar/pluk/issues/17
+// Regression tests for https://github.com/hivecommons/pluk/issues/17
 // Claude Code state classification: working pane must not classify as idle.
 import test from 'node:test';
 import assert from 'node:assert/strict';
