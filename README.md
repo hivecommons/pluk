@@ -2,13 +2,15 @@
 
 Pluk structured events from AI agent terminal output.
 
-TypeScript port of [kubestellar/pluk](https://github.com/kubestellar/pluk) — classify, subscribe, and react to JSONL event streams from AI coding agents (Claude Code, GitHub Copilot CLI, Gemini CLI, Goose, etc.).
+TypeScript port of [hivecommons/pluk](https://github.com/hivecommons/pluk) — classify, subscribe, and react to JSONL event streams from AI coding agents (Claude Code, GitHub Copilot CLI, Gemini CLI, Goose, etc.).
 
 ## Install
 
 ```bash
 npm install -g @kubestellar/pluk
 ```
+
+> **Note:** This repository lives at [hivecommons/pluk](https://github.com/hivecommons/pluk), but the npm package is still published as `@kubestellar/pluk` pending a scope migration. Install commands and imports keep the `@kubestellar` scope for now.
 
 ## Quick Start
 
@@ -188,7 +190,7 @@ Custom patterns can be loaded from a directory with `--patterns-dir` or `getPatt
 
 - **[@kubestellar/rationguard](https://www.npmjs.com/package/@kubestellar/rationguard)** — real-time rationalization detection and rebuttal
 - **[@kubestellar/promptargs](https://www.npmjs.com/package/@kubestellar/promptargs)** — template variable substitution for AI prompts
-- **[kubestellar/pluk](https://github.com/kubestellar/pluk)** — the Go binary (this package is the TypeScript port)
+- **[hivecommons/pluk](https://github.com/hivecommons/pluk)** — the Go binary (this package is the TypeScript port)
 
 ## License
 

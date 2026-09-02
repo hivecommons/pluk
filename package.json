@@ -41,7 +41,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kubestellar/pluk"
+    "url": "https://github.com/hivecommons/pluk"
   },
   "devDependencies": {
     "@types/node": "^26.1.0",
