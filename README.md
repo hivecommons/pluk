@@ -193,3 +193,4 @@ Custom patterns can be loaded from a directory with `--patterns-dir` or `getPatt
 ## License
 
 Apache-2.0
+
