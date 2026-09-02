@@ -1,4 +1,4 @@
-# @kubestellar/pluk
+# @hivecommons/pluk
 
 Pluk structured events from AI agent terminal output.
 
@@ -7,10 +7,9 @@ TypeScript port of [hivecommons/pluk](https://github.com/hivecommons/pluk) — c
 ## Install
 
 ```bash
-npm install -g @kubestellar/pluk
+npm install -g @hivecommons/pluk
 ```
 
-> **Note:** This repository lives at [hivecommons/pluk](https://github.com/hivecommons/pluk), but the npm package is still published as `@kubestellar/pluk` pending a scope migration. Install commands and imports keep the `@kubestellar` scope for now.
 
 ## Quick Start
 
@@ -105,7 +104,7 @@ tmux attach -t my-agent
 ## Programmatic API
 
 ```typescript
-import { Classifier, getPatterns, subscribe, watch, discoverSessions, attach, send } from '@kubestellar/pluk';
+import { Classifier, getPatterns, subscribe, watch, discoverSessions, attach, send } from '@hivecommons/pluk';
 
 // One-command setup: tmux + CLI + pluk + rationguard
 attach({
@@ -188,8 +187,8 @@ Custom patterns can be loaded from a directory with `--patterns-dir` or `getPatt
 
 ## Works With
 
-- **[@kubestellar/rationguard](https://www.npmjs.com/package/@kubestellar/rationguard)** — real-time rationalization detection and rebuttal
-- **[@kubestellar/promptargs](https://www.npmjs.com/package/@kubestellar/promptargs)** — template variable substitution for AI prompts
+- **[@hivecommons/rationguard](https://www.npmjs.com/package/@hivecommons/rationguard)** — real-time rationalization detection and rebuttal
+- **[@hivecommons/promptargs](https://www.npmjs.com/package/@hivecommons/promptargs)** — template variable substitution for AI prompts
 - **[hivecommons/pluk](https://github.com/hivecommons/pluk)** — the Go binary (this package is the TypeScript port)
 
 ## License

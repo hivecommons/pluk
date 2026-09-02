@@ -63,8 +63,8 @@ function resolvePlukBin(): string {
   }
 
   try {
-    execSync('npx --yes @kubestellar/pluk version 2>/dev/null', { stdio: 'ignore' });
-    return 'npx --yes @kubestellar/pluk';
+    execSync('npx --yes @hivecommons/pluk version 2>/dev/null', { stdio: 'ignore' });
+    return 'npx --yes @hivecommons/pluk';
   } catch {
     // not available
   }
@@ -76,7 +76,7 @@ function resolveRationguardBin(): string {
   try {
     return execSync('which rationguard 2>/dev/null', { encoding: 'utf-8' }).trim();
   } catch {
-    return 'npx --yes @kubestellar/rationguard';
+    return 'npx --yes @hivecommons/rationguard';
   }
 }
 
@@ -204,7 +204,7 @@ export function attach(opts: AttachOptions): void {
     log('pipe-pane attached successfully');
   } else {
     console.log('Warning: pluk binary not found, skipping pipe-pane attachment');
-    console.log('Install globally: npm install -g @kubestellar/pluk');
+    console.log('Install globally: npm install -g @hivecommons/pluk');
   }
 
   console.log(`Pluk logs: ${logFile}`);

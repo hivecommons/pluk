@@ -1,5 +1,5 @@
 {
-  "name": "@kubestellar/pluk",
+  "name": "@hivecommons/pluk",
   "version": "0.8.6",
   "description": "Pluk structured events from AI agent terminal output — classify, subscribe, and react to JSONL event streams",
   "type": "module",

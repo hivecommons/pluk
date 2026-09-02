@@ -326,7 +326,7 @@ function main(): void {
       cmdPatterns(rest);
       break;
     case 'version':
-      console.log('@kubestellar/pluk 0.1.0');
+      console.log('@hivecommons/pluk 0.1.0');
       break;
     case '--help':
     case '-h':
