@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-import { basename } from 'node:path';
+import { basename, dirname, join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { Subscriber } from './subscriber.js';
 import { watch } from './watch.js';
 import { type PlukEventType } from './event.js';
@@ -15,6 +17,17 @@ const ANSI_CYAN = '\x1b[36m';
 const ANSI_DIM = '\x1b[2m';
 const ANSI_BOLD = '\x1b[1m';
 const ANSI_RESET = '\x1b[0m';
+
+/** Version from the package's own package.json (adjacent to dist/), so it never drifts. */
+function packageVersion(): string {
+  try {
+    const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version?: string };
+    return pkg.version ?? 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
 
 function usage(): void {
   console.log(`${ANSI_BOLD}pluk${ANSI_RESET} — structured events from AI agent terminal output
@@ -326,7 +339,7 @@ function main(): void {
       cmdPatterns(rest);
       break;
     case 'version':
-      console.log('@hivecommons/pluk 0.1.0');
+      console.log(`@hivecommons/pluk ${packageVersion()}`);
       break;
     case '--help':
     case '-h':
