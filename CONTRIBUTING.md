@@ -18,7 +18,7 @@ npm run build
 npm test
 ```
 
-`npm test` runs the TypeScript build first and then the Node test suite (`node --test "test/**/*.test.js"`). Run it before opening a pull request.
+`npm test` runs the TypeScript build first and then the Node test suite (`node --test test/*.test.js`). Run it before opening a pull request.
 
 ## Making changes
 
