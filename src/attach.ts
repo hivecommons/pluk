@@ -1,9 +1,27 @@
-import { execSync, spawn } from 'node:child_process';
+import { execFileSync, execSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const PLUK_DEFAULT_RUN_DIR = '/tmp/pluk-run';
 const CLI_STARTUP_WAIT_MS = 1500;
+
+// tmux session names and --cli values are embedded in shell contexts that
+// cannot take an argv (tmux pipe-pane -o, pgrep -f), so restrict them to a
+// safe charset. This also prevents `../` traversal into the log-file path.
+const SAFE_NAME_RE = /^[A-Za-z0-9._-]+$/;
+
+function assertSafeName(value: string, what: string): void {
+  if (!SAFE_NAME_RE.test(value)) {
+    throw new Error(
+      `Invalid ${what} "${value}": only letters, digits, ".", "_" and "-" are allowed`,
+    );
+  }
+}
+
+/** Single-quote a string for safe embedding in a POSIX shell command. */
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
 
 export interface AttachOptions {
   session: string;
@@ -22,7 +40,7 @@ export interface AttachOptions {
 
 function tmuxExists(session: string): boolean {
   try {
-    execSync(`tmux has-session -t ${session} 2>/dev/null`, { stdio: 'ignore' });
+    execFileSync('tmux', ['has-session', '-t', session], { stdio: 'ignore' });
     return true;
   } catch {
     return false;
@@ -134,6 +152,8 @@ function openTmuxInNewWindow(session: string): void {
 export function attach(opts: AttachOptions): void {
   const session = opts.session;
   const cli = opts.cli ?? 'claude';
+  assertSafeName(session, 'session name');
+  assertSafeName(cli, 'cli name');
   const cliCmd = opts.cliCommand ?? resolveCliCommand(cli);
   const runDir = opts.runDir ?? process.env['PLUK_RUN_DIR'] ?? PLUK_DEFAULT_RUN_DIR;
   const workDir = opts.workDir ?? process.cwd();
@@ -156,9 +176,9 @@ export function attach(opts: AttachOptions): void {
 
   if (!sessionExists) {
     console.log(`Creating tmux session: ${session}`);
-    const tmuxCmd = `tmux new-session -d -s ${session} -c "${workDir}"`;
-    log(`exec: ${tmuxCmd}`);
-    execSync(tmuxCmd, { stdio: 'inherit' });
+    const newSessionArgs = ['new-session', '-d', '-s', session, '-c', workDir];
+    log(`exec: tmux ${newSessionArgs.join(' ')}`);
+    execFileSync('tmux', newSessionArgs, { stdio: 'inherit' });
 
     let fullCmd = cliCmd;
     if (opts.cliArgs) {
@@ -173,9 +193,9 @@ export function attach(opts: AttachOptions): void {
       }
     }
     console.log(`Starting ${cli}: ${fullCmd}`);
-    const sendCmd = `tmux send-keys -t ${session} "${fullCmd}" Enter`;
-    log(`exec: ${sendCmd}`);
-    execSync(sendCmd, { stdio: 'inherit' });
+    const sendArgs = ['send-keys', '-t', session, fullCmd, 'Enter'];
+    log(`exec: tmux ${sendArgs.join(' ')}`);
+    execFileSync('tmux', sendArgs, { stdio: 'inherit' });
   } else {
     console.log(`Attaching to existing tmux session: ${session}`);
     if (opts.dangerouslySkipPermissions) {
@@ -195,12 +215,14 @@ export function attach(opts: AttachOptions): void {
   log(`log file: ${logFile}`);
 
   if (plukBin) {
-    const pipeCmd = `PLUK_RUN_DIR=${runDir} ${plukBin} watch ${session} --cli=${cli}${includeRawFlag} >> ${logFile}`;
+    // pipe-pane's -o argument is executed by tmux's shell, so quote every
+    // free-form path component; session and cli are charset-validated above.
+    const pipeCmd = `PLUK_RUN_DIR=${shellQuote(runDir)} ${plukBin} watch ${session} --cli=${cli}${includeRawFlag} >> ${shellQuote(logFile)}`;
     log(`pipe-pane command: ${pipeCmd}`);
     console.log(`Attaching pluk pipe-pane: ${cli}`);
-    const tmuxPipeCmd = `tmux pipe-pane -t ${session} -o "${pipeCmd}"`;
-    log(`exec: ${tmuxPipeCmd}`);
-    execSync(tmuxPipeCmd, { stdio: 'inherit' });
+    const pipeArgs = ['pipe-pane', '-t', session, '-o', pipeCmd];
+    log(`exec: tmux ${pipeArgs.join(' ')}`);
+    execFileSync('tmux', pipeArgs, { stdio: 'inherit' });
     log('pipe-pane attached successfully');
   } else {
     console.log('Warning: pluk binary not found, skipping pipe-pane attachment');
@@ -219,12 +241,12 @@ export function attach(opts: AttachOptions): void {
     }
 
     try {
-      const existing = execSync(`pgrep -f "rationguard watch ${session}" 2>/dev/null`, { encoding: 'utf-8' }).trim();
+      const existing = execFileSync('pgrep', ['-f', `rationguard watch ${session}`], { encoding: 'utf-8' }).trim();
       if (existing) {
-        const pids = existing.split('\n').filter(p => p && p !== String(process.pid));
+        const pids = existing.split('\n').filter(p => /^\d+$/.test(p) && p !== String(process.pid));
         if (pids.length > 0) {
           log(`killing ${pids.length} existing rationguard watcher(s) for ${session}: ${pids.join(', ')}`);
-          execSync(`kill ${pids.join(' ')} 2>/dev/null`, { stdio: 'ignore' });
+          execFileSync('kill', pids, { stdio: 'ignore' });
         }
       }
     } catch {
@@ -233,15 +255,23 @@ export function attach(opts: AttachOptions): void {
 
     const rgBin = resolveRationguardBin();
     log(`rationguard binary: ${rgBin}`);
-    const rebuttalFlag = opts.rebuttal ? ` --rebuttal=${opts.rebuttal}` : '';
-    const verboseFlag = verbose ? ' --verbose' : '';
-    const rgCmd = `${rgBin} watch ${session} --run-dir=${runDir} --cli=${cli}${rebuttalFlag}${verboseFlag}`;
-    log(`rationguard command: ${rgCmd}`);
+    // rgBin may be multi-word (e.g. "npx --yes @hivecommons/rationguard").
+    const rgParts = rgBin.split(' ').filter(Boolean);
+    const rgArgs = [
+      ...rgParts.slice(1),
+      'watch',
+      session,
+      `--run-dir=${runDir}`,
+      `--cli=${cli}`,
+    ];
+    if (opts.rebuttal) rgArgs.push(`--rebuttal=${opts.rebuttal}`);
+    if (verbose) rgArgs.push('--verbose');
+    log(`rationguard command: ${rgParts[0]} ${rgArgs.join(' ')}`);
 
     console.log(`Starting rationguard watcher in this terminal...`);
     console.log(`Detections will appear here. Ctrl+C to stop.\n`);
 
-    const child = spawn('sh', ['-c', rgCmd], {
+    const child = spawn(rgParts[0], rgArgs, {
       stdio: 'inherit',
       detached: false,
     });
@@ -254,7 +284,7 @@ export function attach(opts: AttachOptions): void {
     if (!opts.noOpen) {
       console.log(`\nAttaching to tmux session...`);
       try {
-        execSync(`tmux attach -t ${session}`, { stdio: 'inherit' });
+        execFileSync('tmux', ['attach', '-t', session], { stdio: 'inherit' });
       } catch {
         console.log(`Session detached. To reattach: tmux attach -t ${session}`);
       }
