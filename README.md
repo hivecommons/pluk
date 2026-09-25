@@ -179,9 +179,21 @@ pluk send my-agent --text="hello world" --literal
 pluk-send --session=my-agent --text="test" --enter
 ```
 
+## Standalone Binaries
+
+In addition to the `pluk <command>` subcommand form, three standalone binaries are installed alongside `pluk` and behave the same as their subcommand equivalents:
+
+| Binary | Equivalent to |
+|--------|---------------|
+| `pluk-subscribe` | `pluk subscribe` |
+| `pluk-classify` | `pluk watch` |
+| `pluk-send` | `pluk send` |
+
 ## Supported CLIs
 
-Built-in pattern files for: **Claude Code**, **GitHub Copilot CLI**, **Gemini CLI**, **Goose CLI**, **Codex**, **Aider**.
+Built-in event-classification pattern files exist for: **Claude Code**, **GitHub Copilot CLI**, **Gemini CLI**, **Goose CLI**.
+
+`pluk attach` can also launch **Codex** and **Aider** as the terminal CLI (`--cli=codex`, `--cli=aider`), but there are no bundled `.patterns` files for them yet, so `pluk watch`/event classification for those two CLIs requires a custom pattern file via `--patterns-dir`.
 
 Custom patterns can be loaded from a directory with `--patterns-dir` or `getPatterns(cli, patternsDir)`.
 
