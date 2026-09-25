@@ -1,9 +1,9 @@
-import { execSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { execFileSync, spawn } from 'node:child_process';
 import { join } from 'node:path';
+import { ensurePrivateDirectory, ensurePrivateLogFile, resolveRunDir } from './run-dir.js';
 
-const PLUK_DEFAULT_RUN_DIR = '/tmp/pluk-run';
 const CLI_STARTUP_WAIT_MS = 1500;
+const SAFE_SESSION_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 export interface AttachOptions {
   session: string;
@@ -22,14 +22,109 @@ export interface AttachOptions {
 
 function tmuxExists(session: string): boolean {
   try {
-    execSync(`tmux has-session -t ${session} 2>/dev/null`, { stdio: 'ignore' });
+    execFileSync('tmux', ['has-session', '-t', session], { stdio: 'ignore' });
     return true;
   } catch {
     return false;
   }
 }
 
+export function validateSessionName(session: string): void {
+  if (!SAFE_SESSION_PATTERN.test(session)) {
+    throw new Error(`Unsafe session name "${session}". Use only letters, numbers, dot, underscore, and dash.`);
+  }
+}
 
+export function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function appleScriptString(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
+export function splitShellWords(input: string): string[] {
+  const words: string[] = [];
+  let current = '';
+  let quote: '"' | "'" | null = null;
+  let escaping = false;
+
+  for (const char of input) {
+    if (escaping) {
+      current += char;
+      escaping = false;
+      continue;
+    }
+    if (char === '\\' && quote !== "'") {
+      escaping = true;
+      continue;
+    }
+    if ((char === '"' || char === "'") && quote === null) {
+      quote = char;
+      continue;
+    }
+    if (char === quote) {
+      quote = null;
+      continue;
+    }
+    if (/\s/.test(char) && quote === null) {
+      if (current) {
+        words.push(current);
+        current = '';
+      }
+      continue;
+    }
+    current += char;
+  }
+
+  if (escaping) current += '\\';
+  if (quote) throw new Error('Unterminated quote in command arguments');
+  if (current) words.push(current);
+  return words;
+}
+
+export function buildCliCommand(cliCommand: string, cliArgs?: string): string {
+  const words = [...splitShellWords(cliCommand), ...(cliArgs ? splitShellWords(cliArgs) : [])];
+  if (words.length === 0) throw new Error('CLI command cannot be empty');
+  return words.map(shellQuote).join(' ');
+}
+
+export function buildPipePaneCommand(opts: {
+  runDir: string;
+  plukBin: string;
+  session: string;
+  cli: string;
+  includeRaw: boolean;
+  logFile: string;
+}): string {
+  const plukWords = splitShellWords(opts.plukBin);
+  if (plukWords.length === 0) throw new Error('pluk command cannot be empty');
+
+  return [
+    `PLUK_RUN_DIR=${shellQuote(opts.runDir)}`,
+    ...plukWords.map(shellQuote),
+    'watch',
+    shellQuote(opts.session),
+    `--cli=${shellQuote(opts.cli)}`,
+    opts.includeRaw ? '--include-raw' : '',
+    '>>',
+    shellQuote(opts.logFile),
+  ].filter(Boolean).join(' ');
+}
+
+function findExecutable(candidates: string[]): string {
+  for (const candidate of candidates) {
+    try {
+      return execFileSync('which', [candidate], {
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim();
+    } catch {
+      // try next candidate
+    }
+  }
+  return '';
+}
 
 function resolveCliCommand(cli: string): string {
   const CLI_COMMANDS: Record<string, string> = {
@@ -53,17 +148,11 @@ function resolveDangerousFlag(cli: string): string {
 }
 
 function resolvePlukBin(): string {
-  try {
-    const path = execSync('which pluk 2>/dev/null || which pluk-classify 2>/dev/null', {
-      encoding: 'utf-8',
-    }).trim();
-    return path;
-  } catch {
-    // fall back to npx
-  }
+  const path = findExecutable(['pluk', 'pluk-classify']);
+  if (path) return path;
 
   try {
-    execSync('npx --yes @hivecommons/pluk version 2>/dev/null', { stdio: 'ignore' });
+    execFileSync('npx', ['--yes', '@hivecommons/pluk', 'version'], { stdio: 'ignore' });
     return 'npx --yes @hivecommons/pluk';
   } catch {
     // not available
@@ -73,11 +162,7 @@ function resolvePlukBin(): string {
 }
 
 function resolveRationguardBin(): string {
-  try {
-    return execSync('which rationguard 2>/dev/null', { encoding: 'utf-8' }).trim();
-  } catch {
-    return 'npx --yes @hivecommons/rationguard';
-  }
+  return findExecutable(['rationguard']) || 'npx --yes @hivecommons/rationguard';
 }
 
 function detectTerminal(): 'iterm2' | 'terminal' | 'unknown' {
@@ -89,22 +174,20 @@ function detectTerminal(): 'iterm2' | 'terminal' | 'unknown' {
 }
 
 function resolveTmuxPath(): string {
-  try {
-    return execSync('which tmux', { encoding: 'utf-8' }).trim();
-  } catch {
-    return 'tmux';
-  }
+  return findExecutable(['tmux']) || 'tmux';
 }
 
 function openTmuxInNewWindow(session: string): void {
   const terminal = detectTerminal();
   const tmuxBin = resolveTmuxPath();
+  const attachCommand = `${shellQuote(tmuxBin)} attach -t ${shellQuote(session)}`;
 
   switch (terminal) {
     case 'iterm2':
       try {
-        execSync(
-          `osascript -e 'tell application "iTerm2" to create window with default profile command "${tmuxBin} attach -t ${session}"'`,
+        execFileSync(
+          'osascript',
+          ['-e', `tell application "iTerm2" to create window with default profile command ${appleScriptString(attachCommand)}`],
           { stdio: 'ignore' },
         );
         console.log(`Opened iTerm2 window attached to tmux session: ${session}`);
@@ -116,8 +199,9 @@ function openTmuxInNewWindow(session: string): void {
 
     case 'terminal':
       try {
-        execSync(
-          `osascript -e 'tell application "Terminal" to do script "${tmuxBin} attach -t ${session}"'`,
+        execFileSync(
+          'osascript',
+          ['-e', `tell application "Terminal" to do script ${appleScriptString(attachCommand)}`],
           { stdio: 'ignore' },
         );
         console.log(`Opened Terminal window attached to tmux session: ${session}`);
@@ -133,9 +217,10 @@ function openTmuxInNewWindow(session: string): void {
 
 export function attach(opts: AttachOptions): void {
   const session = opts.session;
+  validateSessionName(session);
   const cli = opts.cli ?? 'claude';
   const cliCmd = opts.cliCommand ?? resolveCliCommand(cli);
-  const runDir = opts.runDir ?? process.env['PLUK_RUN_DIR'] ?? PLUK_DEFAULT_RUN_DIR;
+  const runDir = resolveRunDir(opts.runDir);
   const workDir = opts.workDir ?? process.cwd();
   const verbose = opts.verbose ?? false;
 
@@ -146,61 +231,64 @@ export function attach(opts: AttachOptions): void {
   log(`session=${session} cli=${cli} runDir=${runDir} workDir=${workDir}`);
 
   const logsDir = join(runDir, 'logs');
-  if (!existsSync(logsDir)) {
-    log(`Creating logs directory: ${logsDir}`);
-    mkdirSync(logsDir, { recursive: true });
-  }
+  log(`Securing run directory: ${runDir}`);
+  ensurePrivateDirectory(runDir);
+  log(`Securing logs directory: ${logsDir}`);
+  ensurePrivateDirectory(logsDir);
 
   const sessionExists = tmuxExists(session);
   log(`tmux session "${session}" exists: ${sessionExists}`);
 
   if (!sessionExists) {
     console.log(`Creating tmux session: ${session}`);
-    const tmuxCmd = `tmux new-session -d -s ${session} -c "${workDir}"`;
-    log(`exec: ${tmuxCmd}`);
-    execSync(tmuxCmd, { stdio: 'inherit' });
+    const newSessionArgs = ['new-session', '-d', '-s', session, '-c', workDir];
+    log(`execFile: tmux ${newSessionArgs.map(shellQuote).join(' ')}`);
+    execFileSync('tmux', newSessionArgs, { stdio: 'inherit' });
 
-    let fullCmd = cliCmd;
-    if (opts.cliArgs) {
-      fullCmd += ` ${opts.cliArgs}`;
-    }
+    let fullCmd = buildCliCommand(cliCmd, opts.cliArgs);
     if (opts.dangerouslySkipPermissions) {
       const dangerFlag = resolveDangerousFlag(cli);
       if (dangerFlag) {
-        fullCmd += ` ${dangerFlag}`;
+        fullCmd += ` ${shellQuote(dangerFlag)}`;
       } else {
         log(`no dangerous/auto flag known for cli=${cli}, skipping`);
       }
     }
     console.log(`Starting ${cli}: ${fullCmd}`);
-    const sendCmd = `tmux send-keys -t ${session} "${fullCmd}" Enter`;
-    log(`exec: ${sendCmd}`);
-    execSync(sendCmd, { stdio: 'inherit' });
+    const sendArgs = ['send-keys', '-t', session, fullCmd, 'Enter'];
+    log(`execFile: tmux ${sendArgs.map(shellQuote).join(' ')}`);
+    execFileSync('tmux', sendArgs, { stdio: 'inherit' });
   } else {
     console.log(`Attaching to existing tmux session: ${session}`);
     if (opts.dangerouslySkipPermissions) {
       const dangerFlag = resolveDangerousFlag(cli);
       if (dangerFlag) {
         console.log(`Warning: --dangerous was set but session already exists. The CLI may not have ${dangerFlag} enabled.`);
-        console.log(`To restart with permissions skipped: tmux send-keys -t ${session} C-c && tmux send-keys -t ${session} "${cliCmd} ${dangerFlag}" Enter`);
+        console.log(`To restart with permissions skipped: pluk send ${session} C-c && tmux send-keys -t ${shellQuote(session)} ${shellQuote(buildCliCommand(cliCmd, dangerFlag))} Enter`);
       }
     }
   }
 
   const plukBin = resolvePlukBin();
   log(`pluk binary: ${plukBin || '(not found)'}`);
-  const includeRawFlag = opts.noRaw ? '' : ' --include-raw';
-
   const logFile = join(logsDir, `${session}.jsonl`);
   log(`log file: ${logFile}`);
+  ensurePrivateLogFile(logFile);
 
   if (plukBin) {
-    const pipeCmd = `PLUK_RUN_DIR=${runDir} ${plukBin} watch ${session} --cli=${cli}${includeRawFlag} >> ${logFile}`;
+    const pipeCmd = buildPipePaneCommand({
+      runDir,
+      plukBin,
+      session,
+      cli,
+      includeRaw: !opts.noRaw,
+      logFile,
+    });
     log(`pipe-pane command: ${pipeCmd}`);
     console.log(`Attaching pluk pipe-pane: ${cli}`);
-    const tmuxPipeCmd = `tmux pipe-pane -t ${session} -o "${pipeCmd}"`;
-    log(`exec: ${tmuxPipeCmd}`);
-    execSync(tmuxPipeCmd, { stdio: 'inherit' });
+    const pipeArgs = ['pipe-pane', '-t', session, '-o', pipeCmd];
+    log(`execFile: tmux ${pipeArgs.map(shellQuote).join(' ')}`);
+    execFileSync('tmux', pipeArgs, { stdio: 'inherit' });
     log('pipe-pane attached successfully');
   } else {
     console.log('Warning: pluk binary not found, skipping pipe-pane attachment');
@@ -219,12 +307,15 @@ export function attach(opts: AttachOptions): void {
     }
 
     try {
-      const existing = execSync(`pgrep -f "rationguard watch ${session}" 2>/dev/null`, { encoding: 'utf-8' }).trim();
+      const existing = execFileSync('pgrep', ['-f', `rationguard watch ${session}`], {
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim();
       if (existing) {
         const pids = existing.split('\n').filter(p => p && p !== String(process.pid));
         if (pids.length > 0) {
           log(`killing ${pids.length} existing rationguard watcher(s) for ${session}: ${pids.join(', ')}`);
-          execSync(`kill ${pids.join(' ')} 2>/dev/null`, { stdio: 'ignore' });
+          execFileSync('kill', pids, { stdio: 'ignore' });
         }
       }
     } catch {
@@ -233,15 +324,22 @@ export function attach(opts: AttachOptions): void {
 
     const rgBin = resolveRationguardBin();
     log(`rationguard binary: ${rgBin}`);
-    const rebuttalFlag = opts.rebuttal ? ` --rebuttal=${opts.rebuttal}` : '';
-    const verboseFlag = verbose ? ' --verbose' : '';
-    const rgCmd = `${rgBin} watch ${session} --run-dir=${runDir} --cli=${cli}${rebuttalFlag}${verboseFlag}`;
-    log(`rationguard command: ${rgCmd}`);
+    const rgArgs = [
+      ...splitShellWords(rgBin),
+      'watch',
+      session,
+      `--run-dir=${runDir}`,
+      `--cli=${cli}`,
+      ...(opts.rebuttal ? [`--rebuttal=${opts.rebuttal}`] : []),
+      ...(verbose ? ['--verbose'] : []),
+    ];
+    log(`rationguard command: ${rgArgs.map(shellQuote).join(' ')}`);
 
     console.log(`Starting rationguard watcher in this terminal...`);
     console.log(`Detections will appear here. Ctrl+C to stop.\n`);
 
-    const child = spawn('sh', ['-c', rgCmd], {
+    const [cmd, ...args] = rgArgs;
+    const child = spawn(cmd, args, {
       stdio: 'inherit',
       detached: false,
     });
@@ -254,7 +352,7 @@ export function attach(opts: AttachOptions): void {
     if (!opts.noOpen) {
       console.log(`\nAttaching to tmux session...`);
       try {
-        execSync(`tmux attach -t ${session}`, { stdio: 'inherit' });
+        execFileSync('tmux', ['attach', '-t', session], { stdio: 'inherit' });
       } catch {
         console.log(`Session detached. To reattach: tmux attach -t ${session}`);
       }

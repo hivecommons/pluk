@@ -1,7 +1,8 @@
+import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { execSync } from 'node:child_process';
 import { parseEvent, type PlukEvent } from './event.js';
+import { resolveRunDir } from './run-dir.js';
 
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
@@ -48,8 +49,9 @@ function formatAgo(isoTimestamp: string): string {
 function getTmuxSessions(): Set<string> {
   const sessions = new Set<string>();
   try {
-    const output = execSync('tmux list-sessions -F "#{session_name}" 2>/dev/null', {
+    const output = execFileSync('tmux', ['list-sessions', '-F', '#{session_name}'], {
       encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
       timeout: 5000,
     });
     for (const line of output.split('\n')) {
@@ -72,7 +74,7 @@ function countEvents(filePath: string): number {
 }
 
 export function discoverSessions(runDir?: string): SessionInfo[] {
-  const dir = runDir ?? process.env['PLUK_RUN_DIR'] ?? '/var/run/pluk';
+  const dir = resolveRunDir(runDir);
   const logsDir = join(dir, 'logs');
 
   let files: string[];

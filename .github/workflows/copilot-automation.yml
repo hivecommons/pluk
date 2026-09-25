@@ -11,19 +11,40 @@ on:
     types: [opened, synchronize, ready_for_review]
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-  statuses: write
+  contents: read
 
 concurrency:
   group: copilot-automation-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.sha }}
   cancel-in-progress: true
 
 jobs:
-  copilot-automation:
-    uses: hivecommons/infra/.github/workflows/reusable-copilot-automation.yml@main
+  copilot-automation-dispatch:
+    if: github.event_name != 'pull_request_target'
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      statuses: write
+    uses: hivecommons/infra/.github/workflows/reusable-copilot-automation.yml@1416d68a1fd5bd475b96c8ddfcffc8539bfa6b08 # main@2026-09-24
     with:
       pr_number: ${{ github.event.inputs.pr_number || '' }}
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
+
+  copilot-automation-pr:
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      (
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) ||
+        contains(github.event.pull_request.labels.*.name, 'copilot-automation-trusted')
+      )
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      statuses: write
+    uses: hivecommons/infra/.github/workflows/reusable-copilot-automation.yml@1416d68a1fd5bd475b96c8ddfcffc8539bfa6b08 # main@2026-09-24
+    with:
+      pr_number: ''
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
