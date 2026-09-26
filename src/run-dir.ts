@@ -5,6 +5,18 @@ import { join } from 'node:path';
 const PRIVATE_DIR_MODE = 0o700;
 const PRIVATE_FILE_MODE = 0o600;
 
+const SAFE_SESSION_PATTERN = /^[A-Za-z0-9._-]+$/;
+
+/**
+ * Session names become path segments under <runDir>/logs, so anything
+ * outside this set (slashes, "..", spaces) can escape the private run dir.
+ */
+export function validateSessionName(session: string): void {
+  if (!SAFE_SESSION_PATTERN.test(session)) {
+    throw new Error(`Unsafe session name "${session}". Use only letters, numbers, dot, underscore, and dash.`);
+  }
+}
+
 function currentUid(): number | undefined {
   return typeof process.getuid === 'function' ? process.getuid() : undefined;
 }
