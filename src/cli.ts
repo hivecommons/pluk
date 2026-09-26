@@ -91,6 +91,11 @@ function parseArgs(args: string[]): { positional: string[]; flags: Record<string
   return { positional, flags };
 }
 
+function installPipePaneErrorHandlers(): void {
+  process.on('uncaughtException', () => {});
+  process.on('unhandledRejection', () => {});
+}
+
 function cmdSubscribe(args: string[]): void {
   const { positional, flags } = parseArgs(args);
   const session = positional[0];
@@ -134,6 +139,8 @@ function cmdSubscribe(args: string[]): void {
 }
 
 function cmdWatch(args: string[]): void {
+  installPipePaneErrorHandlers();
+
   const { positional, flags } = parseArgs(args);
   const session = positional[0] ?? 'stdin';
   const cli = flags['cli'] ?? 'claude';
@@ -294,10 +301,6 @@ function cmdSend(args: string[]): void {
 }
 
 function main(): void {
-  // Prevent uncaught errors from killing the process inside pipe-pane
-  process.on('uncaughtException', () => {});
-  process.on('unhandledRejection', () => {});
-
   const bin = basename(process.argv[1] ?? '');
   const args = process.argv.slice(2);
 
@@ -317,39 +320,44 @@ function main(): void {
   const command = args[0];
   const rest = args.slice(1);
 
-  switch (command) {
-    case 'attach':
-      cmdAttach(rest);
-      break;
-    case 'sessions':
-    case 'ls':
-      cmdSessions(rest);
-      break;
-    case 'subscribe':
-      cmdSubscribe(rest);
-      break;
-    case 'watch':
-    case 'classify':
-      cmdWatch(rest);
-      break;
-    case 'send':
-      cmdSend(rest);
-      break;
-    case 'patterns':
-      cmdPatterns(rest);
-      break;
-    case 'version':
-      console.log(`@hivecommons/pluk ${packageVersion()}`);
-      break;
-    case '--help':
-    case '-h':
-    case undefined:
-      usage();
-      break;
-    default:
-      console.error(`${ANSI_RED}Unknown command:${ANSI_RESET} ${command}`);
-      usage();
-      process.exit(1);
+  try {
+    switch (command) {
+      case 'attach':
+        cmdAttach(rest);
+        break;
+      case 'sessions':
+      case 'ls':
+        cmdSessions(rest);
+        break;
+      case 'subscribe':
+        cmdSubscribe(rest);
+        break;
+      case 'watch':
+      case 'classify':
+        cmdWatch(rest);
+        break;
+      case 'send':
+        cmdSend(rest);
+        break;
+      case 'patterns':
+        cmdPatterns(rest);
+        break;
+      case 'version':
+        console.log(`@hivecommons/pluk ${packageVersion()}`);
+        break;
+      case '--help':
+      case '-h':
+      case undefined:
+        usage();
+        break;
+      default:
+        console.error(`${ANSI_RED}Unknown command:${ANSI_RESET} ${command}`);
+        usage();
+        process.exit(1);
+    }
+  } catch (err) {
+    console.error(`${ANSI_RED}Error:${ANSI_RESET} ${(err as Error).message}`);
+    process.exit(1);
   }
 }
 

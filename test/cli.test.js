@@ -212,11 +212,9 @@ test('attach without a session exits 1 with guidance', () => {
 
 test('attach rejects unsafe session names before touching tmux', () => {
   rmSync(tmuxLog, { force: true });
-  const { stdout } = runCli(['attach', 'bad;name']);
-  // NOTE: cli.ts installs a no-op uncaughtException handler, so the
-  // validation error is swallowed and the process exits 0 without any
-  // diagnostic. The invariant we can lock down is that tmux is never
-  // invoked and no session is created.
+  const { code, stdout, stderr } = runCli(['attach', 'bad;name']);
+  assert.equal(code, 1);
+  assert.match(stderr, /Unsafe session name/);
   assert.doesNotMatch(stdout, /Creating tmux session/);
   assert.throws(() => readFileSync(tmuxLog), /ENOENT/, 'tmux must not be invoked');
 });
