@@ -7,6 +7,12 @@ updates:
     groups:
       npm-dev:
         dependency-type: development
+    ignore:
+      # TypeScript 7 (native compiler) breaks the current tsconfig/build
+      # (see PR #46: tsc fails with TS2591 on all node: imports).
+      # Take TS majors deliberately via a migration PR, not Dependabot.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
