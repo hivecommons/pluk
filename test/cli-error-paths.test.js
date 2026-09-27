@@ -174,6 +174,39 @@ test('subscribe --verbose --filter replays matching events and logs progress', a
   assert.match(errOut, /\[pluk:sub\]/, 'verbose progress log expected on stderr');
 });
 
+test('subscribe exits 0 on SIGINT while tailing', async () => {
+  // Pins cmdSubscribe's SIGINT handler (sub.stop() + exit 0): without it the
+  // default disposition would kill the process with a non-zero signal death.
+  const dir = makeRunDir();
+  writeFileSync(
+    join(dir, 'logs', 'sig-sub.jsonl'),
+    eventLine({ ts: '2026-01-01T00:00:00.000Z', type: 'state_change', data: { to: 'idle' } }) + '\n',
+  );
+  const child = spawn(
+    process.execPath,
+    [CLI, 'subscribe', 'sig-sub', `--run-dir=${dir}`, '--from-beginning'],
+    { env: { ...process.env, PATH: `${stubBin}:${process.env.PATH}` } },
+  );
+  let out = '';
+  child.stdout.on('data', d => { out += d; });
+  // Wait until the replayed event proves the tail loop is live (and the
+  // SIGINT handler is installed) before delivering the signal.
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`no event seen; got: ${out}`)), 10000);
+    child.stdout.on('data', () => {
+      if (out.includes('"type":"state_change"')) {
+        clearTimeout(timer);
+        resolve();
+      }
+    });
+  });
+  const exit = new Promise(resolve => child.on('exit', (code, signal) => resolve({ code, signal })));
+  child.kill('SIGINT');
+  const { code, signal } = await exit;
+  assert.equal(signal, null, 'handler must catch SIGINT, not die from it');
+  assert.equal(code, 0);
+});
+
 // --- watch signal handling and capture mode --------------------------------------
 
 test('watch (stream) exits 0 on SIGINT', async () => {
