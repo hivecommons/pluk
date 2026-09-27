@@ -1,9 +1,12 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { join } from 'node:path';
-import { ensurePrivateDirectory, ensurePrivateLogFile, resolveRunDir } from './run-dir.js';
+import { ensurePrivateDirectory, ensurePrivateLogFile, resolveRunDir, validateSessionName } from './run-dir.js';
+
+// Re-exported for existing consumers; the validator lives with the other
+// path-safety helpers in run-dir.ts.
+export { validateSessionName } from './run-dir.js';
 
 const CLI_STARTUP_WAIT_MS = 1500;
-const SAFE_SESSION_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 export interface AttachOptions {
   session: string;
@@ -26,12 +29,6 @@ function tmuxExists(session: string): boolean {
     return true;
   } catch {
     return false;
-  }
-}
-
-export function validateSessionName(session: string): void {
-  if (!SAFE_SESSION_PATTERN.test(session)) {
-    throw new Error(`Unsafe session name "${session}". Use only letters, numbers, dot, underscore, and dash.`);
   }
 }
 

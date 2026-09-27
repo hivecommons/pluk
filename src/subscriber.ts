@@ -2,7 +2,7 @@ import { open, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { type PlukEvent, type PlukEventType, parseEvent } from './event.js';
-import { resolveRunDir } from './run-dir.js';
+import { resolveRunDir, validateSessionName } from './run-dir.js';
 
 const POLL_INTERVAL_MS = 200;
 const FILE_WAIT_TIMEOUT_MS = 60_000;
@@ -29,6 +29,9 @@ export class Subscriber extends EventEmitter {
 
   constructor(opts: SubscriberOptions) {
     super();
+    // The session becomes a path segment of logFile — reject anything that
+    // could traverse out of the private run dir (e.g. "../../etc/foo").
+    validateSessionName(opts.session);
     this.session = opts.session;
     this.runDir = resolveRunDir(opts.runDir);
     this.filterSet = opts.filter ? new Set(opts.filter) : null;

@@ -155,3 +155,13 @@ test('subscribe() helper wires the callback and returns a running Subscriber', a
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('Subscriber rejects session names that traverse out of the run dir', () => {
+  for (const session of ['../escape', '../../etc/passwd', 'a/b', 'a b', '']) {
+    assert.throws(() => new Subscriber({ session }), /Unsafe session name/);
+  }
+});
+
+test('subscribe() helper rejects traversal session names before starting', () => {
+  assert.throws(() => subscribe('../../evil', () => {}), /Unsafe session name/);
+});
