@@ -8,6 +8,7 @@ import { watch } from './watch.js';
 import { type PlukEventType } from './event.js';
 import { listAvailableCLIs, bundledPatternsDir, getPatterns } from './patterns.js';
 import { discoverSessions } from './sessions.js';
+import { resolveRunDir } from './run-dir.js';
 import { attach } from './attach.js';
 import { send } from './send.js';
 
@@ -67,7 +68,7 @@ ${ANSI_CYAN}Examples:${ANSI_RESET}
   pluk subscribe my-agent --filter=rate_limit,error,state_change
 
   ${ANSI_DIM}# Manual: pipe agent output through the classifier${ANSI_RESET}
-  tmux pipe-pane -t my-agent -o "pluk watch my-agent --cli=claude >> /tmp/pluk-run/logs/my-agent.jsonl"
+  tmux pipe-pane -t my-agent -o "pluk watch my-agent --cli=claude >> \\"\\$XDG_RUNTIME_DIR/pluk/logs/my-agent.jsonl\\""
 `);
 }
 
@@ -217,7 +218,7 @@ function cmdSessions(args: string[]): void {
 
   if (sessions.length === 0) {
     console.log(`${ANSI_DIM}No active pluk sessions found.${ANSI_RESET}`);
-    console.log(`${ANSI_DIM}Run dir: ${runDir ?? process.env['PLUK_RUN_DIR'] ?? '/var/run/pluk'}${ANSI_RESET}`);
+    console.log(`${ANSI_DIM}Run dir: ${runDir ?? resolveRunDir()}${ANSI_RESET}`);
     return;
   }
 

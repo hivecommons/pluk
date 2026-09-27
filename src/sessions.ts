@@ -5,6 +5,22 @@ import { parseEvent, type PlukEvent } from './event.js';
 import { resolveRunDir } from './run-dir.js';
 
 const SECONDS_PER_MINUTE = 60;
+// C0 controls, DEL, and C1 controls — covers ESC (CSI/OSC introducers), BEL,
+// and every other terminal control byte an attacker could plant in a log
+// field or log filename.
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS_RE = /[\u0000-\u001f\u007f-\u009f]/g;
+
+/**
+ * Strip terminal control characters from a value sourced from a JSONL log
+ * or a log filename. `pluk sessions` prints these values directly to the
+ * user's terminal; without this, a crafted log entry (or a hostile file in
+ * a shared run dir) can inject ANSI/OSC escape sequences — clearing the
+ * screen, retitling the window, or abusing terminal-specific escapes.
+ */
+export function sanitizeField(value: string): string {
+  return value.replace(CONTROL_CHARS_RE, '');
+}
 const SECONDS_PER_HOUR = 3600;
 const SECONDS_PER_DAY = 86400;
 const MAX_TAIL_LINES = 100;
@@ -89,7 +105,7 @@ export function discoverSessions(runDir?: string): SessionInfo[] {
   const MAX_TAIL_EVENTS = 50;
 
   for (const file of files) {
-    const session = file.replace('.jsonl', '');
+    const session = sanitizeField(file.replace('.jsonl', ''));
     const filePath = join(logsDir, file);
     const events = readLastEvents(filePath, MAX_TAIL_EVENTS);
 
@@ -103,11 +119,11 @@ export function discoverSessions(runDir?: string): SessionInfo[] {
       if (e.ts > lastTs) lastTs = e.ts;
 
       if (e.data['cli'] && e.data['cli'] !== 'unknown') {
-        cli = e.data['cli'];
+        cli = sanitizeField(e.data['cli']);
       }
 
       if (e.type === 'state_change') {
-        state = e.data['to'] ?? 'unknown';
+        state = sanitizeField(e.data['to'] ?? 'unknown');
       }
     }
 
