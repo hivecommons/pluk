@@ -20,6 +20,7 @@
   "scripts": {
     "build": "tsc",
     "test": "npm run build && node --test test/*.test.js",
+    "test:coverage": "npm run build && node --test --experimental-test-coverage --test-coverage-lines=95 --test-coverage-branches=85 --test-coverage-functions=90 test/*.test.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
