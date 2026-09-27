@@ -98,6 +98,11 @@ export function bundledPatternsDir(): string {
   return join(__dirname, '..', 'patterns');
 }
 
+// These four constants are the last-resort fallback used only when neither
+// an explicit --patterns-dir nor the bundled patterns/ directory can be read
+// (e.g. a packaging mode that strips non-JS assets). They must stay in sync
+// with patterns/*.patterns — see the "inline builtin patterns match bundled
+// pattern files" test in test/patterns.test.js, which fails if they drift.
 const CLAUDE_PATTERNS = `
 IDLE_PATTERN='❯\\s*$|^\\$ $'
 WORKING_PATTERNS='esc to interrupt|● Working|↳ '
@@ -113,29 +118,45 @@ SESSION_END_PATTERN='Session ended|Goodbye'
 `;
 
 const COPILOT_PATTERNS = `
-IDLE_PATTERN='\\$\\s*$|>\\s*$'
-WORKING_PATTERNS='⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏|Thinking|Loading'
-RATE_LIMIT_PATTERN='rate limit|too many requests|quota exceeded|429'
-LOGIN_PATTERN='gh auth login|not logged in|authentication'
-ERROR_PATTERN='^\\s*Error:|^\\s*error:|fatal:'
-SESSION_END_PATTERN='Goodbye|exit'
+IDLE_PATTERN='❯\\s*$|^\\$ $'
+WORKING_PATTERNS='◐|◑|◒|◓|◉|◎|○|● Working|● Read|● Environment loaded|Esc to cancel'
+RATE_LIMIT_PATTERN='Copilot usage limit|out of extra usage|quota exhausted|monthly limit'
+LOGIN_PATTERN='github\\.com/login|Please sign in|authentication required|Device code:'
+TRUST_DIALOG_PATTERN='Do you trust the files'
+BYPASS_PATTERN=''
+TOOL_START_PATTERN='● .+ \\(shell\\)|● .+ \\(read\\)|● .+ \\(write\\)|● .+ \\(edit\\)'
+TOOL_END_PATTERN='✓ .+ \\(shell\\)|✓ .+ \\(read\\)|✓ .+ \\(write\\)|✓ .+ \\(edit\\)'
+ERROR_PATTERN='^\\s*Error:|^\\s*error:|^\\s*FATAL|^\\s*panic:'
+MODEL_PATTERN='Using model:|model.*claude-|model.*gpt-'
+SESSION_END_PATTERN='Session ended|Goodbye'
 `;
 
 const GEMINI_PATTERNS = `
-IDLE_PATTERN='❯\\s*$|>\\s*$'
-WORKING_PATTERNS='Thinking|\\.\\.\\.'
-RATE_LIMIT_PATTERN='quota|rate limit|too many requests|429|Resource exhausted'
-LOGIN_PATTERN='gcloud auth|not authenticated'
-ERROR_PATTERN='^\\s*Error:|^\\s*error:|FATAL'
-SESSION_END_PATTERN='Goodbye|exit'
+IDLE_PATTERN='>\\s*$|❯\\s*$'
+WORKING_PATTERNS='◐|◑|◒|◓|⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏|Thinking|Generating'
+RATE_LIMIT_PATTERN='rate limit|quota exceeded|resource exhausted|429'
+LOGIN_PATTERN='gcloud auth login|authenticate|sign in'
+TRUST_DIALOG_PATTERN=''
+BYPASS_PATTERN=''
+TOOL_START_PATTERN=''
+TOOL_END_PATTERN=''
+ERROR_PATTERN='^\\s*Error:|^\\s*ERROR:|^\\s*FATAL|^\\s*panic:'
+MODEL_PATTERN='Using model:|gemini-'
+SESSION_END_PATTERN='Session ended|Goodbye'
 `;
 
 const GOOSE_PATTERNS = `
-IDLE_PATTERN='❯\\s*$|goose>|>\\s*$'
-WORKING_PATTERNS='Processing|working|thinking'
-RATE_LIMIT_PATTERN='rate limit|too many requests|429'
-ERROR_PATTERN='^\\s*Error:|^\\s*error:|panic:'
-SESSION_END_PATTERN='Goodbye|exit|session ended'
+IDLE_PATTERN='>\\s*$|❯\\s*$|goose>'
+WORKING_PATTERNS='◐|◑|◒|◓|⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏|thinking|processing'
+RATE_LIMIT_PATTERN='rate limit|quota exceeded|429|too many requests'
+LOGIN_PATTERN='authenticate|sign in|login required'
+TRUST_DIALOG_PATTERN=''
+BYPASS_PATTERN=''
+TOOL_START_PATTERN=''
+TOOL_END_PATTERN=''
+ERROR_PATTERN='^\\s*Error:|^\\s*error:|^\\s*FATAL|^\\s*panic:'
+MODEL_PATTERN='Using model:'
+SESSION_END_PATTERN='Session ended|Goodbye'
 `;
 
 export const BUILTIN_PATTERNS: Record<string, string> = {

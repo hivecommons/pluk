@@ -132,3 +132,30 @@ test('inline builtin patterns compile for every CLI', () => {
     assert.ok(p.error instanceof RegExp, `${cli} error should compile`);
   }
 });
+
+// BUILTIN_PATTERNS is a hand-maintained last-resort fallback for when
+// patterns/*.patterns can't be read at all (e.g. a packaging mode that
+// strips non-JS assets). It has no automatic way to stay in sync with the
+// files that are the real source of truth, so previous edits to
+// patterns/*.patterns silently left BUILTIN_PATTERNS behind — missing
+// fields (TRUST_DIALOG_PATTERN, TOOL_START/END_PATTERN, MODEL_PATTERN) and
+// diverged regexes entirely for copilot/gemini/goose. This test fails the
+// moment the two drift again.
+test('inline builtin patterns match the bundled pattern files field-for-field', () => {
+  const bundledDir = bundledPatternsDir();
+  for (const cli of Object.keys(BUILTIN_PATTERNS)) {
+    const fromFile = loadPatterns(bundledDir, cli);
+    const fromInline = parsePatternsContent(BUILTIN_PATTERNS[cli], cli);
+    for (const field of Object.keys(fromFile)) {
+      if (field === 'cli') continue;
+      const fileSource = fromFile[field] ? fromFile[field].source : null;
+      const inlineSource = fromInline[field] ? fromInline[field].source : null;
+      assert.equal(
+        inlineSource,
+        fileSource,
+        `BUILTIN_PATTERNS.${cli} field "${field}" (inline) does not match patterns/${cli}.patterns (file). ` +
+          `Update the inline constant in src/patterns.ts to match.`,
+      );
+    }
+  }
+});
