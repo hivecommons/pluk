@@ -114,3 +114,49 @@ test('discoverSessions only inspects the last 100 lines for state', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('discoverSessions strips terminal control characters from log-sourced fields', () => {
+  const dir = makeRunDir();
+  try {
+    const lines = [
+      eventLine({
+        ts: '2026-01-01T00:00:00.000Z',
+        type: 'rate_limit',
+        data: { cli: '\u001b]0;PWNED\u0007claude' },
+      }),
+      eventLine({
+        ts: '2026-01-01T00:00:01.000Z',
+        type: 'state_change',
+        data: { to: '\u001b[2J\u001b[Hidle' },
+      }),
+    ];
+    writeFileSync(join(dir, 'logs', 'evil.jsonl'), lines.join('\n') + '\n');
+
+    const s = discoverSessions(dir)[0];
+    assert.equal(s.cli, ']0;PWNEDclaude');
+    assert.equal(s.state, '[2J[Hidle');
+    assert.doesNotMatch(s.cli, /[\u0000-\u001f\u007f-\u009f]/);
+    assert.doesNotMatch(s.state, /[\u0000-\u001f\u007f-\u009f]/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('discoverSessions strips control characters from session names (log filenames)', () => {
+  const dir = makeRunDir();
+  try {
+    writeFileSync(join(dir, 'logs', 'agent\u001b[31m.jsonl'),
+      eventLine({ ts: '2026-01-01T00:00:00.000Z' }) + '\n');
+
+    const s = discoverSessions(dir)[0];
+    assert.equal(s.session, 'agent[31m');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('sanitizeField removes C0, DEL, and C1 control characters', async () => {
+  const { sanitizeField } = await import('../dist/sessions.js');
+  assert.equal(sanitizeField('a\u0000b\u001fc\u007fd\u0080e\u009ff'), 'abcdef');
+  assert.equal(sanitizeField('plain-name_1.2'), 'plain-name_1.2');
+});
