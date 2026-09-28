@@ -1,8 +1,8 @@
-import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseEvent, type PlukEvent } from './event.js';
 import { resolveRunDir } from './run-dir.js';
+import { tmuxListSessionNames } from './tmux.js';
 
 const SECONDS_PER_MINUTE = 60;
 // C0 controls, DEL, and C1 controls — covers ESC (CSI/OSC introducers), BEL,
@@ -65,14 +65,8 @@ function formatAgo(isoTimestamp: string): string {
 function getTmuxSessions(): Set<string> {
   const sessions = new Set<string>();
   try {
-    const output = execFileSync('tmux', ['list-sessions', '-F', '#{session_name}'], {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 5000,
-    });
-    for (const line of output.split('\n')) {
-      const name = line.trim();
-      if (name) sessions.add(name);
+    for (const name of tmuxListSessionNames()) {
+      sessions.add(name);
     }
   } catch {
     // tmux not running or not installed

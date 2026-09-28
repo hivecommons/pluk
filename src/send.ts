@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { tmuxSendKeys } from './tmux.js';
 
 export interface SendOptions {
   session: string;
@@ -34,6 +34,6 @@ export function send(opts: SendOptions): void {
   // corruption of characters like `!`, `$`, backslash, or quotes, and a
   // session name with spaces or metacharacters cannot break the command.
   for (const args of buildSendCommands(opts)) {
-    execFileSync('tmux', args, { stdio: 'pipe' });
+    tmuxSendKeys(args);
   }
 }

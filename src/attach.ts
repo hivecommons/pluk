@@ -2,6 +2,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { ensurePrivateDirectory, ensurePrivateLogFile, resolveRunDir, validateSessionName } from './run-dir.js';
 import { ANSI_DIM, ANSI_RESET } from './ansi.js';
+import { tmuxAttach, tmuxHasSession, tmuxNewSession, tmuxPipePane, tmuxRunInherited } from './tmux.js';
 
 // Re-exported for existing consumers; the validator lives with the other
 // path-safety helpers in run-dir.ts.
@@ -22,15 +23,6 @@ export interface AttachOptions {
   noOpen?: boolean;
   verbose?: boolean;
   dangerouslySkipPermissions?: boolean;
-}
-
-function tmuxExists(session: string): boolean {
-  try {
-    execFileSync('tmux', ['has-session', '-t', session], { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 export function shellQuote(value: string): string {
@@ -234,14 +226,13 @@ export function attach(opts: AttachOptions): void {
   log(`Securing logs directory: ${logsDir}`);
   ensurePrivateDirectory(logsDir);
 
-  const sessionExists = tmuxExists(session);
+  const sessionExists = tmuxHasSession(session);
   log(`tmux session "${session}" exists: ${sessionExists}`);
 
   if (!sessionExists) {
     console.log(`Creating tmux session: ${session}`);
-    const newSessionArgs = ['new-session', '-d', '-s', session, '-c', workDir];
-    log(`execFile: tmux ${newSessionArgs.map(shellQuote).join(' ')}`);
-    execFileSync('tmux', newSessionArgs, { stdio: 'inherit' });
+    log(`execFile: tmux new-session -d -s ${shellQuote(session)} -c ${shellQuote(workDir)}`);
+    tmuxNewSession(session, workDir);
 
     let fullCmd = buildCliCommand(cliCmd, opts.cliArgs);
     if (opts.dangerouslySkipPermissions) {
@@ -255,7 +246,7 @@ export function attach(opts: AttachOptions): void {
     console.log(`Starting ${cli}: ${fullCmd}`);
     const sendArgs = ['send-keys', '-t', session, fullCmd, 'Enter'];
     log(`execFile: tmux ${sendArgs.map(shellQuote).join(' ')}`);
-    execFileSync('tmux', sendArgs, { stdio: 'inherit' });
+    tmuxRunInherited(sendArgs);
   } else {
     console.log(`Attaching to existing tmux session: ${session}`);
     if (opts.dangerouslySkipPermissions) {
@@ -284,9 +275,8 @@ export function attach(opts: AttachOptions): void {
     });
     log(`pipe-pane command: ${pipeCmd}`);
     console.log(`Attaching pluk pipe-pane: ${cli}`);
-    const pipeArgs = ['pipe-pane', '-t', session, '-o', pipeCmd];
-    log(`execFile: tmux ${pipeArgs.map(shellQuote).join(' ')}`);
-    execFileSync('tmux', pipeArgs, { stdio: 'inherit' });
+    log(`execFile: tmux pipe-pane -t ${shellQuote(session)} -o ${shellQuote(pipeCmd)}`);
+    tmuxPipePane(session, pipeCmd);
     log('pipe-pane attached successfully');
   } else {
     console.log('Warning: pluk binary not found, skipping pipe-pane attachment');
@@ -350,7 +340,7 @@ export function attach(opts: AttachOptions): void {
     if (!opts.noOpen) {
       console.log(`\nAttaching to tmux session...`);
       try {
-        execFileSync('tmux', ['attach', '-t', session], { stdio: 'inherit' });
+        tmuxAttach(session);
       } catch {
         console.log(`Session detached. To reattach: tmux attach -t ${session}`);
       }

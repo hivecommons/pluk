@@ -3,7 +3,7 @@ import { type PatternSet, getPatterns } from './patterns.js';
 import { type PlukEvent, type PlukEventType } from './event.js';
 import { createInterface } from 'node:readline';
 import { type Readable } from 'node:stream';
-import { execFileSync } from 'node:child_process';
+import { tmuxCapturePane } from './tmux.js';
 
 const DEFAULT_CAPTURE_INTERVAL_MS = 1000;
 
@@ -44,10 +44,7 @@ export function watch(opts: WatchOptions): { stop: () => void } {
 
     const timer = setInterval(() => {
       try {
-        const frame = execFileSync('tmux', ['capture-pane', '-p', '-t', target], {
-          encoding: 'utf-8',
-          stdio: ['ignore', 'pipe', 'ignore'],
-        });
+        const frame = tmuxCapturePane(target);
         const event = classifier.classifyFrame(frame);
         if (event && (!filterSet || filterSet.has(event.type))) {
           opts.onEvent(event);
