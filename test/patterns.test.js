@@ -1,7 +1,7 @@
 // Tests for src/patterns.ts — pattern file parsing and fallback resolution.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, chmodSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -157,5 +157,25 @@ test('inline builtin patterns match the bundled pattern files field-for-field', 
           `Update the inline constant in src/patterns.ts to match.`,
       );
     }
+  }
+});
+
+test('an unreadable bundled patterns file falls back to the inline builtin', t => {
+  if (typeof process.getuid === 'function' && process.getuid() === 0) {
+    t.skip('chmod 000 does not block reads for root');
+    return;
+  }
+  const bundledFile = join(bundledPatternsDir(), 'claude.patterns');
+  const original = statSync(bundledFile).mode & 0o777;
+  chmodSync(bundledFile, 0o000);
+  try {
+    const p = getPatterns('claude');
+    // loadPatterns(bundled) threw EACCES, so the inline BUILTIN_PATTERNS copy
+    // must have been parsed instead — same cli, compiled regexes.
+    assert.equal(p.cli, 'claude');
+    assert.ok(p.idle instanceof RegExp, 'inline claude idle pattern should compile');
+    assert.ok(p.error instanceof RegExp, 'inline claude error pattern should compile');
+  } finally {
+    chmodSync(bundledFile, original);
   }
 });

@@ -262,6 +262,18 @@ test('Apple_Terminal window is opened via osascript do script', () => {
   assert.match(stubs.log('osascript'), /tell application "Terminal" to do script/);
 });
 
+test('Apple_Terminal osascript failure falls back to the plain attach hint', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk', 'rationguard'], osascriptOk: false });
+  const { code, stdout } = runAttach(
+    ['agent-tf', `--run-dir=${makeRunDir()}`, '--rationguard'],
+    stubs,
+    { TERM_PROGRAM: 'Apple_Terminal' },
+  );
+  assert.equal(code, 0);
+  assert.ok(!stdout.includes('Opened Terminal window'), stdout);
+  assert.match(stdout, /To interact with the agent: tmux attach -t agent-tf/);
+});
+
 test('osascript failure falls back to the plain attach hint', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk', 'rationguard'], osascriptOk: false });
   const { code, stdout } = runAttach(
