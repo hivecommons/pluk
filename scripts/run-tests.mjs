@@ -8,30 +8,45 @@
 // coverage-gated without any workflow change.
 import { readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
-const major = Number(process.versions.node.split('.')[0]);
+export const COVERAGE_FLAGS = [
+  '--experimental-test-coverage',
+  '--test-coverage-lines=95',
+  '--test-coverage-branches=85',
+  '--test-coverage-functions=90',
+];
 
-const files = readdirSync('test')
-  .filter((f) => f.endsWith('.test.js'))
-  .sort()
-  .map((f) => `test/${f}`);
-
-if (files.length === 0) {
-  console.error('run-tests: no test/*.test.js files found');
-  process.exit(1);
+// Coverage-threshold flags for the given Node major version; empty on
+// majors that predate --test-coverage-* (added in Node 22).
+export function coverageArgs(major) {
+  return major >= 22 ? [...COVERAGE_FLAGS] : [];
 }
 
-const args = ['--test'];
-if (major >= 22) {
-  args.push(
-    '--experimental-test-coverage',
-    '--test-coverage-lines=95',
-    '--test-coverage-branches=85',
-    '--test-coverage-functions=90',
-  );
+export function listTestFiles(dir = 'test') {
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.test.js'))
+    .sort()
+    .map((f) => `${dir}/${f}`);
 }
 
-const result = spawnSync(process.execPath, [...args, ...files], {
-  stdio: 'inherit',
-});
-process.exit(result.status ?? 1);
+export function buildArgv(major, files) {
+  return ['--test', ...coverageArgs(major), ...files];
+}
+
+function main() {
+  const major = Number(process.versions.node.split('.')[0]);
+  const files = listTestFiles();
+  if (files.length === 0) {
+    console.error('run-tests: no test/*.test.js files found');
+    process.exit(1);
+  }
+  const result = spawnSync(process.execPath, buildArgv(major, files), {
+    stdio: 'inherit',
+  });
+  process.exit(result.status ?? 1);
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+  main();
+}
