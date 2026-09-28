@@ -134,3 +134,29 @@ test('capture mode returns a stop handle and never throws without tmux', async (
   // No pane exists, so polling must stay silent rather than crash.
   assert.deepEqual(events, []);
 });
+
+test('an onEvent callback that throws does not kill the line loop', async () => {
+  const input = new PassThrough();
+  const seen = [];
+  let calls = 0;
+  const handle = watch({
+    session: 'wthrow',
+    cli: 'claude',
+    input,
+    includeRaw: true,
+    onEvent: e => {
+      calls++;
+      if (calls === 1) throw new Error('consumer exploded');
+      seen.push(e);
+    },
+  });
+  input.write('plain chatter that only raw_output sees\n');
+  await settle();
+  // The throw above must be swallowed; the next line must still be delivered.
+  input.write('Error: second line still classified\n');
+  await settle();
+  handle.stop();
+
+  assert.ok(calls >= 2, `onEvent should keep being called after a throw (calls=${calls})`);
+  assert.ok(seen.some(e => e.type === 'error'), 'later classified event must still arrive');
+});
