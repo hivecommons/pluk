@@ -1,6 +1,7 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { ensurePrivateDirectory, ensurePrivateLogFile, resolveRunDir, validateSessionName } from './run-dir.js';
+import { ANSI_DIM, ANSI_RESET } from './ansi.js';
 
 // Re-exported for existing consumers; the validator lives with the other
 // path-safety helpers in run-dir.ts.
@@ -359,6 +360,3 @@ export function attach(opts: AttachOptions): void {
     }
   }
 }
-
-const ANSI_DIM = '\x1b[2m';
-const ANSI_RESET = '\x1b[0m';
