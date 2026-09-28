@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import {
   buildCliCommand,
   buildPipePaneCommand,
+  rationguardWatcherPattern,
   shellQuote,
   splitShellWords,
   validateSessionName,
@@ -114,4 +115,19 @@ test('transcripts are created or repaired to mode 0600', () => {
   chmodSync(file, 0o644);
   ensurePrivateLogFile(file);
   assert.equal(lstatSync(file).mode & 0o777, 0o600);
+});
+
+test('rationguardWatcherPattern requires a word boundary after the session name', () => {
+  const re = new RegExp(rationguardWatcherPattern('agent'));
+  assert.ok(re.test('node rationguard watch agent --run-dir=/run/pluk'));
+  assert.ok(re.test('rationguard watch agent'));
+  // Must NOT match a different session that merely starts with ours.
+  assert.ok(!re.test('node rationguard watch agent-2 --run-dir=/run/pluk'));
+  assert.ok(!re.test('rationguard watch agentx'));
+});
+
+test('rationguardWatcherPattern escapes regex dots in session names', () => {
+  const re = new RegExp(rationguardWatcherPattern('a.b'));
+  assert.ok(re.test('rationguard watch a.b --cli=claude'));
+  assert.ok(!re.test('rationguard watch aXb --cli=claude'));
 });

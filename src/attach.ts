@@ -29,6 +29,21 @@ export function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
+/**
+ * Build the pgrep -f ERE that matches ONLY this session's rationguard
+ * watcher. pgrep -f does an unanchored regex substring match, so a bare
+ * `rationguard watch <session>` prefix-matches every session whose name
+ * starts with ours (attaching "agent" would kill — and silently disable —
+ * the rationguard watcher of "agent-2"). Dots in session names are regex
+ * wildcards with the same overmatch effect. Escape them and require a
+ * word boundary (a space — pgrep renders cmdline arg separators as
+ * spaces — or end-of-cmdline) after the session name.
+ */
+export function rationguardWatcherPattern(session: string): string {
+  const escaped = session.replace(/\./g, '\\.');
+  return `rationguard watch ${escaped}( |$)`;
+}
+
 function appleScriptString(value: string): string {
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
@@ -295,7 +310,7 @@ export function attach(opts: AttachOptions): void {
     }
 
     try {
-      const existing = execFileSync('pgrep', ['-f', `rationguard watch ${session}`], {
+      const existing = execFileSync('pgrep', ['-f', rationguardWatcherPattern(session)], {
         encoding: 'utf-8',
         stdio: ['ignore', 'pipe', 'ignore'],
       }).trim();

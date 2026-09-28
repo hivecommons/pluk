@@ -33,3 +33,29 @@ test('parseEvent returns null on malformed JSON', () => {
   assert.equal(parseEvent('{"truncated":'), null);
   assert.equal(parseEvent(''), null);
 });
+
+test('parseEvent rejects valid JSON that is not an event object', () => {
+  assert.equal(parseEvent('123'), null);
+  assert.equal(parseEvent('"a string"'), null);
+  assert.equal(parseEvent('null'), null);
+  assert.equal(parseEvent('[1,2,3]'), null);
+});
+
+test('parseEvent rejects objects missing type, ts, or data', () => {
+  assert.equal(parseEvent('{"type":"error"}'), null);
+  assert.equal(parseEvent('{"ts":"2026-01-01T00:00:00.000Z","data":{}}'), null);
+  assert.equal(parseEvent('{"type":"error","ts":"2026-01-01T00:00:00.000Z"}'), null);
+  assert.equal(parseEvent('{"type":"error","ts":"2026-01-01T00:00:00.000Z","data":null}'), null);
+  assert.equal(parseEvent('{"type":"error","ts":"2026-01-01T00:00:00.000Z","data":[1]}'), null);
+});
+
+test('parseEvent rejects non-string data values', () => {
+  assert.equal(parseEvent('{"type":"error","ts":"2026-01-01T00:00:00.000Z","data":{"n":5}}'), null);
+});
+
+test('parseEvent accepts a minimal well-formed event', () => {
+  const e = parseEvent('{"type":"error","ts":"2026-01-01T00:00:00.000Z","data":{"message":"boom"}}');
+  assert.ok(e);
+  assert.equal(e.type, 'error');
+  assert.equal(e.data['message'], 'boom');
+});
