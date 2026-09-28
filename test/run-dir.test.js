@@ -153,3 +153,44 @@ test('ensurePrivateLogFile refuses a directory at the log path', () => {
     rmSync(base, { recursive: true, force: true });
   }
 });
+
+// The ownership checks compare lstat's uid against process.getuid() at call
+// time, so faking getuid() makes the real (self-owned) path look foreign —
+// no root or second user needed to pin the refusal branches.
+function withFakeUid(fn) {
+  const original = process.getuid;
+  if (typeof original !== 'function') return; // platform without uids
+  process.getuid = () => original.call(process) + 1;
+  try {
+    fn();
+  } finally {
+    process.getuid = original;
+  }
+}
+
+test('ensurePrivateDirectory refuses a directory owned by another user', () => {
+  const base = tempBase();
+  try {
+    const dir = join(base, 'foreign');
+    mkdirSync(dir, { mode: 0o700 });
+    withFakeUid(() => {
+      assert.throws(() => ensurePrivateDirectory(dir), /not owned by current user/);
+    });
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test('ensurePrivateLogFile refuses a log file owned by another user', () => {
+  const base = tempBase();
+  try {
+    const file = join(base, 'foreign.jsonl');
+    writeFileSync(file, '');
+    chmodSync(file, 0o600);
+    withFakeUid(() => {
+      assert.throws(() => ensurePrivateLogFile(file), /not owned by current user/);
+    });
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
