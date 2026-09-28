@@ -11,13 +11,7 @@ import { discoverSessions } from './sessions.js';
 import { resolveRunDir } from './run-dir.js';
 import { attach } from './attach.js';
 import { send } from './send.js';
-
-const ANSI_RED = '\x1b[31m';
-const ANSI_GREEN = '\x1b[32m';
-const ANSI_CYAN = '\x1b[36m';
-const ANSI_DIM = '\x1b[2m';
-const ANSI_BOLD = '\x1b[1m';
-const ANSI_RESET = '\x1b[0m';
+import { ANSI_RED, ANSI_GREEN, ANSI_CYAN, ANSI_DIM, ANSI_BOLD, ANSI_RESET } from './ansi.js';
 
 /** Version from the package's own package.json (adjacent to dist/), so it never drifts. */
 function packageVersion(): string {

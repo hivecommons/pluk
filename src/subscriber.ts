@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { type PlukEvent, type PlukEventType, parseEvent } from './event.js';
 import { resolveRunDir, validateSessionName } from './run-dir.js';
+import { ANSI_DIM, ANSI_RESET } from './ansi.js';
 
 const POLL_INTERVAL_MS = 200;
 const FILE_WAIT_TIMEOUT_MS = 60_000;
@@ -15,9 +16,6 @@ export interface SubscriberOptions {
   fromBeginning?: boolean;
   verbose?: boolean;
 }
-
-const ANSI_DIM = '\x1b[2m';
-const ANSI_RESET = '\x1b[0m';
 
 export class Subscriber extends EventEmitter {
   private session: string;
