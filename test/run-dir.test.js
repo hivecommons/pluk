@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync, lstatSync, chmodSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync, readFileSync, lstatSync, chmodSync, openSync, writeSync, closeSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -8,6 +8,11 @@ import {
   resolveRunDir,
   ensurePrivateDirectory,
   ensurePrivateLogFile,
+  rotateLogFileIfNeeded,
+  logMaxBytes,
+  logKeepLines,
+  DEFAULT_LOG_MAX_BYTES,
+  DEFAULT_LOG_KEEP_LINES,
 } from '../dist/run-dir.js';
 
 function withEnv(overrides, fn) {
@@ -190,6 +195,85 @@ test('ensurePrivateLogFile refuses a log file owned by another user', () => {
     withFakeUid(() => {
       assert.throws(() => ensurePrivateLogFile(file), /not owned by current user/);
     });
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test('logMaxBytes/logKeepLines fall back to the documented defaults', () => {
+  withEnv({ PLUK_LOG_MAX_BYTES: undefined, PLUK_LOG_KEEP_LINES: undefined }, () => {
+    assert.strictEqual(logMaxBytes(), DEFAULT_LOG_MAX_BYTES);
+    assert.strictEqual(logKeepLines(), DEFAULT_LOG_KEEP_LINES);
+  });
+});
+
+test('logMaxBytes/logKeepLines honor positive env overrides and ignore garbage', () => {
+  withEnv({ PLUK_LOG_MAX_BYTES: '2048', PLUK_LOG_KEEP_LINES: '10' }, () => {
+    assert.strictEqual(logMaxBytes(), 2048);
+    assert.strictEqual(logKeepLines(), 10);
+  });
+  withEnv({ PLUK_LOG_MAX_BYTES: 'not-a-number', PLUK_LOG_KEEP_LINES: '-5' }, () => {
+    assert.strictEqual(logMaxBytes(), DEFAULT_LOG_MAX_BYTES);
+    assert.strictEqual(logKeepLines(), DEFAULT_LOG_KEEP_LINES);
+  });
+});
+
+test('rotateLogFileIfNeeded leaves a log under the byte threshold untouched', () => {
+  const base = tempBase();
+  try {
+    const file = join(base, 'small.jsonl');
+    const content = '{"ts":"1"}\n{"ts":"2"}\n';
+    writeFileSync(file, content);
+    const rotated = rotateLogFileIfNeeded(file, { maxBytes: 1024, keepLines: 5 });
+    assert.strictEqual(rotated, false);
+    assert.strictEqual(readFileSync(file, 'utf-8'), content);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test('rotateLogFileIfNeeded trims an oversized log to the last N lines', () => {
+  const base = tempBase();
+  try {
+    const file = join(base, 'big.jsonl');
+    const lines = Array.from({ length: 100 }, (_, i) => `{"ts":"${i}"}`);
+    writeFileSync(file, lines.join('\n') + '\n');
+
+    const rotated = rotateLogFileIfNeeded(file, { maxBytes: 10, keepLines: 10 });
+    assert.strictEqual(rotated, true);
+
+    const kept = readFileSync(file, 'utf-8').split('\n').filter(l => l.trim());
+    assert.deepEqual(kept, lines.slice(-10));
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test('rotateLogFileIfNeeded is a no-op for a missing file', () => {
+  const base = tempBase();
+  try {
+    const file = join(base, 'missing.jsonl');
+    assert.strictEqual(rotateLogFileIfNeeded(file, { maxBytes: 1 }), false);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test('rotateLogFileIfNeeded keeps appends intact afterward (O_APPEND safety)', () => {
+  const base = tempBase();
+  try {
+    const file = join(base, 'append-after-rotate.jsonl');
+    const lines = Array.from({ length: 50 }, (_, i) => `{"ts":"${i}"}`);
+    writeFileSync(file, lines.join('\n') + '\n');
+
+    assert.strictEqual(rotateLogFileIfNeeded(file, { maxBytes: 10, keepLines: 5 }), true);
+
+    const fd = openSync(file, 'a');
+    writeSync(fd, '{"ts":"new"}\n');
+    closeSync(fd);
+
+    const kept = readFileSync(file, 'utf-8').split('\n').filter(l => l.trim());
+    assert.deepEqual(kept, [...lines.slice(-5), '{"ts":"new"}']);
   } finally {
     rmSync(base, { recursive: true, force: true });
   }
