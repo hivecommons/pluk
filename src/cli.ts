@@ -8,7 +8,7 @@ import { watch } from './watch.js';
 import { type PlukEventType } from './event.js';
 import { listAvailableCLIs, bundledPatternsDir, getPatterns } from './patterns.js';
 import { discoverSessions } from './sessions.js';
-import { resolveRunDir } from './run-dir.js';
+import { resolveRunDir, rotateLogFileIfNeeded, validateSessionName } from './run-dir.js';
 import { attach } from './attach.js';
 import { send } from './send.js';
 import { ANSI_RED, ANSI_GREEN, ANSI_CYAN, ANSI_DIM, ANSI_BOLD, ANSI_RESET } from './ansi.js';
@@ -23,6 +23,9 @@ function packageVersion(): string {
     return 'unknown';
   }
 }
+
+/** How often a running `pluk watch` checks its log file for rotation. */
+const LOG_ROTATE_CHECK_INTERVAL_MS = 30_000;
 
 function usage(): void {
   console.log(`${ANSI_BOLD}pluk${ANSI_RESET} — structured events from AI agent terminal output
@@ -167,6 +170,29 @@ function cmdWatch(args: string[]): void {
       }
     },
   });
+
+  // `pluk watch` is the one process alive for the whole tmux pipe-pane
+  // session; the JSONL log itself is appended by the shell's `>>`
+  // redirection, so this is the only place that can bound its growth for a
+  // long-running session. Guard the session name the same way `attach`
+  // does before deriving a log path from it.
+  try {
+    validateSessionName(session);
+    const logFile = join(resolveRunDir(flags['run-dir']), 'logs', `${session}.jsonl`);
+    const rotateInterval = setInterval(() => {
+      try {
+        rotateLogFileIfNeeded(logFile);
+      } catch {
+        // Never let rotation crash pipe-pane
+      }
+    }, LOG_ROTATE_CHECK_INTERVAL_MS);
+    rotateInterval.unref();
+
+    process.on('exit', () => clearInterval(rotateInterval));
+  } catch {
+    // Unsafe/placeholder session name (e.g. the default "stdin") — skip
+    // rotation rather than derive a log path from it.
+  }
 
   process.on('SIGINT', () => {
     watcher.stop();
