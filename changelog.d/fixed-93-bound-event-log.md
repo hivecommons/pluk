@@ -1,0 +1,1 @@
+- Bound local session event-log growth for long-running sessions: `pluk watch` now periodically rotates its JSONL log once it exceeds a size threshold (default 10MiB via `PLUK_LOG_MAX_BYTES`), trimming it down to the last N lines (default 5000 via `PLUK_LOG_KEEP_LINES`).
