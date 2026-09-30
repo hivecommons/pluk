@@ -4,6 +4,7 @@ import { type PlukEvent, type PlukEventType } from './event.js';
 import { createInterface } from 'node:readline';
 import { type Readable } from 'node:stream';
 import { tmuxCapturePane } from './tmux.js';
+import { type WatchDiagnostics, createWatchDiagnostics } from './diagnostics.js';
 
 const DEFAULT_CAPTURE_INTERVAL_MS = 1000;
 
@@ -28,10 +29,17 @@ export interface WatchOptions {
   onEvent: (event: PlukEvent) => void;
 }
 
-export function watch(opts: WatchOptions): { stop: () => void } {
+export interface WatchHandle {
+  stop: () => void;
+  /** Snapshot of bounded health counters for this watcher (opt-in diagnostics). */
+  diagnostics: () => WatchDiagnostics;
+}
+
+export function watch(opts: WatchOptions): WatchHandle {
   const cli = opts.cli ?? 'claude';
   const patterns: PatternSet = getPatterns(cli, opts.patternsDir);
   const filterSet = opts.filter ? new Set(opts.filter) : null;
+  const diagnostics = createWatchDiagnostics();
 
   if (opts.mode === 'capture') {
     const classifier = new Classifier({
@@ -45,12 +53,15 @@ export function watch(opts: WatchOptions): { stop: () => void } {
     const timer = setInterval(() => {
       try {
         const frame = tmuxCapturePane(target);
+        diagnostics.capturePolls++;
         const event = classifier.classifyFrame(frame);
         if (event && (!filterSet || filterSet.has(event.type))) {
+          diagnostics.eventsEmitted++;
           opts.onEvent(event);
         }
       } catch {
         // Pane may be gone or tmux unavailable — keep polling quietly
+        diagnostics.captureFailures++;
       }
     }, intervalMs);
 
@@ -58,6 +69,7 @@ export function watch(opts: WatchOptions): { stop: () => void } {
       stop() {
         clearInterval(timer);
       },
+      diagnostics: () => ({ ...diagnostics }),
     };
   }
 
@@ -80,6 +92,7 @@ export function watch(opts: WatchOptions): { stop: () => void } {
       const classified = classifier.classify(clean);
       if (classified) {
         if (!filterSet || filterSet.has(classified.type)) {
+          diagnostics.eventsEmitted++;
           opts.onEvent(classified);
         }
       }
@@ -90,22 +103,28 @@ export function watch(opts: WatchOptions): { stop: () => void } {
           opts.onEvent(rawEvent);
         }
       }
+
+      diagnostics.linesProcessed++;
     } catch {
       // Never crash on malformed input — pipe-pane dies if we exit
+      diagnostics.lineErrors++;
     }
   });
 
   rl.on('error', () => {
     // Silently handle readline errors to keep pipe-pane alive
+    diagnostics.streamErrors++;
   });
 
   input.on('error', () => {
     // Silently handle input stream errors
+    diagnostics.streamErrors++;
   });
 
   return {
     stop() {
       rl.close();
     },
+    diagnostics: () => ({ ...diagnostics }),
   };
 }

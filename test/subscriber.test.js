@@ -126,6 +126,29 @@ test('malformed and blank lines are skipped without stopping the tail', async ()
   }
 });
 
+test('diagnostics() counts malformed skips and emitted events without exposing raw lines', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 's4b.jsonl');
+  writeFileSync(log, 'not json\n\n' + eventLine('error') + '{"broken":\n' + eventLine('rate_limit'));
+
+  const sub = new Subscriber({ session: 's4b', runDir: dir, fromBeginning: true });
+  const events = [];
+  sub.on('event', e => events.push(e));
+  const done = sub.start();
+
+  try {
+    await waitFor(() => events.length >= 2);
+    const diag = sub.diagnostics();
+    assert.equal(diag.eventsEmitted, 2);
+    assert.equal(diag.malformedSkipped, 2);
+    assert.deepEqual(Object.keys(diag).sort(), ['eventsEmitted', 'malformedSkipped']);
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('stop() before the log file appears aborts the wait loop', async () => {
   const dir = makeRunDir();
   const sub = new Subscriber({ session: 'never-appears', runDir: dir });

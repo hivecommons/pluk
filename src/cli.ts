@@ -12,6 +12,7 @@ import { resolveRunDir, rotateLogFileIfNeeded, validateSessionName } from './run
 import { attach } from './attach.js';
 import { send } from './send.js';
 import { ANSI_RED, ANSI_GREEN, ANSI_CYAN, ANSI_DIM, ANSI_BOLD, ANSI_RESET } from './ansi.js';
+import { startDiagnosticsReporter } from './diagnostics.js';
 
 /** Version from the package's own package.json (adjacent to dist/), so it never drifts. */
 function packageVersion(): string {
@@ -27,14 +28,25 @@ function packageVersion(): string {
 /** How often a running `pluk watch` checks its log file for rotation. */
 const LOG_ROTATE_CHECK_INTERVAL_MS = 30_000;
 
+/** Default period for `--diagnostics` health summaries written to stderr. */
+const DEFAULT_DIAGNOSTICS_INTERVAL_MS = 60_000;
+
+/** Parse a `--diagnostics` / `--diagnostics=<ms>` flag into a poll interval, or undefined if absent. */
+function diagnosticsIntervalMs(flag: string | undefined): number | undefined {
+  if (flag === undefined) return undefined;
+  if (flag === 'true') return DEFAULT_DIAGNOSTICS_INTERVAL_MS;
+  const ms = Number(flag);
+  return Number.isFinite(ms) && ms > 0 ? ms : DEFAULT_DIAGNOSTICS_INTERVAL_MS;
+}
+
 function usage(): void {
   console.log(`${ANSI_BOLD}pluk${ANSI_RESET} — structured events from AI agent terminal output
 
 ${ANSI_CYAN}Usage:${ANSI_RESET}
   pluk attach <session> [--cli=claude] [--rationguard] [--rebuttal=send] [--dangerous] [--verbose]
   pluk sessions [--run-dir=<path>] [--json]
-  pluk subscribe <session> [--filter=type1,type2] [--from-beginning] [--verbose]
-  pluk watch <session> [--cli=claude] [--filter=type1,type2] [--include-raw] [--capture[=ms]]
+  pluk subscribe <session> [--filter=type1,type2] [--from-beginning] [--verbose] [--diagnostics[=ms]]
+  pluk watch <session> [--cli=claude] [--filter=type1,type2] [--include-raw] [--capture[=ms]] [--diagnostics[=ms]]
   pluk send <session> --text="<text>" [--enter] [--literal]
   pluk patterns [--cli=claude]
   pluk version
@@ -63,6 +75,9 @@ ${ANSI_CYAN}Examples:${ANSI_RESET}
 
   ${ANSI_DIM}# Subscribe to events from a running pluk publisher${ANSI_RESET}
   pluk subscribe my-agent --filter=rate_limit,error,state_change
+
+  ${ANSI_DIM}# Watch with periodic health diagnostics on stderr (local-only, opt-in)${ANSI_RESET}
+  pluk watch my-agent --cli=claude --diagnostics=30000
 
   ${ANSI_DIM}# Manual: pipe agent output through the classifier${ANSI_RESET}
   tmux pipe-pane -t my-agent -o "pluk watch my-agent --cli=claude >> \\"\\$XDG_RUNTIME_DIR/pluk/logs/my-agent.jsonl\\""
@@ -116,6 +131,11 @@ function cmdSubscribe(args: string[]): void {
     verbose: flags['verbose'] === 'true',
   });
 
+  const diagIntervalMs = diagnosticsIntervalMs(flags['diagnostics']);
+  const diagReporter = diagIntervalMs
+    ? startDiagnosticsReporter('subscribe', () => sub.diagnostics(), diagIntervalMs)
+    : undefined;
+
   sub.on('event', event => {
     console.log(JSON.stringify(event));
   });
@@ -126,6 +146,7 @@ function cmdSubscribe(args: string[]): void {
   });
 
   process.on('SIGINT', () => {
+    diagReporter?.stop();
     sub.stop();
     process.exit(0);
   });
@@ -194,7 +215,13 @@ function cmdWatch(args: string[]): void {
     // rotation rather than derive a log path from it.
   }
 
+  const diagIntervalMs = diagnosticsIntervalMs(flags['diagnostics']);
+  const diagReporter = diagIntervalMs
+    ? startDiagnosticsReporter('watch', watcher.diagnostics, diagIntervalMs)
+    : undefined;
+
   process.on('SIGINT', () => {
+    diagReporter?.stop();
     watcher.stop();
     process.exit(0);
   });

@@ -135,6 +135,36 @@ test('capture mode returns a stop handle and never throws without tmux', async (
   assert.deepEqual(events, []);
 });
 
+test('capture mode diagnostics count poll failures when tmux/pane is unavailable', async () => {
+  const handle = watch({
+    session: 'no-such-tmux-session',
+    cli: 'claude',
+    mode: 'capture',
+    captureIntervalMs: 20,
+    onEvent: () => {},
+  });
+  await settle(80);
+  handle.stop();
+
+  const diag = handle.diagnostics();
+  assert.ok(diag.captureFailures >= 1, 'expected at least one captureFailures increment');
+  assert.equal(diag.capturePolls, 0);
+  assert.equal(diag.eventsEmitted, 0);
+});
+
+test('stream mode diagnostics count processed lines and emitted events', async () => {
+  const { input, handle } = collect();
+  input.write('Error: something exploded\n');
+  input.write('just chatter\n');
+  await settle();
+  handle.stop();
+
+  const diag = handle.diagnostics();
+  assert.equal(diag.linesProcessed, 2);
+  assert.equal(diag.eventsEmitted, 1);
+  assert.equal(diag.lineErrors, 0);
+});
+
 test('an onEvent callback that throws does not kill the line loop', async () => {
   const input = new PassThrough();
   const seen = [];

@@ -4,6 +4,7 @@ import { EventEmitter } from 'node:events';
 import { type PlukEvent, type PlukEventType, parseEvent } from './event.js';
 import { resolveRunDir, validateSessionName } from './run-dir.js';
 import { ANSI_DIM, ANSI_RESET } from './ansi.js';
+import { type SubscriberDiagnostics, createSubscriberDiagnostics } from './diagnostics.js';
 
 const POLL_INTERVAL_MS = 200;
 const FILE_WAIT_TIMEOUT_MS = 60_000;
@@ -24,6 +25,7 @@ export class Subscriber extends EventEmitter {
   private fromBeginning: boolean;
   private aborted = false;
   private verbose: boolean;
+  private readonly _diagnostics: SubscriberDiagnostics = createSubscriberDiagnostics();
 
   constructor(opts: SubscriberOptions) {
     super();
@@ -45,6 +47,11 @@ export class Subscriber extends EventEmitter {
 
   get logFile(): string {
     return join(this.runDir, 'logs', `${this.session}.jsonl`);
+  }
+
+  /** Snapshot of bounded health counters for this subscriber (opt-in diagnostics). */
+  diagnostics(): SubscriberDiagnostics {
+    return { ...this._diagnostics };
   }
 
   async start(): Promise<void> {
@@ -97,9 +104,13 @@ export class Subscriber extends EventEmitter {
         for (const line of lines) {
           if (!line.trim()) continue;
           const event = parseEvent(line);
-          if (!event) continue;
+          if (!event) {
+            this._diagnostics.malformedSkipped++;
+            continue;
+          }
           if (this.filterSet && !this.filterSet.has(event.type)) continue;
           eventCount++;
+          this._diagnostics.eventsEmitted++;
           if (eventCount <= 3 || eventCount % 100 === 0) {
             this.log(`event #${eventCount}: ${event.type}${event.data['to'] ? ` → ${event.data['to']}` : ''}`);
           }

@@ -88,6 +88,21 @@ tmux attach -t my-agent
 | `pluk send <session> --text="..." --enter` | Send text to a tmux session |
 | `pluk patterns --cli=claude` | Show loaded patterns for a CLI |
 
+### Health Diagnostics
+
+`pluk watch` and `pluk subscribe` accept an opt-in `--diagnostics[=ms]` flag
+(default interval: 60000ms) that periodically writes a bounded JSON health
+summary to stderr — capture/poll failures, malformed or skipped events, and
+events processed. This is local-only: diagnostics are written to stderr (or
+returned via the programmatic `diagnostics()` API) and are never sent
+off-box, and carry no session names, raw terminal output, or other
+unbounded/user-provided values.
+
+```sh
+pluk watch my-agent --cli=claude --diagnostics=30000
+pluk subscribe my-agent --diagnostics
+```
+
 ### Attach Flags
 
 | Flag | What it does |
@@ -145,6 +160,10 @@ const watcher = watch({
     }
   },
 });
+
+// Bounded, local-only health counters (opt-in)
+console.log(watcher.diagnostics());
+// → { eventsEmitted, capturePolls, captureFailures, linesProcessed, lineErrors, streamErrors }
 ```
 
 ## Event Types
