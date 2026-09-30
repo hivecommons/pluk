@@ -1,0 +1,1 @@
+- Fixed `publish.yml` so the test suite runs on the tagged ref before `npm publish`, closing the gap where a tag push could publish an untested package.
