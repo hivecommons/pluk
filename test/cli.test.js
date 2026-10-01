@@ -237,7 +237,10 @@ test('attach --no-open creates the session, starts the CLI, and wires pipe-pane'
   assert.match(calls, /^has-session -t agent-x$/m);
   assert.match(calls, /^new-session -d -s agent-x -c /m);
   assert.match(calls, /^send-keys -t agent-x 'claude' Enter$/m);
-  assert.match(calls, /^pipe-pane -t agent-x -o PLUK_RUN_DIR=/m);
+  assert.match(calls, /^pipe-pane -t agent-x PLUK_RUN_DIR=/m);
+  // `-o` makes pipe-pane a toggle that closes an existing pipe without
+  // opening a new one; it must never be passed.
+  assert.ok(!/^pipe-pane .* -o /m.test(calls), `pipe-pane must not toggle with -o: ${calls}`);
 });
 
 test('attach --dangerous appends the per-CLI danger flag to the start command', () => {

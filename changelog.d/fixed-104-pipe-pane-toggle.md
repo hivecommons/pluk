@@ -1,0 +1,1 @@
+- `pluk attach` on a session that already has pluk attached no longer turns event logging off: `tmux pipe-pane` is now invoked without `-o` (a toggle that closes an existing pipe without opening a new one), so a repeat attach replaces the watcher instead of silently stopping it.
