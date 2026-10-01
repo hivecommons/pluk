@@ -19,7 +19,9 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org/
           cache: npm
-      - run: npm ci
+      # Dependency lifecycle scripts must not run in the job that holds the
+      # OIDC token used for npm provenance.
+      - run: npm ci --ignore-scripts
       - run: npm test
       - run: npm publish --access public --provenance
         env:
