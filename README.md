@@ -101,6 +101,23 @@ tmux attach -t my-agent
 | `--no-open` | Don't open a terminal window |
 | `--verbose` | Show debug output |
 
+### Health diagnostics (`watch`, `subscribe`)
+
+`pluk watch` and `pluk subscribe` deliberately swallow capture-pane failures,
+input errors and malformed log lines so the pipe-pane process never dies. To
+tell a healthy quiet session from one that is repeatedly failing, add
+`--diagnostics[=secs]` (default every 60 s). It writes one JSON line per period,
+plus a final one on exit, to **stderr** — stdout stays pure event JSONL:
+
+```json
+{"pluk_diagnostics":1,"command":"watch","uptime_s":120,"final":false,"linesSeen":842,"framesPolled":0,"captureFailures":0,"classifyErrors":0,"inputErrors":0,"eventsEmitted":31,"eventsFiltered":4}
+```
+
+Only fixed counter categories are reported — never the session name, raw
+terminal output or any other user-provided value — and nothing is sent off-box.
+The same counters are available programmatically via `watch(...).stats()` and
+`Subscriber#stats()`.
+
 ## Programmatic API
 
 ```typescript
