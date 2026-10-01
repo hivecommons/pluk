@@ -167,6 +167,24 @@ test('subscribe() helper rejects traversal session names before starting', () =>
   assert.throws(() => subscribe('../../evil', () => {}), /Unsafe session name/);
 });
 
+test('subscribe() helper surfaces a start() rejection as an error event', async () => {
+  const dir = makeRunDir();
+  // A directory at the log path passes the stat() wait but makes the first
+  // read() reject with EISDIR, so start() itself rejects — the helper must
+  // turn that into an 'error' event rather than an unhandled rejection.
+  mkdirSync(join(dir, 'logs', 's6.jsonl'));
+
+  const sub = subscribe('s6', () => {}, { runDir: dir, fromBeginning: true });
+  try {
+    const err = await new Promise(resolve => sub.once('error', resolve));
+    assert.ok(err instanceof Error);
+    assert.equal(err.code, 'EISDIR');
+  } finally {
+    sub.stop();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 // --- rotation resilience -----------------------------------------------------
 // `pluk watch` rotates the log in place (truncate + rewrite of the newest N
 // lines). A tailing Subscriber must keep delivering afterwards, exactly once.
