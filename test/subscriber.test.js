@@ -5,6 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, rmSync } from 'n
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Subscriber, subscribe } from '../dist/subscriber.js';
+import { rotateLogFileIfNeeded } from '../dist/run-dir.js';
 
 function makeRunDir() {
   const dir = mkdtempSync(join(tmpdir(), 'pluk-sub-'));
@@ -164,4 +165,142 @@ test('Subscriber rejects session names that traverse out of the run dir', () => 
 
 test('subscribe() helper rejects traversal session names before starting', () => {
   assert.throws(() => subscribe('../../evil', () => {}), /Unsafe session name/);
+});
+
+// --- rotation resilience -----------------------------------------------------
+// `pluk watch` rotates the log in place (truncate + rewrite of the newest N
+// lines). A tailing Subscriber must keep delivering afterwards, exactly once.
+
+function seqLine(seq, type = 'raw_output') {
+  return JSON.stringify({
+    v: 1, ts: new Date().toISOString(), seq, pid: 1,
+    session: 's', pane: 'p', source: 't', type, data: {},
+  }) + '\n';
+}
+
+async function startTail(dir, session, opts = {}) {
+  const events = [];
+  const sub = new Subscriber({ session, runDir: dir, ...opts });
+  sub.on('event', e => events.push(e));
+  const done = sub.start();
+  return { sub, events, done };
+}
+
+test('rotation: resumes after the last delivered line and never duplicates', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot1.jsonl');
+  writeFileSync(log, '');
+  const { sub, events, done } = await startTail(dir, 'rot1');
+  try {
+    await waitFor(() => sub.listenerCount('event') === 1);
+    await new Promise(r => setTimeout(r, 250));
+    let body = '';
+    for (let i = 0; i < 200; i++) body += seqLine(i);
+    appendFileSync(log, body);
+    await waitFor(() => events.length === 200);
+
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 1000, keepLines: 50 }), true);
+    appendFileSync(log, seqLine(999, 'bypass_permissions'));
+
+    await waitFor(() => events.length >= 201);
+    assert.equal(events.length, 201, 'kept lines must not be replayed');
+    assert.equal(events[200].type, 'bypass_permissions');
+    assert.deepEqual(new Set(events.map(e => e.seq)).size, 201, 'no duplicate events');
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('rotation: lines appended between read and rotation are delivered once', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot2.jsonl');
+  writeFileSync(log, '');
+  const { sub, events, done } = await startTail(dir, 'rot2');
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    let body = '';
+    for (let i = 0; i < 100; i++) body += seqLine(i);
+    appendFileSync(log, body);
+    await waitFor(() => events.length === 100);
+
+    // Rotation keeps the newest 50 lines: 70..99 already seen + 100..119 unseen.
+    let extra = '';
+    for (let i = 100; i < 120; i++) extra += seqLine(i);
+    appendFileSync(log, extra);
+    // Only a synchronous append + rotate (no poll in between) exercises the
+    // marker lookup inside the kept window.
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 100, keepLines: 50 }), true);
+
+    await waitFor(() => events.length >= 120);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 120);
+    assert.deepEqual(events.slice(100).map(e => e.seq), Array.from({ length: 20 }, (_, i) => 100 + i));
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('rotation: when the last seen line was trimmed away, the whole kept tail is replayed', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot3.jsonl');
+  writeFileSync(log, '');
+  const { sub, events, done } = await startTail(dir, 'rot3');
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    let body = '';
+    for (let i = 0; i < 300; i++) body += seqLine(i);
+    appendFileSync(log, body);
+    await waitFor(() => events.length === 300);
+
+    // 100 more lines land and the log is rotated down to the newest 50
+    // before the next poll: the last seen line (seq 299) is gone, so every
+    // kept line (350..399) is unseen and must be replayed.
+    let extra = '';
+    for (let i = 300; i < 400; i++) extra += seqLine(i);
+    appendFileSync(log, extra);
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10, keepLines: 50 }), true);
+
+    await waitFor(() => events.length >= 350);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 350);
+    assert.equal(events[300].seq, 350);
+    assert.equal(events[349].seq, 399);
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('rotation: before any line was seen, the kept tail is delivered and a trailing partial line is held', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot4.jsonl');
+  // Start at EOF of a large file, then rotate without the subscriber ever
+  // having consumed a line (lastLine is empty → no marker → replay all).
+  let body = '';
+  for (let i = 0; i < 100; i++) body += seqLine(i);
+  writeFileSync(log, body);
+  const { sub, events, done } = await startTail(dir, 'rot4');
+  try {
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 0);
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10, keepLines: 5 }), true);
+    // Append a partial line so the resume path must carry it over.
+    const half = seqLine(500, 'error');
+    appendFileSync(log, half.slice(0, 10));
+    await waitFor(() => events.length >= 5);
+    assert.deepEqual(events.map(e => e.seq), [95, 96, 97, 98, 99]);
+    appendFileSync(log, half.slice(10));
+    await waitFor(() => events.length >= 6);
+    assert.equal(events[5].seq, 500);
+    assert.equal(events[5].type, 'error');
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
