@@ -77,6 +77,14 @@ rationguard watch my-agent --rebuttal=send
 tmux attach -t my-agent
 ```
 
+### Environment Variables
+
+| Variable | Default | What it does |
+|----------|---------|---------------|
+| `PLUK_RUN_DIR` | `/tmp/pluk-run` | Directory for session metadata and JSONL event logs |
+| `PLUK_LOG_MAX_BYTES` | `10485760` (10 MiB) | Rotate a session's event log once it exceeds this many bytes |
+| `PLUK_LOG_KEEP_LINES` | `5000` | Trailing lines kept in the log across rotation |
+
 ## CLI Commands
 
 | Command | What it does |
