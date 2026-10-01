@@ -214,6 +214,43 @@ Built-in event-classification pattern files exist for: **Claude Code**, **GitHub
 
 Custom patterns can be loaded from a directory with `--patterns-dir` or `getPatterns(cli, patternsDir)`.
 
+### Pattern File Format
+
+A pattern file is named `<cli>.patterns` (e.g. `codex.patterns`) and placed in
+the directory passed to `--patterns-dir`. Each non-blank, non-comment line is
+`KEY='regex'` — single or double quotes are both accepted, `#` starts a
+comment, and blank lines are ignored. Every value is compiled as a JavaScript
+`RegExp` source string, so use `|` for alternation (as in the bundled files
+below). A key that is omitted, empty, or fails to compile is simply disabled
+(treated as `null`) rather than raising an error.
+
+Recognized keys:
+
+| Key | Meaning |
+|-----|---------|
+| `IDLE_PATTERN` | Terminal is at rest / showing a prompt |
+| `WORKING_PATTERNS` | Agent is actively working (spinner, status hint) |
+| `RATE_LIMIT_PATTERN` | Usage limit / quota exhausted |
+| `LOGIN_PATTERN` | Authentication required |
+| `TRUST_DIALOG_PATTERN` | Folder trust prompt |
+| `BYPASS_PATTERN` | Permission-bypass prompt |
+| `TOOL_START_PATTERN` | A tool call started |
+| `TOOL_END_PATTERN` | A tool call completed |
+| `ERROR_PATTERN` | Error in output |
+| `MODEL_PATTERN` | Model was switched |
+| `SESSION_END_PATTERN` | CLI session ended |
+
+Minimal example (`codex.patterns`):
+
+```
+# codex.patterns — minimal custom pattern file
+IDLE_PATTERN='^\$ $'
+WORKING_PATTERNS='Thinking|Generating'
+ERROR_PATTERN='^\s*Error:|^\s*FATAL'
+```
+
+See `patterns/*.patterns` in this repo for complete, real-world examples.
+
 ## Works With
 
 - **[@hivecommons/rationguard](https://www.npmjs.com/package/@hivecommons/rationguard)** — real-time rationalization detection and rebuttal
