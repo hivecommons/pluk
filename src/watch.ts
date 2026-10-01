@@ -7,6 +7,40 @@ import { tmuxCapturePane } from './tmux.js';
 
 const DEFAULT_CAPTURE_INTERVAL_MS = 1000;
 
+/**
+ * Bounded aggregate health counters for one watcher. Every field is a count
+ * over a fixed category — never a session name, raw terminal output, or any
+ * other user-provided value — so the snapshot is safe to log locally.
+ */
+export interface WatchStats {
+  /** Stream mode: lines received from the input (before ANSI stripping). */
+  linesSeen: number;
+  /** Capture mode: `tmux capture-pane` polls attempted. */
+  framesPolled: number;
+  /** Capture mode: polls that threw (pane gone, tmux unavailable). */
+  captureFailures: number;
+  /** Stream mode: lines whose classification threw and were dropped. */
+  classifyErrors: number;
+  /** Stream mode: readline/input stream 'error' events swallowed. */
+  inputErrors: number;
+  /** Events handed to onEvent (after filtering). */
+  eventsEmitted: number;
+  /** Classified events dropped by the --filter set. */
+  eventsFiltered: number;
+}
+
+export function emptyWatchStats(): WatchStats {
+  return {
+    linesSeen: 0,
+    framesPolled: 0,
+    captureFailures: 0,
+    classifyErrors: 0,
+    inputErrors: 0,
+    eventsEmitted: 0,
+    eventsFiltered: 0,
+  };
+}
+
 export interface WatchOptions {
   session: string;
   cli?: string;
@@ -28,10 +62,26 @@ export interface WatchOptions {
   onEvent: (event: PlukEvent) => void;
 }
 
-export function watch(opts: WatchOptions): { stop: () => void } {
+export interface WatchHandle {
+  stop: () => void;
+  /** Snapshot of the health counters accumulated so far. */
+  stats: () => WatchStats;
+}
+
+export function watch(opts: WatchOptions): WatchHandle {
   const cli = opts.cli ?? 'claude';
   const patterns: PatternSet = getPatterns(cli, opts.patternsDir);
   const filterSet = opts.filter ? new Set(opts.filter) : null;
+  const stats = emptyWatchStats();
+  const snapshot = (): WatchStats => ({ ...stats });
+  const emit = (event: PlukEvent): void => {
+    if (filterSet && !filterSet.has(event.type)) {
+      stats.eventsFiltered++;
+      return;
+    }
+    stats.eventsEmitted++;
+    opts.onEvent(event);
+  };
 
   if (opts.mode === 'capture') {
     const classifier = new Classifier({
@@ -43,14 +93,15 @@ export function watch(opts: WatchOptions): { stop: () => void } {
     const intervalMs = opts.captureIntervalMs ?? DEFAULT_CAPTURE_INTERVAL_MS;
 
     const timer = setInterval(() => {
+      stats.framesPolled++;
       try {
         const frame = tmuxCapturePane(target);
         const event = classifier.classifyFrame(frame);
-        if (event && (!filterSet || filterSet.has(event.type))) {
-          opts.onEvent(event);
-        }
+        if (event) emit(event);
       } catch {
-        // Pane may be gone or tmux unavailable — keep polling quietly
+        // Pane may be gone or tmux unavailable — keep polling quietly, but
+        // count it so --diagnostics can tell a quiet pane from a dead one.
+        stats.captureFailures++;
       }
     }, intervalMs);
 
@@ -58,6 +109,7 @@ export function watch(opts: WatchOptions): { stop: () => void } {
       stop() {
         clearInterval(timer);
       },
+      stats: snapshot,
     };
   }
 
@@ -73,39 +125,35 @@ export function watch(opts: WatchOptions): { stop: () => void } {
   const rl = createInterface({ input, crlfDelay: Infinity });
 
   rl.on('line', (raw: string) => {
+    stats.linesSeen++;
     try {
       const clean = stripANSI(raw);
       if (!clean) return;
 
       const classified = classifier.classify(clean);
-      if (classified) {
-        if (!filterSet || filterSet.has(classified.type)) {
-          opts.onEvent(classified);
-        }
-      }
+      if (classified) emit(classified);
 
-      if (includeRaw) {
-        const rawEvent = classifier.rawOutput(raw);
-        if (!filterSet || filterSet.has('raw_output')) {
-          opts.onEvent(rawEvent);
-        }
-      }
+      if (includeRaw) emit(classifier.rawOutput(raw));
     } catch {
       // Never crash on malformed input — pipe-pane dies if we exit
+      stats.classifyErrors++;
     }
   });
 
   rl.on('error', () => {
     // Silently handle readline errors to keep pipe-pane alive
+    stats.inputErrors++;
   });
 
   input.on('error', () => {
     // Silently handle input stream errors
+    stats.inputErrors++;
   });
 
   return {
     stop() {
       rl.close();
     },
+    stats: snapshot,
   };
 }

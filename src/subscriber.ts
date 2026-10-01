@@ -9,6 +9,21 @@ const POLL_INTERVAL_MS = 200;
 const FILE_WAIT_TIMEOUT_MS = 60_000;
 const FILE_WAIT_POLL_MS = 1_000;
 
+/**
+ * Bounded aggregate health counters for one subscriber: fixed categories
+ * only, no session names or event payloads.
+ */
+export interface SubscriberStats {
+  /** Non-blank lines read from the log file. */
+  linesRead: number;
+  /** Lines that were not a well-formed pluk event and were skipped. */
+  malformedLines: number;
+  /** Well-formed events dropped by the --filter set. */
+  eventsFiltered: number;
+  /** Events emitted to listeners. */
+  eventsEmitted: number;
+}
+
 export interface SubscriberOptions {
   session: string;
   runDir?: string;
@@ -24,6 +39,12 @@ export class Subscriber extends EventEmitter {
   private fromBeginning: boolean;
   private aborted = false;
   private verbose: boolean;
+  private counters: SubscriberStats = { linesRead: 0, malformedLines: 0, eventsFiltered: 0, eventsEmitted: 0 };
+
+  /** Snapshot of the health counters accumulated so far. */
+  stats(): SubscriberStats {
+    return { ...this.counters };
+  }
 
   constructor(opts: SubscriberOptions) {
     super();
@@ -96,10 +117,18 @@ export class Subscriber extends EventEmitter {
 
         for (const line of lines) {
           if (!line.trim()) continue;
+          this.counters.linesRead++;
           const event = parseEvent(line);
-          if (!event) continue;
-          if (this.filterSet && !this.filterSet.has(event.type)) continue;
+          if (!event) {
+            this.counters.malformedLines++;
+            continue;
+          }
+          if (this.filterSet && !this.filterSet.has(event.type)) {
+            this.counters.eventsFiltered++;
+            continue;
+          }
           eventCount++;
+          this.counters.eventsEmitted++;
           if (eventCount <= 3 || eventCount % 100 === 0) {
             this.log(`event #${eventCount}: ${event.type}${event.data['to'] ? ` → ${event.data['to']}` : ''}`);
           }

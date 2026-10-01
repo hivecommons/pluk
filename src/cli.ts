@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Subscriber } from './subscriber.js';
 import { watch } from './watch.js';
+import { startDiagnostics } from './diagnostics.js';
 import { type PlukEventType } from './event.js';
 import { listAvailableCLIs, bundledPatternsDir, getPatterns } from './patterns.js';
 import { discoverSessions } from './sessions.js';
@@ -33,8 +34,8 @@ function usage(): void {
 ${ANSI_CYAN}Usage:${ANSI_RESET}
   pluk attach <session> [--cli=claude] [--rationguard] [--rebuttal=send] [--dangerous] [--verbose]
   pluk sessions [--run-dir=<path>] [--json]
-  pluk subscribe <session> [--filter=type1,type2] [--from-beginning] [--verbose]
-  pluk watch <session> [--cli=claude] [--filter=type1,type2] [--include-raw] [--capture[=ms]]
+  pluk subscribe <session> [--filter=type1,type2] [--from-beginning] [--verbose] [--diagnostics[=secs]]
+  pluk watch <session> [--cli=claude] [--filter=type1,type2] [--include-raw] [--capture[=ms]] [--diagnostics[=secs]]
   pluk send <session> --text="<text>" [--enter] [--literal]
   pluk patterns [--cli=claude]
   pluk version
@@ -120,13 +121,17 @@ function cmdSubscribe(args: string[]): void {
     console.log(JSON.stringify(event));
   });
 
+  const stopDiagnostics = startDiagnostics('subscribe', () => ({ ...sub.stats() }), flags['diagnostics']);
+
   sub.on('error', err => {
     console.error(`${ANSI_RED}Error:${ANSI_RESET} ${(err as Error).message}`);
+    stopDiagnostics();
     process.exit(1);
   });
 
   process.on('SIGINT', () => {
     sub.stop();
+    stopDiagnostics();
     process.exit(0);
   });
 
@@ -194,8 +199,12 @@ function cmdWatch(args: string[]): void {
     // rotation rather than derive a log path from it.
   }
 
+  const stopDiagnostics = startDiagnostics('watch', () => ({ ...watcher.stats() }), flags['diagnostics']);
+  process.on('exit', stopDiagnostics);
+
   process.on('SIGINT', () => {
     watcher.stop();
+    stopDiagnostics();
     process.exit(0);
   });
 }
