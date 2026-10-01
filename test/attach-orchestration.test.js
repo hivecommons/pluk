@@ -130,6 +130,24 @@ test('attach to an existing session skips create/send-keys and warns about --dan
   assert.ok(!tmuxCalls.includes('send-keys'), `unexpected send-keys: ${tmuxCalls}`);
 });
 
+test('re-attaching to an existing session replaces the pipe instead of toggling it off with -o', () => {
+  const stubs = makeStubs({ hasSession: true, which: ['tmux', 'pluk'] });
+  const { code, stdout } = runAttach(
+    ['agent-r', '--cli=claude', `--run-dir=${makeRunDir()}`, '--no-open'],
+    stubs,
+  );
+  assert.equal(code, 0);
+  assert.match(stdout, /Attaching to existing tmux session: agent-r/);
+  assert.match(stdout, /Attaching pluk pipe-pane: claude/);
+  const pipeCall = stubs.log('tmux').split('\n').find(l => l.startsWith('pipe-pane'));
+  assert.ok(pipeCall, 'pipe-pane should run on the existing-session path');
+  assert.match(pipeCall, /^pipe-pane -t agent-r PLUK_RUN_DIR=/);
+  // tmux `pipe-pane -o` only opens a pipe when none exists and closes an
+  // existing one otherwise, so on a second attach it would silently stop
+  // event logging. The pipe command must be passed without -o.
+  assert.ok(!/ -o /.test(pipeCall), `pipe-pane must not use the -o toggle: ${pipeCall}`);
+});
+
 test('attach --dangerous with a CLI that has no auto-flag logs the skip and sends the bare command', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk'] });
   const { code, stdout } = runAttach(

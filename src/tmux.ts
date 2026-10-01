@@ -30,8 +30,18 @@ export function tmuxRunInherited(args: string[]): void {
   execFileSync('tmux', args, { stdio: 'inherit' });
 }
 
+/**
+ * Replaces any pipe already open on the pane with `pipeCmd`.
+ *
+ * Deliberately no `-o`: tmux's `-o` is a toggle ("only open a new pipe if
+ * no previous pipe exists"), and tmux always closes the existing pipe
+ * first. On a pane that `pluk attach` already piped, `-o` would therefore
+ * close the running `pluk watch` and open nothing, silently turning event
+ * logging off on every second attach. Without it the old pipe is closed
+ * and the new one opened, so a repeat attach is idempotent.
+ */
 export function tmuxPipePane(session: string, pipeCmd: string): void {
-  execFileSync('tmux', ['pipe-pane', '-t', session, '-o', pipeCmd], { stdio: 'inherit' });
+  execFileSync('tmux', ['pipe-pane', '-t', session, pipeCmd], { stdio: 'inherit' });
 }
 
 export function tmuxAttach(session: string): void {

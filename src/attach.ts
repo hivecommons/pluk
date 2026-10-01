@@ -290,7 +290,7 @@ export function attach(opts: AttachOptions): void {
     });
     log(`pipe-pane command: ${pipeCmd}`);
     console.log(`Attaching pluk pipe-pane: ${cli}`);
-    log(`execFile: tmux pipe-pane -t ${shellQuote(session)} -o ${shellQuote(pipeCmd)}`);
+    log(`execFile: tmux pipe-pane -t ${shellQuote(session)} ${shellQuote(pipeCmd)}`);
     tmuxPipePane(session, pipeCmd);
     log('pipe-pane attached successfully');
   } else {
