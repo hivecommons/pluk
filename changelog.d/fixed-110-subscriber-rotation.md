@@ -1,1 +1,0 @@
-- `pluk subscribe` (and every `Subscriber` consumer, including the rationguard watcher) no longer stalls permanently after `pluk watch` rotates the session log: a tail whose byte offset is past the shrunken file now re-reads the kept tail and resumes exactly after the last line it already delivered, instead of reading zero bytes forever.
