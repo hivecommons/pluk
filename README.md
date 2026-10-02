@@ -1,8 +1,12 @@
-# @hivecommons/pluk
+<p align="center">
+  <img src="docs/assets/pluk-logo.svg" alt="Pluk" width="120" height="120">
+</p>
 
-Pluk structured events from AI agent terminal output.
+# Pluk
 
-TypeScript port of [hivecommons/pluk](https://github.com/hivecommons/pluk) — classify, subscribe, and react to JSONL event streams from AI coding agents (Claude Code, GitHub Copilot CLI, Gemini CLI, Goose, etc.).
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
+Pluk classifies, subscribes to, and reacts to JSONL event streams from AI coding agent terminals.
 
 ## Install
 
