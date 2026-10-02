@@ -105,12 +105,14 @@ tmux attach -t my-agent
 | Flag | What it does |
 |------|-------------|
 | `--cli=claude` | CLI type: `claude`, `copilot`, `gemini`, `goose`, `codex`, `aider` |
+| `--command=<cmd>` | Override the CLI command/executable to launch (instead of the default resolved from `--cli`); combines with `--cli-args` |
 | `--rationguard` | Start rationguard watcher alongside pluk |
 | `--rebuttal=send` | Auto-send rebuttals when rationguard detects excuses |
 | `--dangerous` | Skip CLI permission prompts (`--dangerously-skip-permissions` for claude, `--full-auto` for codex, `--non-interactive` for goose) |
 | `--dir=/path` | Working directory for the agent |
 | `--cli-args="..."` | Extra arguments to pass to the CLI |
 | `--no-open` | Don't open a terminal window |
+| `--no-raw` | Suppress `raw_output` events from the watcher `attach` starts (on by default for `attach`, unlike plain `pluk watch`, which requires `--include-raw` to emit them) |
 | `--verbose` | Show debug output |
 
 ### Health diagnostics (`watch`, `subscribe`)
