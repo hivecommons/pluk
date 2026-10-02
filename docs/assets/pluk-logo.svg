@@ -1,0 +1,13 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Pluk logo</title>
+  <desc id="desc">A dark terminal card with warm gold event lines being plucked by a teal hook.</desc>
+  <rect x="30" y="52" width="196" height="152" rx="26" fill="#1A1510"/>
+  <path d="M54 82h148" stroke="#E0B04F" stroke-width="12" stroke-linecap="round"/>
+  <path d="M70 116h80" stroke="#FFF4D5" stroke-width="10" stroke-linecap="round"/>
+  <path d="M70 148h58" stroke="#FFF4D5" stroke-width="10" stroke-linecap="round"/>
+  <path d="M70 180h92" stroke="#FFF4D5" stroke-width="10" stroke-linecap="round"/>
+  <path d="M173 112c24 0 36 17 28 35-7 16-27 22-48 14" fill="none" stroke="#1F7A8C" stroke-width="14" stroke-linecap="round"/>
+  <path d="M155 135l-28 18 31 12" fill="none" stroke="#1F7A8C" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="55" cy="82" r="6" fill="#1F7A8C"/>
+</svg>

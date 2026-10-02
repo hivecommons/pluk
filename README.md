@@ -1,4 +1,10 @@
-# @hivecommons/pluk
+<p align="center">
+  <img src="docs/assets/pluk-logo.svg" alt="Pluk" width="120" height="120">
+</p>
+
+# Pluk
+
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 Pluk structured events from AI agent terminal output.
 
