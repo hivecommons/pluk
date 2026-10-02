@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Pluk — red guitar pick">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#E63946"/>
-      <stop offset="1" stop-color="#B5172A"/>
-    </linearGradient>
-  </defs>
-  <!-- plectrum: rounded top, tapering to a soft point at the bottom -->
-  <path d="M128 232 C 86 190, 36 136, 36 86 C 36 54, 70 32, 128 32 C 186 32, 220 54, 220 86 C 220 136, 170 190, 128 232 Z"
-        fill="url(#g)" stroke="#8E0F20" stroke-width="6" stroke-linejoin="round"/>
-  <!-- glossy highlight -->
-  <path d="M70 68 C 86 52, 118 46, 148 50" fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="10" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Pluk — industrial red plectrum">
+  <path d="M68 34H188C208 34 222 49 219 69C211 129 177 181 128 231C79 181 45 129 37 69C34 49 48 34 68 34Z" fill="#8E0F20"/>
+  <path d="M72 43H184C199 43 209 54 207 69C199 122 168 173 128 217C88 173 57 122 49 69C47 54 57 43 72 43Z" fill="#D7263D"/>
+  <path d="M72 43H184C199 43 209 54 207 69C204 88 198 108 190 127C153 116 111 117 66 130C58 111 52 90 49 69C47 54 57 43 72 43Z" fill="#E23A4F" opacity="0.72"/>
+  <path d="M75 96H181" stroke="#8E0F20" stroke-width="7" stroke-linecap="round" opacity="0.42"/>
+  <g fill="#8E0F20" opacity="0.55">
+    <circle cx="128" cy="83" r="3.5"/>
+    <circle cx="111" cy="88" r="3.5"/>
+    <circle cx="145" cy="88" r="3.5"/>
+    <circle cx="101" cy="102" r="3.5"/>
+    <circle cx="128" cy="103" r="3.5"/>
+    <circle cx="155" cy="102" r="3.5"/>
+    <circle cx="128" cy="122" r="3.5"/>
+  </g>
 </svg>
