@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/assets/pluk-logo.svg" alt="Pluk — red guitar pick logo" width="160"></p>
+
 # @hivecommons/pluk
 
 Pluk structured events from AI agent terminal output.

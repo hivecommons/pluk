@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Pluk red guitar pick logo</title>
+  <desc id="desc">A warm red classic guitar-pick silhouette with a subtle darker red edge and soft highlight stroke.</desc>
+  <defs>
+    <linearGradient id="pickFill" x1="58" y1="31" x2="198" y2="234" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E23349"/>
+      <stop offset="0.52" stop-color="#D7263D"/>
+      <stop offset="1" stop-color="#BF2034"/>
+    </linearGradient>
+  </defs>
+  <path
+    d="M73 37
+       C86 26 170 26 183 37
+       C210 61 219 107 205 150
+       C191 194 152 229 128 241
+       C104 229 65 194 51 150
+       C37 107 46 61 73 37Z"
+    fill="url(#pickFill)"
+    stroke="#A61B2B"
+    stroke-width="8"
+    stroke-linejoin="round"/>
+  <path
+    d="M82 50
+       C96 42 159 40 174 50
+       C193 64 202 93 198 120
+       C185 96 165 79 140 70
+       C116 61 96 60 70 70"
+    fill="none"
+    stroke="#F58A99"
+    stroke-width="7"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.58"/>
+</svg>
