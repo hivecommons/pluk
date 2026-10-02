@@ -1,1 +1,0 @@
-- `pluk watch` and `pluk subscribe` accept `--diagnostics[=secs]`, an opt-in, local-only health summary (bounded counters for capture failures, swallowed input errors, malformed/filtered lines and emitted events) written as JSON lines to stderr; the same counters are exposed via `watch(...).stats()` and `Subscriber#stats()` (#102).
