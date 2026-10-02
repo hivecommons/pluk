@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { ensurePrivateDirectory, ensurePrivateLogFile, resolveRunDir, validateSessionName } from './run-dir.js';
 import { ANSI_DIM, ANSI_RESET } from './ansi.js';
 import { tmuxAttach, tmuxHasSession, tmuxNewSession, tmuxPipePane, tmuxRunInherited } from './tmux.js';
+import { plukPackageSpec } from './version.js';
 
 // Re-exported for existing consumers; the validator lives with the other
 // path-safety helpers in run-dir.ts.
@@ -156,9 +157,12 @@ function resolvePlukBin(): string {
   const path = findExecutable(['pluk', 'pluk-classify']);
   if (path) return path;
 
+  // Pin to the running release: the pipe-pane must run the same pluk that
+  // performed the attach, not whatever `latest` the registry serves.
+  const spec = plukPackageSpec();
   try {
-    execFileSync('npx', ['--yes', '@hivecommons/pluk', 'version'], { stdio: 'ignore' });
-    return 'npx --yes @hivecommons/pluk';
+    execFileSync('npx', ['--yes', spec, 'version'], { stdio: 'ignore' });
+    return `npx --yes ${spec}`;
   } catch {
     // not available
   }

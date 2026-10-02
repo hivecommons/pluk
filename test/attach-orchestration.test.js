@@ -27,6 +27,7 @@ import { join } from 'node:path';
 import { splitShellWords } from '../dist/attach.js';
 
 const CLI = join(process.cwd(), 'dist', 'cli.js');
+const pkgVersion = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8')).version;
 const scratch = mkdtempSync(join(tmpdir(), 'pluk-attach-'));
 
 after(() => {
@@ -169,9 +170,13 @@ test('when pluk is not on PATH the npx fallback is probed and used for pipe-pane
   );
   assert.equal(code, 0);
   assert.match(stdout, /Attaching pluk pipe-pane/);
-  assert.match(stubs.log('npx'), /--yes @hivecommons\/pluk version/);
+  // The fallback must be pinned to this package's own version so the
+  // pipe-pane never runs whatever `latest` the registry happens to serve.
+  const spec = `@hivecommons/pluk@${pkgVersion}`;
+  assert.match(stubs.log('npx'), new RegExp(`--yes ${spec.replace(/[.@/]/g, '\\$&')} version`));
+  assert.ok(!stubs.log('npx').includes('--yes @hivecommons/pluk version'), stubs.log('npx'));
   const pipeCall = stubs.log('tmux').split('\n').find(l => l.startsWith('pipe-pane'));
-  assert.ok(pipeCall.includes("'npx' '--yes' '@hivecommons/pluk' watch 'agent-n'"), pipeCall);
+  assert.ok(pipeCall.includes(`'npx' '--yes' '${spec}' watch 'agent-n'`), pipeCall);
   assert.ok(!pipeCall.includes('--include-raw'), `--no-raw ignored: ${pipeCall}`);
 });
 
