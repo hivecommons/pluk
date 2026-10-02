@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
-import { basename, dirname, join } from 'node:path';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { basename, join } from 'node:path';
 import { Subscriber } from './subscriber.js';
 import { watch } from './watch.js';
 import { startDiagnostics } from './diagnostics.js';
@@ -13,17 +11,7 @@ import { resolveRunDir, rotateLogFileIfNeeded, validateSessionName } from './run
 import { attach } from './attach.js';
 import { send } from './send.js';
 import { ANSI_RED, ANSI_GREEN, ANSI_CYAN, ANSI_DIM, ANSI_BOLD, ANSI_RESET } from './ansi.js';
-
-/** Version from the package's own package.json (adjacent to dist/), so it never drifts. */
-function packageVersion(): string {
-  try {
-    const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version?: string };
-    return pkg.version ?? 'unknown';
-  } catch {
-    return 'unknown';
-  }
-}
+import { packageVersion } from './version.js';
 
 /** How often a running `pluk watch` checks its log file for rotation. */
 const LOG_ROTATE_CHECK_INTERVAL_MS = 30_000;
