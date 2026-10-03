@@ -18,7 +18,13 @@ npm run build
 npm test
 ```
 
-`npm test` runs the TypeScript build first and then the Node test suite (`node --test test/*.test.js`). Run it before opening a pull request.
+`npm test` runs the TypeScript build first and then the Node test suite (via `scripts/run-tests.mjs`). Run it before opening a pull request.
+
+To check coverage against the project thresholds (lines 95, branches 85, functions 90), run:
+
+```sh
+npm run test:coverage
+```
 
 ## Making changes
 
@@ -26,6 +32,7 @@ npm test
 - Prefer small helpers that can be unit-tested without requiring a live tmux session.
 - Do not commit generated `dist/` output unless a maintainer explicitly asks for it.
 - Update README examples when CLI behavior or flags change.
+- For user-visible changes, add a fragment to `changelog.d/` named `<category>-<slug>.md` (for example `fixed-<slug>.md`); see the existing entries in that directory for the format.
 
 ## Pull requests
 
