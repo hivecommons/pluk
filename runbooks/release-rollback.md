@@ -33,10 +33,18 @@ packaging nit.
    ```sh
    npm deprecate @hivecommons/pluk@<bad-version> "Known issue: <short description>, use <good-version> instead"
    ```
-2. **Do not `npm unpublish`** unless the version is less than 72 hours old and
+2. **Repoint `latest` at the last good version.** Deprecating does not move
+   the `latest` dist-tag, so a plain `npm install -g @hivecommons/pluk` still
+   resolves to the bad version until a fix ships:
+   ```sh
+   npm view @hivecommons/pluk dist-tags --json
+   npm dist-tag add @hivecommons/pluk@<last-good-version> latest
+   ```
+   After the fix-forward release publishes, `latest` moves to it automatically.
+3. **Do not `npm unpublish`** unless the version is less than 72 hours old and
    npm's unpublish policy allows it — unpublishing an older version can break
    other projects that already resolved to it. Prefer deprecate + forward fix.
-3. If the bad version broke `pluk attach`/`watch` for active hive sessions,
+4. If the bad version broke `pluk attach`/`watch` for active hive sessions,
    tell operators to pin the last known-good version until a fix ships:
    ```sh
    npm install -g @hivecommons/pluk@<last-good-version>
@@ -56,7 +64,7 @@ packaging nit.
 ## After
 
 - Confirm `npm view @hivecommons/pluk@latest version` matches the new patched
-  release.
+  release (or the pinned good version while the fix is pending).
 - Confirm the deprecation notice on the bad version is still visible
   (`npm view @hivecommons/pluk@<bad-version>` shows the `deprecated` field).
 - Note the incident in the PR/issue that tracked the fix so future readers can
