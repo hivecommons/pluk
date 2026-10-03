@@ -159,11 +159,41 @@ MODEL_PATTERN='Using model:'
 SESSION_END_PATTERN='Session ended|Goodbye'
 `;
 
+const CODEX_PATTERNS = `
+IDLE_PATTERN='>\\s*$|❯\\s*$'
+WORKING_PATTERNS='esc to interrupt|● Working|Working \\('
+RATE_LIMIT_PATTERN='rate limit|quota exceeded|usage limit|429|too many requests'
+LOGIN_PATTERN='Please log in|authentication required|sign in|login required'
+TRUST_DIALOG_PATTERN=''
+BYPASS_PATTERN=''
+TOOL_START_PATTERN=''
+TOOL_END_PATTERN=''
+ERROR_PATTERN='^\\s*Error:|^\\s*error:|^\\s*FATAL|^\\s*panic:'
+MODEL_PATTERN='Using model:|model.*gpt-|model.*o[0-9]'
+SESSION_END_PATTERN='Session ended|Goodbye'
+`;
+
+const AIDER_PATTERNS = `
+IDLE_PATTERN='^>\\s*$'
+WORKING_PATTERNS='Tokens: [0-9]'
+RATE_LIMIT_PATTERN='rate limit|quota exceeded|429|too many requests'
+LOGIN_PATTERN='API key|authenticate|sign in|login required'
+TRUST_DIALOG_PATTERN=''
+BYPASS_PATTERN=''
+TOOL_START_PATTERN=''
+TOOL_END_PATTERN=''
+ERROR_PATTERN='^\\s*Error:|^\\s*error:|^\\s*FATAL|^\\s*panic:'
+MODEL_PATTERN='^Model:|model.*gpt-|model.*claude-'
+SESSION_END_PATTERN='Session ended|Goodbye'
+`;
+
 export const BUILTIN_PATTERNS: Record<string, string> = {
   claude: CLAUDE_PATTERNS,
   copilot: COPILOT_PATTERNS,
   gemini: GEMINI_PATTERNS,
   goose: GOOSE_PATTERNS,
+  codex: CODEX_PATTERNS,
+  aider: AIDER_PATTERNS,
 };
 
 export function getPatterns(cli: string, patternsDir?: string): PatternSet {

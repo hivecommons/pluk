@@ -1,0 +1,13 @@
+# codex.patterns — OpenAI Codex CLI output patterns
+
+IDLE_PATTERN='>\s*$|❯\s*$'
+WORKING_PATTERNS='esc to interrupt|● Working|Working \('
+RATE_LIMIT_PATTERN='rate limit|quota exceeded|usage limit|429|too many requests'
+LOGIN_PATTERN='Please log in|authentication required|sign in|login required'
+TRUST_DIALOG_PATTERN=''
+BYPASS_PATTERN=''
+TOOL_START_PATTERN=''
+TOOL_END_PATTERN=''
+ERROR_PATTERN='^\s*Error:|^\s*error:|^\s*FATAL|^\s*panic:'
+MODEL_PATTERN='Using model:|model.*gpt-|model.*o[0-9]'
+SESSION_END_PATTERN='Session ended|Goodbye'
