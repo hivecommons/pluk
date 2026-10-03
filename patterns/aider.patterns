@@ -1,0 +1,13 @@
+# aider.patterns — Aider CLI output patterns
+
+IDLE_PATTERN='^>\s*$'
+WORKING_PATTERNS='Tokens: [0-9]'
+RATE_LIMIT_PATTERN='rate limit|quota exceeded|429|too many requests'
+LOGIN_PATTERN='API key|authenticate|sign in|login required'
+TRUST_DIALOG_PATTERN=''
+BYPASS_PATTERN=''
+TOOL_START_PATTERN=''
+TOOL_END_PATTERN=''
+ERROR_PATTERN='^\s*Error:|^\s*error:|^\s*FATAL|^\s*panic:'
+MODEL_PATTERN='^Model:|model.*gpt-|model.*claude-'
+SESSION_END_PATTERN='Session ended|Goodbye'
