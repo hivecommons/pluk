@@ -31,6 +31,15 @@ function onExit(child) {
   return new Promise(resolve => child.on('exit', (code, signal) => resolve({ code, signal })));
 }
 
+// A watch child that outlives a failed assertion keeps its stdio pipes open
+// and so keeps this test process alive forever (CI only ends it via the job
+// timeout, hiding the assertion). Always reap it.
+function reapOnFailure(t, child) {
+  t.after(() => {
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+  });
+}
+
 function waitFor(predicate, { timeoutMs = 8000, label = 'condition' } = {}) {
   return new Promise((resolve, reject) => {
     const started = Date.now();
@@ -67,23 +76,29 @@ test('subscribe exits 1 with a timeout error when the log file never appears', (
 
 // --- watch: the rotation interval actually rotates the session log ---------------
 
-test('watch rotates an oversized session log on its periodic check', async () => {
+test('watch rotates an oversized session log on its periodic check', async t => {
   const dir = makeRunDir('pluk-watch-rotate-');
   const logFile = join(dir, 'logs', 'rot.jsonl');
   try {
     const original = [0, 1, 2, 3, 4].map(sampleLine).join('\n') + '\n';
+    const expected = [3, 4].map(sampleLine).join('\n') + '\n';
     writeFileSync(logFile, original);
 
     const child = spawnFast(['watch', 'rot', '--cli=claude', `--run-dir=${dir}`], {
       PLUK_LOG_MAX_BYTES: '1',
       PLUK_LOG_KEEP_LINES: '2',
     });
+    reapOnFailure(t, child);
     let stderr = '';
     child.stderr.on('data', d => { stderr += d; });
 
-    await waitFor(() => readFileSync(logFile, 'utf-8') !== original, { label: 'log rotation' });
-    const rotated = readFileSync(logFile, 'utf-8');
-    assert.equal(rotated, [3, 4].map(sampleLine).join('\n') + '\n', 'only the newest keepLines survive');
+    // rotateLogFileIfNeeded rewrites with writeFileSync, which truncates
+    // before it writes, so a poll can observe an empty or partial file
+    // mid-rewrite. Wait for the final content rather than "anything changed".
+    let rotated = original;
+    await waitFor(() => (rotated = readFileSync(logFile, 'utf-8')) === expected, { label: 'log rotation' })
+      .catch(err => { throw new Error(`${err.message}; last content: ${JSON.stringify(rotated)}`); });
+    assert.equal(rotated, expected, 'only the newest keepLines survive');
 
     const exit = onExit(child);
     child.kill('SIGINT');
@@ -114,6 +129,7 @@ test('watch keeps classifying when the rotation check throws', async t => {
       PLUK_LOG_MAX_BYTES: '1',
       PLUK_LOG_KEEP_LINES: '1',
     });
+    reapOnFailure(t, child);
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', d => { stdout += d; });
