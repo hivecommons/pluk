@@ -90,7 +90,10 @@ export function watch(opts: WatchOptions): WatchHandle {
       source: 'capture-pane',
     });
     const target = opts.pane ?? opts.session;
-    const intervalMs = opts.captureIntervalMs ?? DEFAULT_CAPTURE_INTERVAL_MS;
+    const intervalMs =
+      opts.captureIntervalMs !== undefined && Number.isFinite(opts.captureIntervalMs) && opts.captureIntervalMs > 0
+        ? opts.captureIntervalMs
+        : DEFAULT_CAPTURE_INTERVAL_MS;
 
     const timer = setInterval(() => {
       stats.framesPolled++;

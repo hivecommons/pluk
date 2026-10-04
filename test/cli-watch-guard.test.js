@@ -83,3 +83,13 @@ test('run-tests.mjs propagates the child suite exit status', () => {
     rmSync(cwd, { recursive: true, force: true });
   }
 });
+
+// --- watch: invalid --capture interval is rejected -------------------------------
+
+for (const bad of ['0', '-5', 'abc']) {
+  test(`watch --capture=${bad} exits 2 with a usage error`, () => {
+    const { code, stderr } = run(CLI, ['watch', 'x', `--capture=${bad}`]);
+    assert.equal(code, 2);
+    assert.match(stderr, /--capture expects a positive integer/);
+  });
+}
