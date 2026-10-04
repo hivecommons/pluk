@@ -32,7 +32,7 @@ npm run test:coverage
 - Prefer small helpers that can be unit-tested without requiring a live tmux session.
 - Do not commit generated `dist/` output unless a maintainer explicitly asks for it.
 - Update README examples when CLI behavior or flags change.
-- For user-visible changes, add a fragment to `changelog.d/` named `<category>-<slug>.md` (for example `fixed-<slug>.md`); see the existing entries in that directory for the format.
+- For user-visible changes, add a fragment to `changelog.d/` named `<category>-<slug>.md`, where `<category>` is one of `added`, `changed`, `deprecated`, `removed`, `fixed` or `security` and `<slug>` is lowercase `[a-z0-9-]` (for example `fixed-<slug>.md`). The body is a markdown bullet list (`- ...`) — `test/changelog-fragments.test.js` fails `npm test` on a misnamed, empty or non-bullet fragment.
 
 ## Pull requests
 

@@ -1,1 +1,1 @@
-Added a runbook for diagnosing a monitored session that stops producing events, using the `--diagnostics` counters.
+- Added a runbook for diagnosing a monitored session that stops producing events, using the `--diagnostics` counters.
