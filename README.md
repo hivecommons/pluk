@@ -88,6 +88,7 @@ tmux attach -t my-agent
 | `PLUK_RUN_DIR` | `/tmp/pluk-run` | Directory for session metadata and JSONL event logs |
 | `PLUK_LOG_MAX_BYTES` | `10485760` (10 MiB) | Rotate a session's event log once it exceeds this many bytes |
 | `PLUK_LOG_KEEP_LINES` | `5000` | Trailing lines kept in the log across rotation |
+| `PLUK_RATIONGUARD_BIN` | *(unset)* | Rationguard command for `pluk attach --rationguard` when it is not on `PATH`; same as `--rationguard-bin` |
 
 ## CLI Commands
 
@@ -106,7 +107,8 @@ tmux attach -t my-agent
 |------|-------------|
 | `--cli=claude` | CLI type: `claude`, `copilot`, `gemini`, `goose`, `codex`, `aider` |
 | `--command=<cmd>` | Override the CLI command/executable to launch (instead of the default resolved from `--cli`); combines with `--cli-args` |
-| `--rationguard` | Start rationguard watcher alongside pluk |
+| `--rationguard` | Start rationguard watcher alongside pluk (requires `rationguard` on `PATH` — `npm install -g @hivecommons/rationguard` — or `--rationguard-bin`; pluk never fetches it from the registry implicitly) |
+| `--rationguard-bin=<cmd>` | Explicit rationguard command to run instead of the one on `PATH`, e.g. `--rationguard-bin='npx --yes @hivecommons/rationguard@0.11.0'` (also `PLUK_RATIONGUARD_BIN`) |
 | `--rebuttal=send` | Auto-send rebuttals when rationguard detects excuses |
 | `--dangerous` | Skip CLI permission prompts (`--dangerously-skip-permissions` for claude, `--full-auto` for codex, `--non-interactive` for goose) |
 | `--dir=/path` | Working directory for the agent |

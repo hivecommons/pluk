@@ -20,7 +20,7 @@ function usage(): void {
   console.log(`${ANSI_BOLD}pluk${ANSI_RESET} — structured events from AI agent terminal output
 
 ${ANSI_CYAN}Usage:${ANSI_RESET}
-  pluk attach <session> [--cli=claude] [--rationguard] [--rebuttal=send] [--dangerous] [--verbose]
+  pluk attach <session> [--cli=claude] [--rationguard] [--rationguard-bin=<cmd>] [--rebuttal=send] [--dangerous] [--verbose]
   pluk sessions [--run-dir=<path>] [--json]
   pluk subscribe <session> [--filter=type1,type2] [--from-beginning] [--verbose] [--diagnostics[=secs]]
   pluk watch <session> [--cli=claude] [--filter=type1,type2] [--include-raw] [--capture[=ms]] [--diagnostics[=secs]]
@@ -228,6 +228,7 @@ function cmdAttach(args: string[]): void {
     noOpen: flags['no-open'] === 'true',
     verbose: flags['verbose'] === 'true',
     dangerouslySkipPermissions: flags['dangerous'] === 'true',
+    rationguardBin: flags['rationguard-bin'],
   });
 }
 
