@@ -145,6 +145,14 @@ function cmdWatch(args: string[]): void {
   process.stdin.on('error', () => {});
 
   const capture = flags['capture'];
+  let captureIntervalMs: number | undefined;
+  if (capture && capture !== 'true') {
+    captureIntervalMs = Number(capture);
+    if (!Number.isFinite(captureIntervalMs) || captureIntervalMs <= 0) {
+      console.error(`${ANSI_RED}Error:${ANSI_RESET} --capture expects a positive integer number of milliseconds`);
+      process.exit(2);
+    }
+  }
 
   const watcher = watch({
     session,
@@ -154,7 +162,7 @@ function cmdWatch(args: string[]): void {
     includeRaw: flags['include-raw'] === 'true',
     mode: capture ? 'capture' : 'stream',
     pane: flags['pane'],
-    captureIntervalMs: capture && capture !== 'true' ? Number(capture) : undefined,
+    captureIntervalMs,
     onEvent(event) {
       try {
         console.log(JSON.stringify(event));

@@ -1,0 +1,1 @@
+- `pluk watch --capture` now rejects zero, negative and non-numeric intervals instead of busy-looping `tmux capture-pane`; `watch()` falls back to the default interval for invalid values (#147).
