@@ -4,7 +4,7 @@
 //   - buildCliCommand: empty command throw, cliArgs merge
 //   - buildPipePaneCommand: empty pluk command throw, includeRaw off
 //   - resolveCliCommand fallback for a CLI with no known command mapping
-//   - resolveRationguardBin npx fallback when `which rationguard` fails
+//   - resolveRationguardBin fail-closed / override arms when `which rationguard` fails
 //   - detectTerminal with TERM_PROGRAM absent from the environment
 //   - resolveTmuxPath 'tmux' fallback when `which tmux` fails
 //   - attach() cli default ('claude') when the option is omitted entirely —
@@ -20,7 +20,7 @@ import { spawnSync } from 'node:child_process';
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { splitShellWords, buildCliCommand, buildPipePaneCommand } from '../dist/attach.js';
+import { splitShellWords, buildCliCommand, buildPipePaneCommand, resolveRationguardBin } from '../dist/attach.js';
 
 const CLI = join(process.cwd(), 'dist', 'cli.js');
 const ATTACH = join(process.cwd(), 'dist', 'attach.js');
@@ -155,17 +155,54 @@ test('an unmapped --cli name is used verbatim as the command', () => {
   assert.match(stubs.log('tmux'), /send-keys -t agent-fb 'somecli' Enter/);
 });
 
-// --- resolveRationguardBin npx fallback ----------------------------------------------
+// --- resolveRationguardBin: no implicit registry fetch ---------------------------------
 
-test('rationguard watcher falls back to npx when `which rationguard` fails', () => {
+test('attach --rationguard fails closed when rationguard is not on PATH (no npx fetch)', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-rg', `--run-dir=${makeRunDir()}`, '--no-open', '--rationguard'],
     stubs,
+    { PLUK_RATIONGUARD_BIN: undefined },
+  );
+  assert.equal(code, 1);
+  assert.match(stderr, /rationguard not found on PATH/);
+  assert.match(stderr, /--rationguard-bin=/);
+  assert.equal(stubs.log('npx'), '', 'npx must never be invoked for rationguard');
+  // Resolved before any tmux side effect: no session was created.
+  assert.equal(stubs.log('tmux'), '', 'tmux must not run when rationguard is missing');
+});
+
+test('--rationguard-bin runs the operator-chosen command verbatim', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const { code, stdout } = runAttach(
+    ['agent-rgb', `--run-dir=${makeRunDir()}`, '--no-open', '--rationguard',
+      '--rationguard-bin=npx --yes @hivecommons/rationguard@0.11.0'],
+    stubs,
+    { PLUK_RATIONGUARD_BIN: undefined },
   );
   assert.equal(code, 0);
   assert.match(stdout, /Starting rationguard watcher/);
-  assert.match(stubs.log('npx'), /--yes @hivecommons\/rationguard watch agent-rg/);
+  assert.match(stubs.log('npx'), /^--yes @hivecommons\/rationguard@0\.11\.0 watch agent-rgb /m);
+});
+
+test('PLUK_RATIONGUARD_BIN is honoured when rationguard is not on PATH', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const { code, stdout } = runAttach(
+    ['agent-rge', `--run-dir=${makeRunDir()}`, '--no-open', '--rationguard'],
+    stubs,
+    { PLUK_RATIONGUARD_BIN: `${stubs.dir}/rationguard` },
+  );
+  assert.equal(code, 0);
+  assert.match(stdout, /Starting rationguard watcher/);
+  assert.match(stubs.log('rationguard'), /^watch agent-rge /m);
+  assert.equal(stubs.log('npx'), '');
+});
+
+test('resolveRationguardBin prefers the explicit override over PATH and env', () => {
+  assert.equal(resolveRationguardBin('/opt/rg', { PLUK_RATIONGUARD_BIN: '/env/rg' }, () => '/path/rg'), '/opt/rg');
+  assert.equal(resolveRationguardBin(undefined, { PLUK_RATIONGUARD_BIN: '/env/rg' }, () => '/path/rg'), '/env/rg');
+  assert.equal(resolveRationguardBin('  ', {}, () => '/path/rg'), '/path/rg');
+  assert.throws(() => resolveRationguardBin(undefined, {}, () => ''), /rationguard not found on PATH/);
 });
 
 // --- detectTerminal / resolveTmuxPath fallbacks --------------------------------------

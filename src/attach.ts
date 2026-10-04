@@ -24,6 +24,8 @@ export interface AttachOptions {
   noOpen?: boolean;
   verbose?: boolean;
   dangerouslySkipPermissions?: boolean;
+  /** Explicit rationguard command (shell words); overrides PATH lookup. */
+  rationguardBin?: string;
 }
 
 export function shellQuote(value: string): string {
@@ -170,8 +172,29 @@ function resolvePlukBin(): string {
   return '';
 }
 
-function resolveRationguardBin(): string {
-  return findExecutable(['rationguard']) || 'npx --yes @hivecommons/rationguard';
+/**
+ * Resolve the rationguard command without ever fetching it implicitly.
+ *
+ * The old `npx --yes @hivecommons/rationguard` fallback ran whatever
+ * `latest` the registry served at attach time — a process that reads the
+ * private session log and, with `--rebuttal=send`, types into the agent's
+ * tmux session. Only an explicit override (`--rationguard-bin` /
+ * `PLUK_RATIONGUARD_BIN`) or a binary already on PATH is accepted; the
+ * caller decides the version, not the registry's `latest` tag.
+ */
+export function resolveRationguardBin(
+  override?: string,
+  env: NodeJS.ProcessEnv = process.env,
+  lookup: (candidates: string[]) => string = findExecutable,
+): string {
+  const explicit = (override ?? env['PLUK_RATIONGUARD_BIN'] ?? '').trim();
+  if (explicit) return explicit;
+  const found = lookup(['rationguard']);
+  if (found) return found;
+  throw new Error(
+    'rationguard not found on PATH. Install it (npm install -g @hivecommons/rationguard) ' +
+      'or pass --rationguard-bin=COMMAND (also PLUK_RATIONGUARD_BIN).',
+  );
 }
 
 function detectTerminal(): 'iterm2' | 'terminal' | 'unknown' {
@@ -238,6 +261,11 @@ export function attach(opts: AttachOptions): void {
     : (_msg: string) => {};
 
   log(`session=${session} cli=${cli} runDir=${runDir} workDir=${workDir}`);
+
+  // Resolve before any tmux side effect so a missing rationguard fails the
+  // attach cleanly instead of leaving a half-wired session behind.
+  const rgBin = opts.rationguard ? resolveRationguardBin(opts.rationguardBin) : '';
+  if (rgBin) log(`rationguard binary: ${rgBin}`);
 
   const logsDir = join(runDir, 'logs');
   log(`Securing run directory: ${runDir}`);
@@ -329,8 +357,6 @@ export function attach(opts: AttachOptions): void {
       // no existing watchers
     }
 
-    const rgBin = resolveRationguardBin();
-    log(`rationguard binary: ${rgBin}`);
     const rgArgs = [
       ...splitShellWords(rgBin),
       'watch',
