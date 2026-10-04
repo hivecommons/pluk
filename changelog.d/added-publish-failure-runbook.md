@@ -1,1 +1,1 @@
-Added a runbook for recovering from a failed publish pipeline run, by failing job.
+- Added a runbook for recovering from a failed publish pipeline run, by failing job.
