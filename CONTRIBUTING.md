@@ -41,6 +41,10 @@ npm run test:coverage
 3. Run `npm test` locally.
 4. Open a PR that explains the user-visible change and links any issue it fixes.
 
+## Operations
+
+For failed publishes, bad releases, or silent monitored sessions, see the [runbooks](runbooks/README.md).
+
 ## Developer Certificate of Origin
 
 All commits must be signed off to certify the [Developer Certificate of Origin](https://developercertificate.org/):
