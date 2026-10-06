@@ -2,7 +2,7 @@
 
 IDLE_PATTERN='>\s*$|❯\s*$'
 WORKING_PATTERNS='◐|◑|◒|◓|⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏|Thinking|Generating'
-RATE_LIMIT_PATTERN='rate limit|quota exceeded|resource exhausted|429'
+RATE_LIMIT_PATTERN='rate limit|quota exceeded|resource exhausted|HTTP 429|[Ss]tatus( code)?:? 429|[Ee]rror:? 429|429 [Tt]oo [Mm]any|[(]429[)]'
 LOGIN_PATTERN='gcloud auth login|authenticate|sign in'
 TRUST_DIALOG_PATTERN=''
 BYPASS_PATTERN=''

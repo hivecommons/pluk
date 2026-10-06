@@ -2,7 +2,7 @@
 
 IDLE_PATTERN='>\s*$|❯\s*$'
 WORKING_PATTERNS='esc to interrupt|● Working|Working \('
-RATE_LIMIT_PATTERN='rate limit|quota exceeded|usage limit|429|too many requests'
+RATE_LIMIT_PATTERN='rate limit|quota exceeded|usage limit|HTTP 429|[Ss]tatus( code)?:? 429|[Ee]rror:? 429|429 [Tt]oo [Mm]any|[(]429[)]|too many requests'
 LOGIN_PATTERN='Please log in|authentication required|sign in|login required'
 TRUST_DIALOG_PATTERN=''
 BYPASS_PATTERN=''
