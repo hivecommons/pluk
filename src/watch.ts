@@ -3,7 +3,7 @@ import { type PatternSet, getPatterns } from './patterns.js';
 import { type PlukEvent, type PlukEventType } from './event.js';
 import { createInterface } from 'node:readline';
 import { type Readable } from 'node:stream';
-import { tmuxCapturePane } from './tmux.js';
+import { exactTarget, tmuxCapturePane } from './tmux.js';
 
 const DEFAULT_CAPTURE_INTERVAL_MS = 1000;
 
@@ -89,7 +89,7 @@ export function watch(opts: WatchOptions): WatchHandle {
       patterns,
       source: 'capture-pane',
     });
-    const target = opts.pane ?? opts.session;
+    const target = opts.pane ?? exactTarget(opts.session);
     const intervalMs =
       opts.captureIntervalMs !== undefined && Number.isFinite(opts.captureIntervalMs) && opts.captureIntervalMs > 0
         ? opts.captureIntervalMs

@@ -1,0 +1,2 @@
+- Every tmux target pluk uses is now an exact session match (`-t =<session>`), so a session name can no longer resolve to a different session by prefix or be read as `window.pane`; session names may no longer contain `.`. `pluk send` and `attach` put `--` before the text, so text beginning with `-` is no longer parsed as tmux flags (#169).
+- `pluk attach --rationguard-bin` / `PLUK_RATIONGUARD_BIN` is now validated before the session is created, and the rationguard watcher reports spawn errors and propagates its exit code instead of crashing with an unhandled `ENOENT` (#171).

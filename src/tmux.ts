@@ -12,9 +12,17 @@ import { execFileSync } from 'node:child_process';
  * and swappable (e.g. for testing) rather than duplicated ad hoc.
  */
 
+/**
+ * tmux resolves a bare `-t name` by prefix and fnmatch, and reads `a.b` as
+ * window.pane. A leading `=` forces an exact session-name match.
+ */
+export function exactTarget(session: string): string {
+  return `=${session}`;
+}
+
 export function tmuxHasSession(session: string): boolean {
   try {
-    execFileSync('tmux', ['has-session', '-t', session], { stdio: 'ignore' });
+    execFileSync('tmux', ['has-session', '-t', exactTarget(session)], { stdio: 'ignore' });
     return true;
   } catch {
     return false;
@@ -41,11 +49,11 @@ export function tmuxRunInherited(args: string[]): void {
  * and the new one opened, so a repeat attach is idempotent.
  */
 export function tmuxPipePane(session: string, pipeCmd: string): void {
-  execFileSync('tmux', ['pipe-pane', '-t', session, pipeCmd], { stdio: 'inherit' });
+  execFileSync('tmux', ['pipe-pane', '-t', exactTarget(session), pipeCmd], { stdio: 'inherit' });
 }
 
 export function tmuxAttach(session: string): void {
-  execFileSync('tmux', ['attach', '-t', session], { stdio: 'inherit' });
+  execFileSync('tmux', ['attach', '-t', exactTarget(session)], { stdio: 'inherit' });
 }
 
 /** Runs a `send-keys`-style argv with stdio captured (not shown to the user). */

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 const PRIVATE_DIR_MODE = 0o700;
 const PRIVATE_FILE_MODE = 0o600;
 
-const SAFE_SESSION_PATTERN = /^[A-Za-z0-9._-]+$/;
+const SAFE_SESSION_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 /** Log files larger than this are rotated down to LOG_KEEP_LINES. */
 export const DEFAULT_LOG_MAX_BYTES = 10 * 1024 * 1024;
@@ -14,11 +14,11 @@ export const DEFAULT_LOG_KEEP_LINES = 5000;
 
 /**
  * Session names become path segments under <runDir>/logs, so anything
- * outside this set (slashes, "..", spaces) can escape the private run dir.
+ * outside this set (slashes, dots, colons, spaces) can escape the private run dir.
  */
 export function validateSessionName(session: string): void {
   if (!SAFE_SESSION_PATTERN.test(session)) {
-    throw new Error(`Unsafe session name "${session}". Use only letters, numbers, dot, underscore, and dash.`);
+    throw new Error(`Unsafe session name "${session}". Use only letters, numbers, underscore, and dash.`);
   }
 }
 

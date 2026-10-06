@@ -24,11 +24,11 @@ after(() => {
 });
 
 test('session names reject shell metacharacters, traversal, quotes, and spaces', () => {
-  for (const session of ['ok', 'agent_1.2-3']) {
+  for (const session of ['ok', 'agent_1-2-3']) {
     assert.doesNotThrow(() => validateSessionName(session));
   }
 
-  for (const session of ['bad; rm -rf .', 'bad$(id)', '../escape', 'has space', 'quote"']) {
+  for (const session of ['bad; rm -rf .', 'bad$(id)', '../escape', 'has space', 'quote"', 'a.b', 'a:b', 'agent.0']) {
     assert.throws(() => validateSessionName(session), /Unsafe session name/);
   }
 });

@@ -142,7 +142,7 @@ test('re-attaching to an existing session replaces the pipe instead of toggling 
   assert.match(stdout, /Attaching pluk pipe-pane: claude/);
   const pipeCall = stubs.log('tmux').split('\n').find(l => l.startsWith('pipe-pane'));
   assert.ok(pipeCall, 'pipe-pane should run on the existing-session path');
-  assert.match(pipeCall, /^pipe-pane -t agent-r PLUK_RUN_DIR=/);
+  assert.match(pipeCall, /^pipe-pane -t =agent-r PLUK_RUN_DIR=/);
   // tmux `pipe-pane -o` only opens a pipe when none exists and closes an
   // existing one otherwise, so on a second attach it would silently stop
   // event logging. The pipe command must be passed without -o.
@@ -157,7 +157,7 @@ test('attach --dangerous with a CLI that has no auto-flag logs the skip and send
   );
   assert.equal(code, 0);
   assert.match(stdout, /no dangerous\/auto flag known for cli=aider/);
-  assert.match(stubs.log('tmux'), /send-keys -t agent-a 'aider' Enter/);
+  assert.match(stubs.log('tmux'), /send-keys -t =agent-a -- 'aider' Enter/);
 });
 
 // --- pluk binary resolution --------------------------------------------------------
@@ -270,7 +270,7 @@ test('iTerm2 window is opened via osascript with the attach command quoted for A
   const call = stubs.log('osascript');
   assert.match(call, /tell application "iTerm2" to create window/);
   // appleScriptString must escape the double quotes around the shell-quoted command
-  assert.ok(call.includes(`attach -t 'agent-i'`), call);
+  assert.ok(call.includes(`attach -t '=agent-i'`), call);
 });
 
 test('Apple_Terminal window is opened via osascript do script', () => {
@@ -319,7 +319,7 @@ test('without --no-open and without rationguard, attach execs tmux attach', () =
   );
   assert.equal(code, 0);
   assert.match(stdout, /Attaching to tmux session\.\.\./);
-  assert.match(stubs.log('tmux'), /^attach -t agent-o$/m);
+  assert.match(stubs.log('tmux'), /^attach -t =agent-o$/m);
   assert.ok(!stdout.includes('Session detached'), stdout);
 });
 

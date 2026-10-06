@@ -98,7 +98,7 @@ test('send joins positional words as the text when --text is absent', () => {
   assert.equal(code, 0);
   const calls = readFileSync(tmuxLog, 'utf-8').trim().split('\n');
   // No --enter and no --literal: bare send-keys, no -l, and no Enter keypress.
-  assert.deepEqual(calls, ['send-keys -t my-agent hello there']);
+  assert.deepEqual(calls, ['send-keys -t =my-agent -- hello there']);
 });
 
 test('pluk-send --session takes all positional args as text', () => {
@@ -108,7 +108,7 @@ test('pluk-send --session takes all positional args as text', () => {
   const { code } = runCli(['--session=agent-q', 'ping', 'pong'], { argv1: link });
   assert.equal(code, 0);
   const calls = readFileSync(tmuxLog, 'utf-8').trim().split('\n');
-  assert.deepEqual(calls, ['send-keys -t agent-q ping pong']);
+  assert.deepEqual(calls, ['send-keys -t =agent-q -- ping pong']);
 });
 
 // --- watch: default session, --patterns-dir ------------------------------------

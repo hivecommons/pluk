@@ -2,7 +2,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { ensurePrivateDirectory, ensurePrivateLogFile, resolveRunDir, validateSessionName } from './run-dir.js';
 import { ANSI_DIM, ANSI_RESET } from './ansi.js';
-import { tmuxAttach, tmuxHasSession, tmuxNewSession, tmuxPipePane, tmuxRunInherited } from './tmux.js';
+import { exactTarget, tmuxAttach, tmuxHasSession, tmuxNewSession, tmuxPipePane, tmuxRunInherited } from './tmux.js';
 import { plukPackageSpec } from './version.js';
 
 // Re-exported for existing consumers; the validator lives with the other
@@ -188,7 +188,15 @@ export function resolveRationguardBin(
   lookup: (candidates: string[]) => string = findExecutable,
 ): string {
   const explicit = (override ?? env['PLUK_RATIONGUARD_BIN'] ?? '').trim();
-  if (explicit) return explicit;
+  if (explicit) {
+    const [first] = splitShellWords(explicit);
+    if (!first || !lookup([first])) {
+      throw new Error(
+        `--rationguard-bin / PLUK_RATIONGUARD_BIN command not found or not executable: ${explicit}`,
+      );
+    }
+    return explicit;
+  }
   const found = lookup(['rationguard']);
   if (found) return found;
   throw new Error(
@@ -212,7 +220,7 @@ function resolveTmuxPath(): string {
 function openTmuxInNewWindow(session: string): void {
   const terminal = detectTerminal();
   const tmuxBin = resolveTmuxPath();
-  const attachCommand = `${shellQuote(tmuxBin)} attach -t ${shellQuote(session)}`;
+  const attachCommand = `${shellQuote(tmuxBin)} attach -t ${shellQuote(exactTarget(session))}`;
 
   switch (terminal) {
     case 'iterm2':
@@ -291,7 +299,7 @@ export function attach(opts: AttachOptions): void {
       }
     }
     console.log(`Starting ${cli}: ${fullCmd}`);
-    const sendArgs = ['send-keys', '-t', session, fullCmd, 'Enter'];
+    const sendArgs = ['send-keys', '-t', exactTarget(session), '--', fullCmd, 'Enter'];
     log(`execFile: tmux ${sendArgs.map(shellQuote).join(' ')}`);
     tmuxRunInherited(sendArgs);
   } else {
@@ -300,7 +308,7 @@ export function attach(opts: AttachOptions): void {
       const dangerFlag = resolveDangerousFlag(cli);
       if (dangerFlag) {
         console.log(`Warning: --dangerous was set but session already exists. The CLI may not have ${dangerFlag} enabled.`);
-        console.log(`To restart with permissions skipped: pluk send ${session} C-c && tmux send-keys -t ${shellQuote(session)} ${shellQuote(buildCliCommand(cliCmd, dangerFlag))} Enter`);
+        console.log(`To restart with permissions skipped: pluk send ${session} C-c && tmux send-keys -t ${shellQuote(exactTarget(session))} -- ${shellQuote(buildCliCommand(cliCmd, dangerFlag))} Enter`);
       }
     }
   }
@@ -322,7 +330,7 @@ export function attach(opts: AttachOptions): void {
     });
     log(`pipe-pane command: ${pipeCmd}`);
     console.log(`Attaching pluk pipe-pane: ${cli}`);
-    log(`execFile: tmux pipe-pane -t ${shellQuote(session)} ${shellQuote(pipeCmd)}`);
+    log(`execFile: tmux pipe-pane -t ${shellQuote(exactTarget(session))} ${shellQuote(pipeCmd)}`);
     tmuxPipePane(session, pipeCmd);
     log('pipe-pane attached successfully');
   } else {
@@ -375,6 +383,14 @@ export function attach(opts: AttachOptions): void {
     const child = spawn(cmd, args, {
       stdio: 'inherit',
       detached: false,
+    });
+
+    child.on('error', err => {
+      console.error(`Failed to start rationguard (${cmd}): ${err.message}`);
+      process.exit(1);
+    });
+    child.on('exit', (code, signal) => {
+      process.exit(code ?? (signal ? 1 : 0));
     });
 
     process.on('SIGINT', () => {

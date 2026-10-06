@@ -50,6 +50,7 @@ exit 0
   writeStub(dir, 'which', `#!/bin/sh
 case "$1" in
   ${which.join('|') || 'nothing-resolves'}) echo '${dir}'/"$1"; exit 0 ;;
+  '${dir}'/*) echo "$1"; exit 0 ;;
   *) exit 1 ;;
 esac
 `);
@@ -152,7 +153,7 @@ test('an unmapped --cli name is used verbatim as the command', () => {
   );
   assert.equal(code, 0);
   assert.match(stdout, /Starting somecli: 'somecli'/);
-  assert.match(stubs.log('tmux'), /send-keys -t agent-fb 'somecli' Enter/);
+  assert.match(stubs.log('tmux'), /send-keys -t =agent-fb -- 'somecli' Enter/);
 });
 
 // --- resolveRationguardBin: no implicit registry fetch ---------------------------------
@@ -173,7 +174,7 @@ test('attach --rationguard fails closed when rationguard is not on PATH (no npx 
 });
 
 test('--rationguard-bin runs the operator-chosen command verbatim', () => {
-  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const stubs = makeStubs({ which: ['tmux', 'pluk', 'npx'] });
   const { code, stdout } = runAttach(
     ['agent-rgb', `--run-dir=${makeRunDir()}`, '--no-open', '--rationguard',
       '--rationguard-bin=npx --yes @hivecommons/rationguard@0.11.0'],
@@ -183,6 +184,28 @@ test('--rationguard-bin runs the operator-chosen command verbatim', () => {
   assert.equal(code, 0);
   assert.match(stdout, /Starting rationguard watcher/);
   assert.match(stubs.log('npx'), /^--yes @hivecommons\/rationguard@0\.11\.0 watch agent-rgb /m);
+});
+
+test('a rationguard that cannot be spawned exits non-zero with a clear error', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk', '/nonexistent/rg'] });
+  const { code, stderr } = runAttach(
+    ['agent-enoent', `--run-dir=${makeRunDir()}`, '--no-open', '--rationguard', '--rationguard-bin=/nonexistent/rg'],
+    stubs,
+    { PLUK_RATIONGUARD_BIN: undefined },
+  );
+  assert.equal(code, 1);
+  assert.match(stderr, /Failed to start rationguard/);
+});
+
+test('the rationguard exit code is propagated', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  writeStub(stubs.dir, 'rationguard', '#!/bin/sh\nexit 3\n');
+  const { code } = runAttach(
+    ['agent-exit', `--run-dir=${makeRunDir()}`, '--no-open', '--rationguard', `--rationguard-bin=${stubs.dir}/rationguard`],
+    stubs,
+    { PLUK_RATIONGUARD_BIN: undefined },
+  );
+  assert.equal(code, 3);
 });
 
 test('PLUK_RATIONGUARD_BIN is honoured when rationguard is not on PATH', () => {
@@ -203,6 +226,27 @@ test('resolveRationguardBin prefers the explicit override over PATH and env', ()
   assert.equal(resolveRationguardBin(undefined, { PLUK_RATIONGUARD_BIN: '/env/rg' }, () => '/path/rg'), '/env/rg');
   assert.equal(resolveRationguardBin('  ', {}, () => '/path/rg'), '/path/rg');
   assert.throws(() => resolveRationguardBin(undefined, {}, () => ''), /rationguard not found on PATH/);
+});
+
+test('resolveRationguardBin validates an explicit override with the same lookup', () => {
+  const seen = [];
+  const lookup = c => { seen.push(c); return c[0] === 'npx' ? '/bin/npx' : ''; };
+  assert.equal(resolveRationguardBin('npx --yes rationguard@1', {}, lookup), 'npx --yes rationguard@1');
+  assert.deepEqual(seen, [['npx']]);
+  assert.throws(() => resolveRationguardBin('/nope/rg', {}, lookup), /not found or not executable/);
+  assert.throws(() => resolveRationguardBin(undefined, { PLUK_RATIONGUARD_BIN: 'missing-rg' }, lookup), /not found or not executable/);
+});
+
+test('attach --rationguard-bin with a missing binary fails before any tmux call', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const { code, stderr } = runAttach(
+    ['agent-bad', `--run-dir=${makeRunDir()}`, '--no-open', '--rationguard', '--rationguard-bin=/nonexistent/rg'],
+    stubs,
+    { PLUK_RATIONGUARD_BIN: undefined },
+  );
+  assert.equal(code, 1);
+  assert.match(stderr, /not found or not executable/);
+  assert.equal(stubs.log('tmux'), '', 'tmux must not run when the override is invalid');
 });
 
 // --- detectTerminal / resolveTmuxPath fallbacks --------------------------------------
