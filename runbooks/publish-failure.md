@@ -30,7 +30,7 @@ The tag does not match `package.json`, is not reachable from `main`, or
 ## `publish` failed (version not on npm)
 
 If `npm view @hivecommons/pluk@X.Y.Z version` returns nothing, the failure was
-tests, build, or registry/auth (`NPM_TOKEN`). Fix the cause, then use
+tests, build, smoke-test, or registry/auth (`NPM_TOKEN`). Fix the cause, then use
 **Re-run failed jobs** on the run. If the fix needs a code change, follow the
 `verify-tag` path above to retag.
 
