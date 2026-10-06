@@ -1,0 +1,1 @@
+- Anchored the bare `429` in `RATE_LIMIT_PATTERN` for aider, codex, gemini and goose so ordinary output such as `Read 1429 lines` no longer emits false `rate_limit` events (#172).

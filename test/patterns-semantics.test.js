@@ -124,7 +124,7 @@ test('gemini: bare ">" prompt is idle, Thinking/braille spinner is working', () 
 
 test('gemini: quota and 429 lines emit rate_limit', () => {
   assert.equal(classifyType('gemini', 'quota exceeded, try again later'), 'rate_limit');
-  assert.equal(classifyType('gemini', 'received 429 from upstream'), 'rate_limit');
+  assert.equal(classifyType('gemini', 'received HTTP 429 from upstream'), 'rate_limit');
 });
 
 test('gemini: gcloud login prompt emits login_required', () => {
@@ -168,4 +168,15 @@ test('goose: rate-limit, login, error, model, and session-end lines classify', (
 
 test('goose: tool bullet lines emit nothing (no tool patterns defined)', () => {
   assert.equal(classifyType('goose', '✓ npm test (shell)'), null);
+});
+
+test('rate_limit: bare 429 inside other tokens is not a rate limit', () => {
+  for (const cli of ['aider', 'codex', 'gemini', 'goose']) {
+    for (const line of ['Read 1429 lines from src/app.ts', 'foo.ts:429', '4,429 tokens']) {
+      assert.notEqual(classifyType(cli, line), 'rate_limit', `${cli}: ${line}`);
+    }
+    for (const line of ['HTTP 429 Too Many Requests', 'status 429', 'rate limit exceeded']) {
+      assert.equal(classifyType(cli, line), 'rate_limit', `${cli}: ${line}`);
+    }
+  }
 });

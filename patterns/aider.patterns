@@ -2,7 +2,7 @@
 
 IDLE_PATTERN='^>\s*$'
 WORKING_PATTERNS='Tokens: [0-9]'
-RATE_LIMIT_PATTERN='rate limit|quota exceeded|429|too many requests'
+RATE_LIMIT_PATTERN='rate limit|quota exceeded|HTTP 429|[Ss]tatus( code)?:? 429|[Ee]rror:? 429|429 [Tt]oo [Mm]any|[(]429[)]|too many requests'
 LOGIN_PATTERN='API key|authenticate|sign in|login required'
 TRUST_DIALOG_PATTERN=''
 BYPASS_PATTERN=''
