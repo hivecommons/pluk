@@ -259,6 +259,31 @@ test('rotateLogFileIfNeeded is a no-op for a missing file', () => {
   }
 });
 
+test('rotateLogFileIfNeeded leaves an oversized but unreadable log alone', (t) => {
+  // stat succeeds (size over the threshold) but the read fails: the watcher
+  // must neither throw nor touch the file. chmod is advisory for root, so
+  // the branch cannot be reached there.
+  if (typeof process.getuid === 'function' && process.getuid() === 0) {
+    t.skip('running as root: chmod 000 does not make the file unreadable');
+    return;
+  }
+  const base = tempBase();
+  try {
+    const file = join(base, 'unreadable.jsonl');
+    const original = Array.from({ length: 20 }, (_, i) => `line-${i}`).join('\n') + '\n';
+    writeFileSync(file, original);
+    chmodSync(file, 0o000);
+    try {
+      assert.strictEqual(rotateLogFileIfNeeded(file, { maxBytes: 10, keepLines: 5 }), false);
+    } finally {
+      chmodSync(file, 0o600);
+    }
+    assert.strictEqual(readFileSync(file, 'utf-8'), original, 'file must be left untouched');
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
 test('rotateLogFileIfNeeded keeps appends intact afterward (O_APPEND safety)', () => {
   const base = tempBase();
   try {
