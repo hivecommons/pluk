@@ -1,0 +1,1 @@
+- Declared `engines.node >=22` in `package.json` and updated CONTRIBUTING.md to match: Node 20 is end-of-life and has not been in the CI matrix since the coverage gate landed. `npm install` on Node 20 now warns; a test keeps the engines floor, the Test matrix and CONTRIBUTING in sync.
