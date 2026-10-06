@@ -57,6 +57,17 @@ jobs:
       # OIDC token used for npm provenance.
       - run: npm ci --ignore-scripts
       - run: npm test
+      - name: Smoke-test the packed tarball
+        run: |
+          tarball="$(npm pack --silent | tail -n1)"
+          dir="$(mktemp -d)"
+          cd "$dir"
+          npm init -y >/dev/null
+          npm install --ignore-scripts "$GITHUB_WORKSPACE/$tarball"
+          out="$(npx --no-install pluk version)"
+          echo "$out"
+          test "$out" = "@hivecommons/pluk ${GITHUB_REF_NAME#v}"
+          test -d node_modules/@hivecommons/pluk/patterns
       - run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
