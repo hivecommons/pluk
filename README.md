@@ -224,9 +224,7 @@ In addition to the `pluk <command>` subcommand form, three standalone binaries a
 
 ## Supported CLIs
 
-Built-in event-classification pattern files exist for: **Claude Code**, **GitHub Copilot CLI**, **Gemini CLI**, **Goose CLI**.
-
-`pluk attach` can also launch **Codex** and **Aider** as the terminal CLI (`--cli=codex`, `--cli=aider`), but there are no bundled `.patterns` files for them yet, so `pluk watch`/event classification for those two CLIs requires a custom pattern file via `--patterns-dir`.
+Built-in event-classification pattern files exist for: **Claude Code**, **GitHub Copilot CLI**, **Gemini CLI**, **Goose CLI**, **OpenAI Codex CLI**, **Aider**.
 
 Custom patterns can be loaded from a directory with `--patterns-dir` or `getPatterns(cli, patternsDir)`.
 
