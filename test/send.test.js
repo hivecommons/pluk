@@ -37,8 +37,8 @@ test('special characters pass through unmodified (no shell escaping)', () => {
 test('session name with spaces/metacharacters is a single argv entry', () => {
   const session = 'my agent; echo pwned';
   const cmds = buildSendCommands({ session, text: 'x', enter: true });
-  assert.strictEqual(cmds[0][4], session);
-  assert.strictEqual(cmds[1][3], session);
+  assert.deepStrictEqual(cmds[0], ['send-keys', '-l', '-t', `=${session}`, '--', 'x']);
+  assert.deepStrictEqual(cmds[1], ['send-keys', '-t', `=${session}`, 'Enter']);
 });
 
 test('text starting with a dash is placed after -- so tmux cannot parse it as flags', () => {
