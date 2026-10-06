@@ -6,7 +6,7 @@ Thanks for helping improve pluk. This project follows the same lightweight contr
 
 Requirements:
 
-- Node.js 20 or newer
+- Node.js 22 or newer (the floor declared in `package.json` `engines.node` and the oldest major in the CI matrix)
 - npm
 - tmux, if you are manually exercising `pluk attach`, `pluk watch --capture`, or `pluk send`
 
