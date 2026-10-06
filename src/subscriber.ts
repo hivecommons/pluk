@@ -1,5 +1,6 @@
 import { type FileHandle, open, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { StringDecoder } from 'node:string_decoder';
 import { EventEmitter } from 'node:events';
 import { type PlukEvent, type PlukEventType, parseEvent } from './event.js';
 import { resolveRunDir, validateSessionName } from './run-dir.js';
@@ -102,6 +103,8 @@ export class Subscriber extends EventEmitter {
 
       let position = this.fromBeginning ? 0 : (await fh.stat()).size;
       let partial = '';
+      // Holds an incomplete multi-byte sequence across read boundaries.
+      let decoder = new StringDecoder('utf8');
       this.log(`tailing from position ${position}${this.filterSet ? ` (filter: ${[...this.filterSet].join(',')})` : ''}`);
 
       while (!this.aborted) {
@@ -122,6 +125,7 @@ export class Subscriber extends EventEmitter {
             const resumed = await this.resumeAfterRotation(fh);
             position = resumed.position;
             partial = resumed.partial;
+            decoder = resumed.decoder;
             continue;
           }
           await sleep(POLL_INTERVAL_MS);
@@ -129,7 +133,7 @@ export class Subscriber extends EventEmitter {
         }
 
         position += bytesRead;
-        const chunk = partial + buf.toString('utf-8', 0, bytesRead);
+        const chunk = partial + decoder.write(buf.subarray(0, bytesRead));
         const lines = chunk.split('\n');
         partial = lines.pop() ?? '';
 
@@ -147,7 +151,7 @@ export class Subscriber extends EventEmitter {
    * subscriber lagged by more than N lines) everything in the file is newer
    * than anything delivered, and it is all replayed.
    */
-  private async resumeAfterRotation(fh: FileHandle): Promise<{ position: number; partial: string }> {
+  private async resumeAfterRotation(fh: FileHandle): Promise<{ position: number; partial: string; decoder: StringDecoder }> {
     const chunks: Buffer[] = [];
     let position = 0;
     for (;;) {
@@ -158,11 +162,12 @@ export class Subscriber extends EventEmitter {
       position += bytesRead;
     }
 
-    const lines = Buffer.concat(chunks).toString('utf-8').split('\n');
+    const decoder = new StringDecoder('utf8');
+    const lines = decoder.write(Buffer.concat(chunks)).split('\n');
     const partial = lines.pop() ?? '';
     const marker = this.lastLine ? lines.lastIndexOf(this.lastLine) : -1;
     for (const line of lines.slice(marker + 1)) this.consumeLine(line);
-    return { position, partial };
+    return { position, partial, decoder };
   }
 
   private consumeLine(line: string): void {

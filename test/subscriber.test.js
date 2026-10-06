@@ -59,6 +59,30 @@ test('fromBeginning replays existing events then picks up appended lines', async
   }
 });
 
+test('multi-byte characters straddling the 16 KiB read boundary are preserved', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 's1.jsonl');
+  const probe = eventLine('error', { line: '' });
+  const pad = 16384 - Buffer.byteLength(probe) - 1; // '✻' (3 bytes) then spans bytes 16383..16385
+  const line = 'x'.repeat(pad) + '✻ Brewed';
+  writeFileSync(log, eventLine('error', { line }));
+
+  const events = [];
+  const sub = new Subscriber({ session: 's1', runDir: dir, fromBeginning: true });
+  sub.on('event', e => events.push(e));
+  const done = sub.start();
+
+  try {
+    await waitFor(() => events.length >= 1);
+    assert.equal(events[0].data.line, line);
+    assert.ok(!events[0].data.line.includes('\uFFFD'));
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('default (tail) mode skips pre-existing events', async () => {
   const dir = makeRunDir();
   const log = join(dir, 'logs', 's2.jsonl');
