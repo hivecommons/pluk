@@ -18,8 +18,14 @@ const TRUNCATE_MAX_RUNES = 120;
 // eslint-disable-next-line no-control-regex
 const ANSI_RE = /\x1b\[[0-?]*[ -\/]*[@-~]|\x9b[0-?]*[ -\/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?|\x9d[^\x07\x9c\x1b]*(?:\x07|\x9c|\x1b\\)?|\x1b[PX^_][^\x1b]*(?:\x1b\\)?|\x1b[ -\/]*[0-~]|[\x0e\x0f\x80-\x9f]/g;
 
+// Residual control bytes left behind by a truncated or malformed sequence
+// (bare BEL/BS, a dangling ESC at the line break, ESC followed by a C0
+// byte). Everything except TAB; CR/LF never reach here (readline splits).
+// eslint-disable-next-line no-control-regex
+const RESIDUAL_CONTROL_RE = /[\x00-\x08\x0a-\x1f\x7f\x80-\x9f]/g;
+
 export function stripANSI(line: string): string {
-  return line.replace(ANSI_RE, '').trim();
+  return line.replace(ANSI_RE, '').replace(RESIDUAL_CONTROL_RE, '').trim();
 }
 
 function truncate(s: string, max: number): string {
