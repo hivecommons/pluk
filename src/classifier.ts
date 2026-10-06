@@ -4,7 +4,19 @@ import { type PatternSet } from './patterns.js';
 const STATE_DEBOUNCE_SECONDS = 2;
 const TRUNCATE_MAX_RUNES = 120;
 
-const ANSI_RE = /\x1b\[\??[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b[()][0-9A-B]|\x0f|\x1b=|\x1b>/g;
+// ECMA-48 / xterm control sequences, most specific first:
+//   CSI  ESC [ <params 0x30-0x3f>* <intermediates 0x20-0x2f>* <final 0x40-0x7e>
+//   OSC  ESC ] ... terminated by BEL or ST (ESC \)
+//   DCS / SOS / PM / APC strings  ESC [PX^_] ... ST
+//   any other ESC <intermediates>* <final 0x30-0x7e>  (RIS, DECSC, charset
+//   selects, keypad modes, ...)
+//   8-bit C1 forms of CSI (U+009B) and OSC (U+009D) with their payloads,
+//   any other lone C1 control (U+0080-U+009F), and SO/SI.
+// The old pattern only knew BEL-terminated OSC and digit-only CSI, so an
+// OSC-with-ST title set, `ESC c` (full reset) or a DCS query survived into
+// the "clean" line and from there into event payloads (see issue #165).
+// eslint-disable-next-line no-control-regex
+const ANSI_RE = /\x1b\[[0-?]*[ -\/]*[@-~]|\x9b[0-?]*[ -\/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?|\x9d[^\x07\x9c\x1b]*(?:\x07|\x9c|\x1b\\)?|\x1b[PX^_][^\x1b]*(?:\x1b\\)?|\x1b[ -\/]*[0-~]|[\x0e\x0f\x80-\x9f]/g;
 
 export function stripANSI(line: string): string {
   return line.replace(ANSI_RE, '').trim();

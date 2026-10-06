@@ -158,3 +158,40 @@ test('getPatterns for an unknown CLI returns the all-null pattern set', () => {
   // And a classifier built from it classifies nothing.
   assert.equal(makeClassifier(p).classify('Error: anything at all'), null);
 });
+
+test('stripANSI removes OSC-ST, RIS, DCS, CSI-with-intermediates and 8-bit C1 sequences', async () => {
+  const { stripANSI } = await import('../dist/classifier.js');
+  const cases = [
+    ['\x1b]0;title\x1b\\text', 'text'],            // OSC terminated by ST
+    ['\x1b]0;title\x07text', 'text'],              // OSC terminated by BEL (already handled)
+    ['\x1b]0;unterminated title', ''],             // OSC cut by the line break
+    ['\x1bctext', 'text'],                         // RIS full reset
+    ['\x1b7text\x1b8', 'text'],                    // DECSC / DECRC
+    ['\x1bP+q544e\x1b\\text', 'text'],             // DCS termcap query
+    ['\x1b_apc payload\x1b\\text', 'text'],        // APC string
+    ['\x1b[2 qtext', 'text'],                      // CSI with intermediate byte
+    ['\x1b[>ctext', 'text'],                       // CSI with private marker >
+    ['\x1b[?1049htext', 'text'],                   // CSI private mode (already handled)
+    ['\x9b2Jtext\x9d0;t\x9c', 'text'],              // 8-bit CSI / OSC / ST
+    ['\x85text\x90', 'text'],                     // lone C1 controls
+    ['\x0etext\x0f', 'text'],                      // SO / SI
+    ['\x1b(Btext\x1b)0', 'text'],                  // charset selects (already handled)
+    ['\x1b=text\x1b>', 'text'],                    // keypad modes (already handled)
+  ];
+  for (const [input, expected] of cases) {
+    assert.equal(stripANSI(input), expected, JSON.stringify(input));
+  }
+  // eslint-disable-next-line no-control-regex
+  const hostile = 'model claude-sonnet \x1b]0;PWNED\x1b\\ \x1bc \x9b2J \x1bP+q\x1b\\';
+  assert.doesNotMatch(stripANSI(hostile), /[\x1b\x80-\x9f]/);
+});
+
+test('model_changed data.to carries no control sequences after stripANSI', async () => {
+  const { stripANSI } = await import('../dist/classifier.js');
+  const c = makeClassifier();
+  const ev = c.classify(stripANSI('model claude-sonnet \x1b]0;PWNED\x1b\\ \x1bc'));
+  assert.ok(ev);
+  assert.equal(ev.type, 'model_changed');
+  // eslint-disable-next-line no-control-regex
+  assert.doesNotMatch(ev.data.to, /[\u001b\u0080-\u009f]/);
+});

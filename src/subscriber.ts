@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { type PlukEvent, type PlukEventType, parseEvent } from './event.js';
 import { resolveRunDir, validateSessionName } from './run-dir.js';
-import { ANSI_DIM, ANSI_RESET } from './ansi.js';
+import { ANSI_DIM, ANSI_RESET, sanitizeField } from './ansi.js';
 
 const POLL_INTERVAL_MS = 200;
 const READ_CHUNK_BYTES = 16384;
@@ -181,7 +181,10 @@ export class Subscriber extends EventEmitter {
     this.eventCount++;
     this.counters.eventsEmitted++;
     if (this.eventCount <= 3 || this.eventCount % 100 === 0) {
-      this.log(`event #${this.eventCount}: ${event.type}${event.data['to'] ? ` → ${event.data['to']}` : ''}`);
+      // `data.to` is agent-controlled for model_changed events (it is the
+      // raw terminal line), so never echo it to the terminal unsanitised.
+      const to = event.data['to'];
+      this.log(`event #${this.eventCount}: ${sanitizeField(event.type)}${to ? ` → ${sanitizeField(to)}` : ''}`);
     }
     this.emit('event', event);
   }
