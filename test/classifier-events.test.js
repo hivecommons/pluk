@@ -195,3 +195,30 @@ test('model_changed data.to carries no control sequences after stripANSI', async
   // eslint-disable-next-line no-control-regex
   assert.doesNotMatch(ev.data.to, /[\u001b\u0080-\u009f]/);
 });
+
+test('stripANSI never leaves a control byte behind, even for truncated or malformed sequences', async () => {
+  const { stripANSI } = await import('../dist/classifier.js');
+  const cases = [
+    ['a\x07b', 'ab'],          // bare BEL
+    ['a\x08b', 'ab'],          // backspace
+    ['a\x01b', 'ab'],          // other C0
+    ['text\x1b', 'text'],      // ESC cut by the line break
+    ['a\x1b\x01b', 'ab'],      // ESC followed by a C0 byte
+    ['a\x7fb', 'ab'],          // DEL
+    ['a\tb', 'a\tb'],          // TAB is content, keep it
+  ];
+  for (const [input, expected] of cases) {
+    assert.equal(stripANSI(input), expected, JSON.stringify(input));
+  }
+  // property: for any mix of sequence fragments, no control byte survives
+  const alphabet = [...'\x1b[]P\\\x07\x9b\x9c\x9d;0123456789?> mctext\x7f\x80\x85\x01\x08'];
+  let seed = 0x9e3779b9;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 2 ** 32;
+  for (let k = 0; k < 5000; k++) {
+    let s = '';
+    const len = 1 + Math.floor(rnd() * 12);
+    for (let j = 0; j < len; j++) s += alphabet[Math.floor(rnd() * alphabet.length)];
+    // eslint-disable-next-line no-control-regex
+    assert.doesNotMatch(stripANSI(s), /[\x00-\x08\x0a-\x1f\x7f\x80-\x9f]/, JSON.stringify(s));
+  }
+});
