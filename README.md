@@ -69,9 +69,11 @@ tmux send-keys -t my-agent "claude" Enter
 
 # 2. Attach pluk to capture output
 export PLUK_RUN_DIR=/tmp/pluk-run
-tmux pipe-pane -t my-agent -o "pluk watch my-agent --cli=claude"
+mkdir -p "$PLUK_RUN_DIR/logs"
+tmux pipe-pane -t my-agent "PLUK_RUN_DIR=$PLUK_RUN_DIR pluk watch my-agent --cli=claude >> $PLUK_RUN_DIR/logs/my-agent.jsonl"
 
 # 3. Subscribe to events (another terminal)
+export PLUK_RUN_DIR=/tmp/pluk-run
 pluk subscribe my-agent --filter=state_change,rate_limit,error
 
 # 4. Or start rationguard for real-time detection
