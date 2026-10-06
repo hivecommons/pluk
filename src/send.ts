@@ -1,4 +1,4 @@
-import { tmuxSendKeys } from './tmux.js';
+import { exactTarget, tmuxSendKeys } from './tmux.js';
 
 export interface SendOptions {
   session: string;
@@ -20,11 +20,12 @@ export function buildSendCommands(opts: SendOptions): string[][] {
   const { session, text, enter = false, literal = false } = opts;
   const args = ['send-keys'];
   if (literal || enter) args.push('-l');
-  args.push('-t', session, text);
+  // `--` ends option parsing so text starting with '-' is never read as a flag.
+  args.push('-t', exactTarget(session), '--', text);
 
   const commands = [args];
   if (enter) {
-    commands.push(['send-keys', '-t', session, 'Enter']);
+    commands.push(['send-keys', '-t', exactTarget(session), 'Enter']);
   }
   return commands;
 }
