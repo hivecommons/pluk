@@ -322,3 +322,39 @@ test('rotation: before any line was seen, the kept tail is delivered and a trail
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('verbose log never echoes control characters from event fields to the terminal', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'hostile.jsonl');
+  // `data.to` of a model_changed event is the agent's own terminal line;
+  // seed it with an OSC title set (ST-terminated), RIS, an 8-bit CSI and a DCS.
+  const hostile = 'model claude-sonnet \x1b]0;PWNED\x1b\\ \x1bc \x9b2J \x1bP+q\x1b\\';
+  writeFileSync(log, eventLine('model_changed', { from: '', to: hostile }));
+
+  const lines = [];
+  const orig = console.error;
+  console.error = (msg) => lines.push(String(msg));
+  const sub = new Subscriber({ session: 'hostile', runDir: dir, fromBeginning: true, verbose: true });
+  const events = [];
+  sub.on('event', e => events.push(e));
+  const done = sub.start();
+
+  try {
+    await waitFor(() => events.length >= 1);
+    const eventLog = lines.find(l => l.includes('event #1'));
+    assert.ok(eventLog, 'verbose event line was logged');
+    assert.ok(eventLog.includes('model_changed'));
+    assert.ok(eventLog.includes('PWNED'), 'printable payload text is kept');
+    // Only pluk's own dim/reset prefix may contain ESC — the payload must not.
+    const payload = eventLog.slice(eventLog.indexOf('event #1'));
+    // eslint-disable-next-line no-control-regex
+    assert.doesNotMatch(payload, /[\u0000-\u001f\u007f-\u009f]/);
+    // The emitted event itself is untouched: consumers get the original data.
+    assert.equal(events[0].data.to, hostile);
+  } finally {
+    console.error = orig;
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

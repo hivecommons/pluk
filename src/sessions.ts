@@ -3,24 +3,13 @@ import { join } from 'node:path';
 import { parseEvent, type PlukEvent } from './event.js';
 import { resolveRunDir } from './run-dir.js';
 import { tmuxListSessionNames } from './tmux.js';
+import { sanitizeField } from './ansi.js';
+
+// Re-exported for existing consumers; the sanitizer now lives in ansi.ts so
+// every module that prints untrusted log-derived text shares one definition.
+export { sanitizeField } from './ansi.js';
 
 const SECONDS_PER_MINUTE = 60;
-// C0 controls, DEL, and C1 controls — covers ESC (CSI/OSC introducers), BEL,
-// and every other terminal control byte an attacker could plant in a log
-// field or log filename.
-// eslint-disable-next-line no-control-regex
-const CONTROL_CHARS_RE = /[\u0000-\u001f\u007f-\u009f]/g;
-
-/**
- * Strip terminal control characters from a value sourced from a JSONL log
- * or a log filename. `pluk sessions` prints these values directly to the
- * user's terminal; without this, a crafted log entry (or a hostile file in
- * a shared run dir) can inject ANSI/OSC escape sequences — clearing the
- * screen, retitling the window, or abusing terminal-specific escapes.
- */
-export function sanitizeField(value: string): string {
-  return value.replace(CONTROL_CHARS_RE, '');
-}
 const SECONDS_PER_HOUR = 3600;
 const SECONDS_PER_DAY = 86400;
 const MAX_TAIL_LINES = 100;
