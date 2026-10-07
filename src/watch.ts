@@ -148,14 +148,19 @@ export function watch(opts: WatchOptions): WatchHandle {
     stats.inputErrors++;
   });
 
-  input.on('error', () => {
+  const onInputError = (): void => {
     // Silently handle input stream errors
     stats.inputErrors++;
-  });
+  };
+  input.on('error', onInputError);
 
+  let stopped = false;
   return {
     stop() {
+      if (stopped) return;
+      stopped = true;
       rl.close();
+      input.off('error', onInputError);
     },
     stats: snapshot,
   };

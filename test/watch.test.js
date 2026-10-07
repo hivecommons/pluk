@@ -160,3 +160,26 @@ test('an onEvent callback that throws does not kill the line loop', async () => 
   assert.ok(calls >= 2, `onEvent should keep being called after a throw (calls=${calls})`);
   assert.ok(seen.some(e => e.type === 'error'), 'later classified event must still arrive');
 });
+
+test('stop() removes the input error listener and is idempotent', () => {
+  const input = new PassThrough();
+  const before = input.listenerCount('error');
+  const warnings = [];
+  const onWarning = w => warnings.push(w);
+  process.on('warning', onWarning);
+  try {
+    for (let i = 0; i < 12; i++) {
+      const handle = watch({ session: 'wtest', cli: 'claude', input, onEvent: () => {} });
+      assert.ok(input.listenerCount('error') > before);
+      handle.stop();
+      assert.equal(input.listenerCount('error'), before);
+    }
+    const handle = watch({ session: 'wtest', cli: 'claude', input, onEvent: () => {} });
+    handle.stop();
+    assert.doesNotThrow(() => handle.stop());
+    assert.equal(input.listenerCount('error'), before);
+  } finally {
+    process.off('warning', onWarning);
+  }
+  assert.equal(warnings.filter(w => w.name === 'MaxListenersExceededWarning').length, 0);
+});
