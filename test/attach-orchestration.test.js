@@ -270,7 +270,7 @@ test('iTerm2 window is opened via osascript with the attach command quoted for A
   const call = stubs.log('osascript');
   assert.match(call, /tell application "iTerm2" to create window/);
   // appleScriptString must escape the double quotes around the shell-quoted command
-  assert.ok(call.includes(`attach -t '=agent-i'`), call);
+  assert.ok(call.includes(`attach -t '=agent-i:'`), call);
 });
 
 test('Apple_Terminal window is opened via osascript do script', () => {
