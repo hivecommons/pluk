@@ -37,8 +37,6 @@ function hasTmux() {
 
 const skip = hasTmux() ? false : 'tmux is not installed';
 
-const todo = 'pane-type tmux commands reject the bare =session target (hivecommons/pluk#188)';
-
 const PREFIX = `pluk-ct-${process.pid}`;
 const SHORT = `${PREFIX}-agent`; // a strict prefix of LONG
 const LONG = `${PREFIX}-agent-two`;
