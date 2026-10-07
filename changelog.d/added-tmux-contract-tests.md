@@ -1,0 +1,1 @@
+- Added `test/tmux-contract.test.js`, which runs the tmux seam against a real tmux server on a private socket (skipped when tmux is not installed), so tmux-semantics regressions like #105 and #169 are caught by `npm test`.
