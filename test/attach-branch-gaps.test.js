@@ -153,7 +153,7 @@ test('an unmapped --cli name is used verbatim as the command', () => {
   );
   assert.equal(code, 0);
   assert.match(stdout, /Starting somecli: 'somecli'/);
-  assert.match(stubs.log('tmux'), /send-keys -t =agent-fb -- 'somecli' Enter/);
+  assert.match(stubs.log('tmux'), /send-keys -t =agent-fb: -- 'somecli' Enter/);
 });
 
 // --- resolveRationguardBin: no implicit registry fetch ---------------------------------

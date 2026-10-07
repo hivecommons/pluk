@@ -14,10 +14,12 @@ import { execFileSync } from 'node:child_process';
 
 /**
  * tmux resolves a bare `-t name` by prefix and fnmatch, and reads `a.b` as
- * window.pane. A leading `=` forces an exact session-name match.
+ * window.pane. A leading `=` forces an exact session-name match, and the
+ * trailing `:` makes pane-type commands (send-keys, pipe-pane, capture-pane)
+ * accept it too; session-type commands (has-session, attach) accept it as well.
  */
 export function exactTarget(session: string): string {
-  return `=${session}`;
+  return `=${session}:`;
 }
 
 export function tmuxHasSession(session: string): boolean {

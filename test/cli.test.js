@@ -183,8 +183,8 @@ test('send --text --enter issues a literal send-keys plus a separate Enter key',
   assert.equal(code, 0);
   const calls = readFileSync(tmuxLog, 'utf-8').trim().split('\n');
   assert.deepEqual(calls, [
-    'send-keys -l -t =my-agent -- hello world',
-    'send-keys -t =my-agent Enter',
+    'send-keys -l -t =my-agent: -- hello world',
+    'send-keys -t =my-agent: Enter',
   ]);
 });
 
@@ -234,10 +234,10 @@ test('attach --no-open creates the session, starts the CLI, and wires pipe-pane'
   assert.match(stdout, /Session ready\. To interact: tmux attach -t agent-x/);
 
   const calls = readFileSync(tmuxLog, 'utf-8');
-  assert.match(calls, /^has-session -t =agent-x$/m);
+  assert.match(calls, /^has-session -t =agent-x:$/m);
   assert.match(calls, /^new-session -d -s agent-x -c /m);
-  assert.match(calls, /^send-keys -t =agent-x -- 'claude' Enter$/m);
-  assert.match(calls, /^pipe-pane -t =agent-x PLUK_RUN_DIR=/m);
+  assert.match(calls, /^send-keys -t =agent-x: -- 'claude' Enter$/m);
+  assert.match(calls, /^pipe-pane -t =agent-x: PLUK_RUN_DIR=/m);
   // `-o` makes pipe-pane a toggle that closes an existing pipe without
   // opening a new one; it must never be passed.
   assert.ok(!/^pipe-pane .* -o /m.test(calls), `pipe-pane must not toggle with -o: ${calls}`);
@@ -252,7 +252,7 @@ test('attach --dangerous appends the per-CLI danger flag to the start command', 
   assert.equal(code, 0);
   assert.match(stdout, /--dangerously-skip-permissions/);
   const calls = readFileSync(tmuxLog, 'utf-8');
-  assert.match(calls, /^send-keys -t =agent-y -- 'claude' '--dangerously-skip-permissions' Enter$/m);
+  assert.match(calls, /^send-keys -t =agent-y: -- 'claude' '--dangerously-skip-permissions' Enter$/m);
 });
 
 // --- watch over stdin -------------------------------------------------------------
@@ -291,8 +291,8 @@ test('pluk-send bin name dispatches straight to send', () => {
   assert.equal(code, 0);
   const calls = readFileSync(tmuxLog, 'utf-8').trim().split('\n');
   assert.deepEqual(calls, [
-    'send-keys -l -t =agent-z -- hi',
-    'send-keys -t =agent-z Enter',
+    'send-keys -l -t =agent-z: -- hi',
+    'send-keys -t =agent-z: Enter',
   ]);
 });
 

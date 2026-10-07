@@ -37,15 +37,6 @@ function hasTmux() {
 
 const skip = hasTmux() ? false : 'tmux is not installed';
 
-// Pane-type commands (send-keys, pipe-pane, capture-pane) reject the bare
-// `=session` target that exactTarget() currently returns: tmux only strips
-// the `=` from the session and window parts of a target, and a target with
-// no `:`/`.` is taken wholesale as a pane name (cmd-find.c). `=session:` is
-// the form that resolves. Until src/tmux.ts is fixed these cases are TODO
-// so they document the contract without turning `npm test` red; drop the
-// `todo` once they pass.
-const todo = 'pane-type tmux commands reject the bare =session target (hivecommons/pluk#188)';
-
 const PREFIX = `pluk-ct-${process.pid}`;
 const SHORT = `${PREFIX}-agent`; // a strict prefix of LONG
 const LONG = `${PREFIX}-agent-two`;
@@ -119,7 +110,7 @@ test('tmuxNewSession + tmuxListSessionNames round-trip the exact names', { skip 
   assert.ok(names.includes(LONG), `expected ${LONG} in ${names}`);
 });
 
-test('tmuxCapturePane(exactTarget(session)) returns the rendered frame', { skip, todo }, async () => {
+test('tmuxCapturePane(exactTarget(session)) returns the rendered frame', { skip }, async () => {
   const marker = `${PREFIX}-frame`;
   rawSendLine(SHORT, `echo ${marker}`);
   await waitFor(() => rawCapture(SHORT).split('\n').includes(marker), 'echo output in pane');
@@ -127,13 +118,13 @@ test('tmuxCapturePane(exactTarget(session)) returns the rendered frame', { skip,
   assert.ok(frame.split('\n').includes(marker), `frame did not contain ${marker}:\n${frame}`);
 });
 
-test('send() with enter types the text and the shell executes it', { skip, todo }, async () => {
+test('send() with enter types the text and the shell executes it', { skip }, async () => {
   const marker = `${PREFIX}-sent`;
   send({ session: SHORT, text: `echo ${marker}`, enter: true });
   await waitFor(() => rawCapture(SHORT).split('\n').includes(marker), 'sent command output');
 });
 
-test('send() literal keeps leading dashes and the word Enter as text', { skip, todo }, async () => {
+test('send() literal keeps leading dashes and the word Enter as text', { skip }, async () => {
   const text = `echo -n Enter ${PREFIX}-lit`;
   send({ session: SHORT, text, literal: true });
   const frame = await waitFor(() => {
@@ -146,7 +137,7 @@ test('send() literal keeps leading dashes and the word Enter as text', { skip, t
   execFileSync('tmux', ['send-keys', '-t', `=${SHORT}:`, 'C-u'], { stdio: 'ignore' });
 });
 
-test('a repeat tmuxPipePane keeps piping instead of toggling the pipe off (#105)', { skip, todo }, async () => {
+test('a repeat tmuxPipePane keeps piping instead of toggling the pipe off (#105)', { skip }, async () => {
   const first = join(scratch, 'pipe-1.log');
   const second = join(scratch, 'pipe-2.log');
   tmuxPipePane(SHORT, `cat >> '${first}'`);
