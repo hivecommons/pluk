@@ -2,7 +2,7 @@
 // npm spec `pluk attach` hands to its npx fallback.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -38,6 +38,24 @@ test('packageVersion returns "unknown" when no package.json sits beside dist/', 
     const distCopy = join(base, 'dist');
     mkdirSync(distCopy);
     copyFileSync(join(process.cwd(), 'dist', 'version.js'), join(distCopy, 'version.js'));
+    const orphan = await import(pathToFileURL(join(distCopy, 'version.js')).href);
+    assert.equal(orphan.packageVersion(), 'unknown');
+    assert.equal(orphan.plukPackageSpec(), '@hivecommons/pluk');
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test('packageVersion returns "unknown" when package.json has no version field', async () => {
+  // A readable manifest with no `version` is distinct from an unreadable
+  // one: the read succeeds and the `?? 'unknown'` default must take over so
+  // the npx fallback still gets a resolvable, unpinned spec.
+  const base = mkdtempSync(join(tmpdir(), 'pluk-version-test-'));
+  try {
+    const distCopy = join(base, 'dist');
+    mkdirSync(distCopy);
+    copyFileSync(join(process.cwd(), 'dist', 'version.js'), join(distCopy, 'version.js'));
+    writeFileSync(join(base, 'package.json'), JSON.stringify({ name: '@hivecommons/pluk', type: 'module' }));
     const orphan = await import(pathToFileURL(join(distCopy, 'version.js')).href);
     assert.equal(orphan.packageVersion(), 'unknown');
     assert.equal(orphan.plukPackageSpec(), '@hivecommons/pluk');
