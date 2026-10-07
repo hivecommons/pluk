@@ -119,6 +119,21 @@ tmux attach -t my-agent
 | `--no-raw` | Suppress `raw_output` events from the watcher `attach` starts (on by default for `attach`, unlike plain `pluk watch`, which requires `--include-raw` to emit them) |
 | `--verbose` | Show debug output |
 
+### Watch, Subscribe and Sessions Flags
+
+| Command | Flag | What it does |
+|---------|------|-------------|
+| `watch` | `--cli=claude` | CLI whose patterns classify the output |
+| `watch` | `--filter=type1,type2` | Emit only the listed event types (also accepted by `subscribe`) |
+| `watch` | `--include-raw` | Also emit `raw_output` events |
+| `watch` | `--capture[=ms]` | Instead of reading stdin, poll `tmux capture-pane` and classify each whole rendered frame; useful for TUIs whose pipe-pane stream has no line feeds. Interval in milliseconds, default `1000` |
+| `watch` | `--pane=<target>` | tmux pane to poll in `--capture` mode (defaults to the session name) |
+| `watch` | `--patterns-dir=<dir>` | Load pattern files from this directory |
+| `subscribe` | `--from-beginning` | Replay the existing log from the start instead of only new lines |
+| `subscribe` | `--verbose` | Show debug output |
+| `sessions`, `subscribe` | `--run-dir=<path>` | Run directory to read (overrides `PLUK_RUN_DIR`) |
+| `sessions` | `--json` | Print the session list as JSON instead of a table |
+
 ### Health diagnostics (`watch`, `subscribe`)
 
 `pluk watch` and `pluk subscribe` deliberately swallow capture-pane failures,
