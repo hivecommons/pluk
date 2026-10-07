@@ -11,6 +11,8 @@
 //   throw        — an uncaught exception thrown from a timer callback
 //   reject       — an unhandled promise rejection
 //   stdin-error  — an 'error' event on process.stdin (EIO when the pane dies)
+//   stdout-throw — console.log throws synchronously on its next call (a
+//                  closed/exhausted stdout surfacing inside onEvent)
 const kind = process.env['PLUK_TEST_FAULT'] ?? '';
 const delayMs = Number(process.env['PLUK_TEST_FAULT_DELAY_MS']) || 50;
 
@@ -27,6 +29,16 @@ setTimeout(() => {
     case 'stdin-error':
       process.stdin.emit('error', new Error('synthetic EIO on stdin'));
       break;
+    case 'stdout-throw': {
+      // One-shot: the next console.log throws, then the original is restored
+      // so the test can observe events flowing again afterwards.
+      const original = console.log;
+      console.log = () => {
+        console.log = original;
+        throw new Error('synthetic console.log failure');
+      };
+      break;
+    }
     default:
       break;
   }
