@@ -93,3 +93,22 @@ for (const bad of ['0', '-5', 'abc']) {
     assert.match(stderr, /--capture expects a positive integer/);
   });
 }
+
+// --- --filter validation ---------------------------------------------------------
+
+for (const cmd of ['watch', 'subscribe']) {
+  for (const bad of ['rate-limit', 'rate_limit,', 'error,,state_change', 'RATE_LIMIT']) {
+    test(`${cmd} --filter=${bad} exits 2 naming the unknown type`, () => {
+      const { code, stderr } = run(CLI, [cmd, 'x', `--filter=${bad}`]);
+      assert.equal(code, 2);
+      assert.match(stderr, /unknown event type "[^"]*" \(valid: raw_output, state_change, /);
+    });
+  }
+}
+
+test('watch --filter with valid types is not rejected as a usage error', () => {
+  const { code, stderr } = run(CLI, ['watch', 'x', '--filter=rate_limit, error', '--capture=0']);
+  assert.equal(code, 2);
+  assert.doesNotMatch(stderr, /unknown event type/);
+  assert.match(stderr, /--capture expects/);
+});

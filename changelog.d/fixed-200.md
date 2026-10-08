@@ -1,0 +1,1 @@
+- `pluk watch` and `pluk subscribe` now reject unknown or empty `--filter` event types with exit code 2 instead of silently matching nothing (#200).

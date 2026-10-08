@@ -4,7 +4,7 @@ import { basename, join } from 'node:path';
 import { Subscriber } from './subscriber.js';
 import { watch } from './watch.js';
 import { startDiagnostics } from './diagnostics.js';
-import { type PlukEventType } from './event.js';
+import { PLUK_EVENT_TYPES, type PlukEventType } from './event.js';
 import { listAvailableCLIs, bundledPatternsDir, getPatterns } from './patterns.js';
 import { discoverSessions } from './sessions.js';
 import { resolveRunDir, rotateLogFileIfNeeded, validateSessionName } from './run-dir.js';
@@ -83,6 +83,18 @@ function installPipePaneErrorHandlers(): void {
   process.on('unhandledRejection', () => {});
 }
 
+function parseFilter(raw: string | undefined): PlukEventType[] | undefined {
+  if (!raw) return undefined;
+  const types = raw.split(',').map(t => t.trim());
+  for (const t of types) {
+    if (!(PLUK_EVENT_TYPES as readonly string[]).includes(t)) {
+      console.error(`${ANSI_RED}Error:${ANSI_RESET} unknown event type "${t}" (valid: ${PLUK_EVENT_TYPES.join(', ')})`);
+      process.exit(2);
+    }
+  }
+  return types as PlukEventType[];
+}
+
 function cmdSubscribe(args: string[]): void {
   const { positional, flags } = parseArgs(args);
   const session = positional[0];
@@ -93,9 +105,7 @@ function cmdSubscribe(args: string[]): void {
     process.exit(1);
   }
 
-  const filter = flags['filter']
-    ? flags['filter'].split(',').map(t => t.trim()) as PlukEventType[]
-    : undefined;
+  const filter = parseFilter(flags['filter']);
 
   const sub = new Subscriber({
     session,
@@ -136,9 +146,7 @@ function cmdWatch(args: string[]): void {
   const session = positional[0] ?? 'stdin';
   const cli = flags['cli'] ?? 'claude';
 
-  const filter = flags['filter']
-    ? flags['filter'].split(',').map(t => t.trim()) as PlukEventType[]
-    : undefined;
+  const filter = parseFilter(flags['filter']);
 
   // Prevent crash on stdout write errors (EPIPE when pipe-pane closes)
   process.stdout.on('error', () => {});

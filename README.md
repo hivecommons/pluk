@@ -124,7 +124,7 @@ tmux attach -t my-agent
 | Command | Flag | What it does |
 |---------|------|-------------|
 | `watch` | `--cli=claude` | CLI whose patterns classify the output |
-| `watch` | `--filter=type1,type2` | Emit only the listed event types (also accepted by `subscribe`) |
+| `watch` | `--filter=type1,type2` | Emit only the listed event types (also accepted by `subscribe`); unknown or empty entries exit 2 |
 | `watch` | `--include-raw` | Also emit `raw_output` events |
 | `watch` | `--capture[=ms]` | Instead of reading stdin, poll `tmux capture-pane` and classify each whole rendered frame; useful for TUIs whose pipe-pane stream has no line feeds. Interval in milliseconds, default `1000` |
 | `watch` | `--pane=<target>` | tmux pane to poll in `--capture` mode (defaults to the session name) |
