@@ -160,3 +160,15 @@ test('sanitizeField removes C0, DEL, and C1 control characters', async () => {
   assert.equal(sanitizeField('a\u0000b\u001fc\u007fd\u0080e\u009ff'), 'abcdef');
   assert.equal(sanitizeField('plain-name_1.2'), 'plain-name_1.2');
 });
+
+test('discoverSessions picks up cli from a state_change event (#197)', () => {
+  const dir = makeRunDir();
+  try {
+    writeFileSync(join(dir, 'logs', 'agent1.jsonl'), eventLine({
+      ts: '2026-01-01T00:00:00.000Z', type: 'state_change', data: { from: 'unknown', to: 'working', cli: 'goose' },
+    }) + '\n');
+    assert.equal(discoverSessions(dir)[0].cli, 'goose');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
