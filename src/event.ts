@@ -10,19 +10,27 @@ export interface PlukEvent {
   data: Record<string, string>;
 }
 
-export type PlukEventType =
-  | 'raw_output'
-  | 'state_change'
-  | 'rate_limit'
-  | 'login_required'
-  | 'trust_dialog'
-  | 'bypass_permissions'
-  | 'tool_call_started'
-  | 'tool_call_completed'
-  | 'error'
-  | 'model_changed'
-  | 'session_ended'
-  | 'command_received';
+export const PLUK_EVENT_TYPES = [
+  'raw_output',
+  'state_change',
+  'rate_limit',
+  'login_required',
+  'trust_dialog',
+  'bypass_permissions',
+  'tool_call_started',
+  'tool_call_completed',
+  'error',
+  'model_changed',
+  'session_ended',
+  'command_received',
+] as const;
+
+export type PlukEventType = (typeof PLUK_EVENT_TYPES)[number];
+
+// Fails to compile if a PlukEventType member is missing from PLUK_EVENT_TYPES.
+type MissingEventTypes = Exclude<PlukEventType, (typeof PLUK_EVENT_TYPES)[number]>;
+const _allEventTypesListed: MissingEventTypes extends never ? true : never = true;
+void _allEventTypesListed;
 
 const EVENT_VERSION = 1;
 
