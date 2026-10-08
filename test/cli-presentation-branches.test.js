@@ -198,6 +198,20 @@ function eventCount(stdout) {
   return stdout.split('\n').filter(l => l.startsWith('{')).length;
 }
 
+function hasRawLine(stdout, line) {
+  return stdout
+    .split('\n')
+    .filter(l => l.startsWith('{'))
+    .some(l => {
+      try {
+        const e = JSON.parse(l);
+        return e.type === 'raw_output' && e.data?.line === line;
+      } catch {
+        return false; // a chunk may end mid-line
+      }
+    });
+}
+
 test('watch keeps emitting events after console.log throws inside onEvent', async () => {
   const child = spawn(
     process.execPath,
@@ -208,7 +222,10 @@ test('watch keeps emitting events after console.log throws inside onEvent', asyn
         ...process.env,
         PATH: `${stubBin}:${process.env.PATH}`,
         PLUK_TEST_FAULT: 'stdout-throw',
-        PLUK_TEST_FAULT_DELAY_MS: '50',
+        // Arm on demand, not on a timer: a 50ms timer counts from the preload
+        // and on a loaded host fires before the CLI has processed the baseline
+        // line, so the baseline's own state_change becomes the dropped event.
+        PLUK_TEST_FAULT_ON_SIGNAL: 'SIGUSR2',
       },
     },
   );
@@ -224,8 +241,12 @@ test('watch keeps emitting events after console.log throws inside onEvent', asyn
     ]);
 
   // Baseline: the watcher is up and classifying before the fault is armed.
+  // Wait for the baseline line's raw_output — watch emits it last for a line,
+  // synchronously after any state_change — so every baseline event is on
+  // stdout before SIGUSR2 arms the throwing console.log.
   child.stdin.write('esc to interrupt\n');
-  await alive(out.waitFor(s => eventCount(s) >= 1));
+  await alive(out.waitFor(s => hasRawLine(s, 'esc to interrupt')));
+  child.kill('SIGUSR2');
   await alive(err.waitFor(s => s.includes(`${FAULT_MARKER}:stdout-throw`)));
   const before = eventCount(out.text);
 

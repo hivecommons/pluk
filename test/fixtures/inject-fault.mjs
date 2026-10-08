@@ -13,12 +13,22 @@
 //   stdin-error  — an 'error' event on process.stdin (EIO when the pane dies)
 //   stdout-throw — console.log throws synchronously on its next call (a
 //                  closed/exhausted stdout surfacing inside onEvent)
+//
+// By default the fault fires PLUK_TEST_FAULT_DELAY_MS after this preload
+// runs — before dist/cli.js has even been loaded — so a test that needs the
+// command to have processed some input first cannot rely on the timer: on a
+// loaded host the CLI's startup alone can outlast it. Such a test sets
+// PLUK_TEST_FAULT_ON_SIGNAL=<signal> (e.g. SIGUSR2) and sends that signal
+// once it has observed the state it needs; the fault then fires on the next
+// event-loop turn, which can never interleave with the synchronous work of a
+// single input line.
 const kind = process.env['PLUK_TEST_FAULT'] ?? '';
 const delayMs = Number(process.env['PLUK_TEST_FAULT_DELAY_MS']) || 50;
+const onSignal = process.env['PLUK_TEST_FAULT_ON_SIGNAL'] ?? '';
 
 export const FAULT_MARKER = 'PLUK_TEST_FAULT_INJECTED';
 
-setTimeout(() => {
+function fire() {
   process.stderr.write(`${FAULT_MARKER}:${kind}\n`);
   switch (kind) {
     case 'throw':
@@ -42,4 +52,10 @@ setTimeout(() => {
     default:
       break;
   }
-}, delayMs);
+}
+
+if (onSignal) {
+  process.once(onSignal, fire);
+} else {
+  setTimeout(fire, delayMs);
+}
