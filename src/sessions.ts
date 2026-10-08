@@ -66,7 +66,7 @@ function getTmuxSessions(): Set<string> {
 function countEvents(filePath: string): number {
   try {
     const content = readFileSync(filePath, 'utf-8');
-    return content.split('\n').filter(l => l.trim()).length;
+    return content.split('\n').filter(l => l.trim() && parseEvent(l) !== null).length;
   } catch {
     return 0;
   }

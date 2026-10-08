@@ -55,3 +55,15 @@ test('lastActivityAgo uses hours under one day', () => {
 test('lastActivityAgo uses days from one day onward', () => {
   assert.match(agoFor(2 * 86_400_000), /^[12]d ago$/);
 });
+
+test('eventCount ignores malformed and blank log lines', () => {
+  const dir = makeRunDir();
+  try {
+    const ts = new Date().toISOString();
+    writeFileSync(join(dir, 'logs', 'a.jsonl'), eventLine(ts) + 'not-json\n\n' + eventLine(ts));
+    const [s] = discoverSessions(dir);
+    assert.equal(s.eventCount, 2);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
