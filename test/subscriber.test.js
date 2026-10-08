@@ -347,6 +347,61 @@ test('rotation: before any line was seen, the kept tail is delivered and a trail
   }
 });
 
+test('rotation: a poll that sees the log empty mid-rotation does not replay the kept tail', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot5.jsonl');
+  writeFileSync(log, '');
+  const { sub, events, done } = await startTail(dir, 'rot5');
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    const sent = Array.from({ length: 100 }, (_, i) => seqLine(i));
+    appendFileSync(log, sent.join(''));
+    await waitFor(() => events.length === 100);
+
+    // Simulate a reader observing the truncate before the kept tail is
+    // written, long enough for the bounded re-reads to give up.
+    writeFileSync(log, '');
+    await new Promise(r => setTimeout(r, 1200));
+    appendFileSync(log, sent.slice(50).join('') + seqLine(100, 'error'));
+
+    await waitFor(() => events.length >= 101);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 101, 'kept tail must not be replayed');
+    assert.equal(events[100].seq, 100);
+    assert.equal(events[100].type, 'error');
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('rotation: an empty log that fills within the retry window resumes after the marker', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot6.jsonl');
+  writeFileSync(log, '');
+  const { sub, events, done } = await startTail(dir, 'rot6');
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    const sent = Array.from({ length: 100 }, (_, i) => seqLine(i));
+    appendFileSync(log, sent.join(''));
+    await waitFor(() => events.length === 100);
+
+    writeFileSync(log, '');
+    await new Promise(r => setTimeout(r, 300));
+    appendFileSync(log, sent.slice(50).join('') + seqLine(100, 'error'));
+
+    await waitFor(() => events.length >= 101);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 101, 'kept tail must not be replayed');
+    assert.equal(events[100].seq, 100);
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('verbose log never echoes control characters from event fields to the terminal', async () => {
   const dir = makeRunDir();
   const log = join(dir, 'logs', 'hostile.jsonl');

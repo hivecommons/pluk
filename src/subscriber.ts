@@ -10,6 +10,8 @@ const POLL_INTERVAL_MS = 200;
 const READ_CHUNK_BYTES = 16384;
 const FILE_WAIT_TIMEOUT_MS = 60_000;
 const FILE_WAIT_POLL_MS = 1_000;
+/** Re-reads of a rotated log that still has no complete line before giving up. */
+const ROTATION_RETRY_LIMIT = 3;
 
 /**
  * Bounded aggregate health counters for one subscriber: fixed categories
@@ -45,6 +47,12 @@ export class Subscriber extends EventEmitter {
   private eventCount = 0;
   /** Last non-blank line consumed — the resume marker after a rotation. */
   private lastLine = '';
+  /**
+   * Set when a rotation re-read found no complete line yet: the next bytes
+   * that show up must go through the resume path again so the kept tail is
+   * still checked against {@link lastLine} rather than replayed from byte 0.
+   */
+  private resumePending = false;
 
   /** Snapshot of the health counters accumulated so far. */
   stats(): SubscriberStats {
@@ -132,6 +140,14 @@ export class Subscriber extends EventEmitter {
           continue;
         }
 
+        if (this.resumePending) {
+          const resumed = await this.resumeAfterRotation(fh);
+          position = resumed.position;
+          partial = resumed.partial;
+          decoder = resumed.decoder;
+          continue;
+        }
+
         position += bytesRead;
         const chunk = partial + decoder.write(buf.subarray(0, bytesRead));
         const lines = chunk.split('\n');
@@ -150,21 +166,27 @@ export class Subscriber extends EventEmitter {
    * lines, so that line is normally still present; if it is not (the
    * subscriber lagged by more than N lines) everything in the file is newer
    * than anything delivered, and it is all replayed.
+   *
+   * A file with no complete line yet is treated as a rotation still in
+   * progress: it is re-read a bounded number of times, and if it is still
+   * empty the resume is deferred until content appears, so the kept tail is
+   * never replayed from byte 0 without the marker check.
    */
   private async resumeAfterRotation(fh: FileHandle): Promise<{ position: number; partial: string; decoder: StringDecoder }> {
-    const chunks: Buffer[] = [];
-    let position = 0;
-    for (;;) {
-      const buf = Buffer.alloc(READ_CHUNK_BYTES);
-      const { bytesRead } = await fh.read(buf, 0, buf.length, position);
-      if (bytesRead === 0) break;
-      chunks.push(buf.subarray(0, bytesRead));
-      position += bytesRead;
+    let { position, text } = await readFromStart(fh);
+    for (let attempt = 0; !text.includes('\n') && attempt < ROTATION_RETRY_LIMIT && !this.aborted; attempt++) {
+      await sleep(POLL_INTERVAL_MS);
+      ({ position, text } = await readFromStart(fh));
     }
 
     const decoder = new StringDecoder('utf8');
-    const lines = decoder.write(Buffer.concat(chunks)).split('\n');
+    const lines = decoder.write(text).split('\n');
     const partial = lines.pop() ?? '';
+    this.resumePending = lines.length === 0;
+    if (this.resumePending) {
+      this.log('rotated log has no complete line yet; deferring resume');
+      return { position, partial: '', decoder: new StringDecoder('utf8') };
+    }
     const marker = this.lastLine ? lines.lastIndexOf(this.lastLine) : -1;
     for (const line of lines.slice(marker + 1)) this.consumeLine(line);
     return { position, partial, decoder };
@@ -197,6 +219,19 @@ export class Subscriber extends EventEmitter {
   stop(): void {
     this.aborted = true;
   }
+}
+
+async function readFromStart(fh: FileHandle): Promise<{ position: number; text: Buffer }> {
+  const chunks: Buffer[] = [];
+  let position = 0;
+  for (;;) {
+    const buf = Buffer.alloc(READ_CHUNK_BYTES);
+    const { bytesRead } = await fh.read(buf, 0, buf.length, position);
+    if (bytesRead === 0) break;
+    chunks.push(buf.subarray(0, bytesRead));
+    position += bytesRead;
+  }
+  return { position, text: Buffer.concat(chunks) };
 }
 
 function sleep(ms: number): Promise<void> {

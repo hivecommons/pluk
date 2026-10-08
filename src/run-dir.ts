@@ -1,4 +1,16 @@
-import { chmodSync, closeSync, lstatSync, mkdirSync, openSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  closeSync,
+  fstatSync,
+  ftruncateSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  statSync,
+  writeSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -116,17 +128,27 @@ export function logKeepLines(): number {
  * rotates or caps them, so a long-running session's log (and the memory
  * `pluk sessions` uses to read it) grows without bound.
  *
- * Because appends are O_APPEND writes (the kernel always seeks to EOF
- * before writing), it is safe to truncate the file out from under the
- * active writer: the next append lands right after whatever we just kept,
- * with no coordination and no corruption. Called on a size threshold so
- * normal-sized logs never pay the read/rewrite cost.
+ * Appends are O_APPEND writes (the kernel always seeks to EOF before
+ * writing), and the log must keep its inode — a rename would orphan the
+ * `>>` fd — so the file is trimmed in place on a single `r+` fd:
+ *
+ * 1. snapshot the content and compute the kept tail;
+ * 2. overwrite the start of the file with that tail (the file never shrinks
+ *    to zero, so a tailing Subscriber never sees an empty log mid-rotation);
+ * 3. copy any bytes appended past the snapshot onto the end of the tail,
+ *    repeating until the size stops growing;
+ * 4. ftruncate to the new length.
+ *
+ * Only an append landing between the final size check and the ftruncate
+ * (a few microseconds) can still be lost; appends after the ftruncate land
+ * right after the kept tail. Called on a size threshold so normal-sized logs
+ * never pay the read/rewrite cost.
  *
  * Returns whether the file was rewritten.
  */
 export function rotateLogFileIfNeeded(
   file: string,
-  opts: { maxBytes?: number; keepLines?: number } = {},
+  opts: { maxBytes?: number; keepLines?: number; onSnapshot?: () => void } = {},
 ): boolean {
   const maxBytes = opts.maxBytes ?? logMaxBytes();
   const keepLines = opts.keepLines ?? logKeepLines();
@@ -139,22 +161,47 @@ export function rotateLogFileIfNeeded(
   }
   if (size <= maxBytes) return false;
 
-  let content: string;
+  let snapshot: Buffer;
   try {
-    content = readFileSync(file, 'utf-8');
+    snapshot = readFileSync(file);
   } catch {
     return false;
   }
 
-  const lines = content.split('\n');
+  const lines = snapshot.toString('utf-8').split('\n');
   const hasTrailingNewline = lines.length > 0 && lines[lines.length - 1] === '';
   const usableLines = hasTrailingNewline ? lines.slice(0, -1) : lines;
   if (usableLines.length <= keepLines) return false;
 
+  // A snapshot ending mid-line keeps that partial line unterminated so the
+  // rest of it, copied from past the snapshot below, completes it.
   const kept = usableLines.slice(-keepLines);
-  const rebuilt = kept.length ? kept.join('\n') + '\n' : '';
+  const rebuilt = Buffer.from(kept.join('\n') + (hasTrailingNewline ? '\n' : ''), 'utf-8');
 
-  writeFileSync(file, rebuilt, { mode: PRIVATE_FILE_MODE });
+  // Test seam: lets a test append between the snapshot and the rewrite.
+  opts.onSnapshot?.();
+
+  const fd = openSync(file, 'r+');
+  try {
+    writeSync(fd, rebuilt, 0, rebuilt.length, 0);
+    let readFrom = snapshot.length;
+    let writeAt = rebuilt.length;
+    const buf = Buffer.alloc(64 * 1024);
+    for (;;) {
+      const end = fstatSync(fd).size;
+      if (end <= readFrom) break;
+      while (readFrom < end) {
+        const bytesRead = readSync(fd, buf, 0, Math.min(buf.length, end - readFrom), readFrom);
+        if (bytesRead === 0) break;
+        writeSync(fd, buf, 0, bytesRead, writeAt);
+        readFrom += bytesRead;
+        writeAt += bytesRead;
+      }
+    }
+    ftruncateSync(fd, writeAt);
+  } finally {
+    closeSync(fd);
+  }
   chmodSync(file, PRIVATE_FILE_MODE);
   return true;
 }
