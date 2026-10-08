@@ -72,8 +72,8 @@ test('discoverSessions ignores cli:"unknown" markers and tolerates malformed lin
     const sessions = discoverSessions(dir);
     assert.equal(sessions.length, 1);
     assert.equal(sessions[0].cli, 'copilot');
-    // malformed line still counts as a raw line for eventCount
-    assert.equal(sessions[0].eventCount, 3);
+    // malformed line is not an event and is excluded from eventCount
+    assert.equal(sessions[0].eventCount, 2);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -1,0 +1,1 @@
+- `pluk sessions` EVENTS column now counts only log lines that parse as valid events, ignoring malformed lines (#203).
