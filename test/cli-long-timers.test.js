@@ -92,9 +92,9 @@ test('watch rotates an oversized session log on its periodic check', async t => 
     let stderr = '';
     child.stderr.on('data', d => { stderr += d; });
 
-    // rotateLogFileIfNeeded rewrites with writeFileSync, which truncates
-    // before it writes, so a poll can observe an empty or partial file
-    // mid-rewrite. Wait for the final content rather than "anything changed".
+    // rotateLogFileIfNeeded overwrites the start of the file in place and
+    // only then truncates, so a poll can observe a partially rewritten file.
+    // Wait for the final content rather than "anything changed".
     let rotated = original;
     await waitFor(() => (rotated = readFileSync(logFile, 'utf-8')) === expected, { label: 'log rotation' })
       .catch(err => { throw new Error(`${err.message}; last content: ${JSON.stringify(rotated)}`); });

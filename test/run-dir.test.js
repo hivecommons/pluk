@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync, readFileSync, lstatSync, chmodSync, openSync, writeSync, closeSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync, readFileSync, lstatSync, chmodSync, openSync, writeSync, closeSync, appendFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -279,6 +279,46 @@ test('rotateLogFileIfNeeded leaves an oversized but unreadable log alone', (t) =
       chmodSync(file, 0o600);
     }
     assert.strictEqual(readFileSync(file, 'utf-8'), original, 'file must be left untouched');
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test('rotateLogFileIfNeeded keeps lines appended between the snapshot and the rewrite', () => {
+  const base = tempBase();
+  try {
+    const file = join(base, 'append-during-rotate.jsonl');
+    const lines = Array.from({ length: 50 }, (_, i) => `{"ts":"${i}"}`);
+    writeFileSync(file, lines.join('\n') + '\n');
+
+    const late = Array.from({ length: 3 }, (_, i) => `{"ts":"late-${i}"}`);
+    const rotated = rotateLogFileIfNeeded(file, {
+      maxBytes: 10,
+      keepLines: 5,
+      onSnapshot: () => appendFileSync(file, late.map(l => l + '\n').join('')),
+    });
+    assert.strictEqual(rotated, true);
+    assert.strictEqual(readFileSync(file, 'utf-8'), [...lines.slice(-5), ...late].join('\n') + '\n');
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test('rotateLogFileIfNeeded completes a line that was mid-append at snapshot time', () => {
+  const base = tempBase();
+  try {
+    const file = join(base, 'partial-during-rotate.jsonl');
+    const lines = Array.from({ length: 50 }, (_, i) => `{"ts":"${i}"}`);
+    const last = '{"ts":"split"}';
+    writeFileSync(file, lines.join('\n') + '\n' + last.slice(0, 6));
+
+    const rotated = rotateLogFileIfNeeded(file, {
+      maxBytes: 10,
+      keepLines: 5,
+      onSnapshot: () => appendFileSync(file, last.slice(6) + '\n'),
+    });
+    assert.strictEqual(rotated, true);
+    assert.strictEqual(readFileSync(file, 'utf-8'), [...lines.slice(-4), last].join('\n') + '\n');
   } finally {
     rmSync(base, { recursive: true, force: true });
   }
