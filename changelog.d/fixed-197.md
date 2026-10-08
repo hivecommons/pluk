@@ -1,0 +1,1 @@
+- Fixed `pluk sessions` showing `CLI = unknown`: `state_change` events now carry the `cli` field (#197).

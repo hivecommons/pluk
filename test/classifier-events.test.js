@@ -222,3 +222,11 @@ test('stripANSI never leaves a control byte behind, even for truncated or malfor
     assert.doesNotMatch(stripANSI(s), /[\x00-\x08\x0a-\x1f\x7f\x80-\x9f]/, JSON.stringify(s));
   }
 });
+
+test('state_change carries patterns.cli so sessions can resolve the CLI (#197)', () => {
+  const frame = '✻ Concocting… (6m 44s · ↓ 27.9k tokens)\n❯\n⏵⏵ bypass permissions on · esc to interrupt';
+  const ev = makeClassifier().classifyFrame(frame);
+  assert.ok(ev);
+  assert.equal(ev.type, 'state_change');
+  assert.equal(ev.data.cli, 'claude');
+});

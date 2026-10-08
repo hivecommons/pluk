@@ -124,6 +124,7 @@ export class Classifier {
     this.seq++;
     return createEvent(this.session, this.pane, this.source, this.seq, 'state_change', {
       from: oldState, to: this.currentState,
+      ...(this.patterns.cli ? { cli: this.patterns.cli } : {}),
     });
   }
 
