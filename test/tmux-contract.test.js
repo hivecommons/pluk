@@ -35,7 +35,24 @@ function hasTmux() {
   }
 }
 
-const skip = hasTmux() ? false : 'tmux is not installed';
+// Locally a missing tmux just skips the suite. Under CI the Test workflow
+// installs tmux explicitly (#190), so a missing binary there means the
+// install step regressed; skipping would let this lane go dark while CI
+// stays green, which is how #105/#169/#188 slipped through. Fail instead,
+// with PLUK_TMUX_OPTIONAL=1 as the explicit escape hatch.
+export function tmuxRequirement(available, env = process.env) {
+  if (available) return false;
+  if (env.CI && !env.PLUK_TMUX_OPTIONAL) {
+    throw new Error(
+      'tmux-contract: tmux is not installed but CI is set. Install tmux '
+      + '(see the "Install tmux" step in .github/workflows/test.yml) or set '
+      + 'PLUK_TMUX_OPTIONAL=1 to skip this suite deliberately.',
+    );
+  }
+  return 'tmux is not installed';
+}
+
+const skip = tmuxRequirement(hasTmux());
 
 const PREFIX = `pluk-ct-${process.pid}`;
 const SHORT = `${PREFIX}-agent`; // a strict prefix of LONG
