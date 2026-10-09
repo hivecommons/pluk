@@ -56,7 +56,7 @@ export class Subscriber extends EventEmitter {
    */
   private resumePending = false;
   /** First bytes of the log as last seen; a change while tailing means it was rewritten. */
-  private head = Buffer.alloc(0);
+  private head: Buffer = Buffer.alloc(0);
 
   /** Snapshot of the health counters accumulated so far. */
   stats(): SubscriberStats {
