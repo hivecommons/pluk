@@ -1,0 +1,1 @@
+- Fixed `pluk subscribe` missing an in-place log rotation when the kept tail is larger than its read offset, which produced a malformed fragment and duplicated events: rotation is now also detected when the log's leading bytes change (#208).

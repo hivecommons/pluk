@@ -286,6 +286,35 @@ test('rotation: lines appended between read and rotation are delivered once', as
   }
 });
 
+test('rotation: a kept tail larger than the read offset is detected without duplicates or fragments', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot-big.jsonl');
+  writeFileSync(log, '');
+  const { sub, events, done } = await startTail(dir, 'rot-big');
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    let body = '';
+    for (let i = 0; i < 100; i++) body += seqLine(i);
+    appendFileSync(log, body);
+    await waitFor(() => events.length === 100);
+
+    // Rotating down to 90 lines shrinks the file only slightly; the two
+    // appended lines push it past our old offset, so no shrink is ever seen.
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10, keepLines: 90 }), true);
+    appendFileSync(log, seqLine(100) + seqLine(101));
+
+    await waitFor(() => events.length >= 102);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 102, 'kept lines must not be replayed');
+    assert.equal(new Set(events.map(e => e.seq)).size, 102, 'no duplicate events');
+    assert.equal(sub.stats().malformedLines, 0, 'no mid-line fragment parsed');
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('rotation: when the last seen line was trimmed away, the whole kept tail is replayed', async () => {
   const dir = makeRunDir();
   const log = join(dir, 'logs', 'rot3.jsonl');

@@ -12,6 +12,8 @@ const FILE_WAIT_TIMEOUT_MS = 60_000;
 const FILE_WAIT_POLL_MS = 1_000;
 /** Re-reads of a rotated log that still has no complete line before giving up. */
 const ROTATION_RETRY_LIMIT = 3;
+/** Leading bytes of the log remembered to recognise an in-place rewrite. */
+const HEAD_FINGERPRINT_BYTES = 256;
 
 /**
  * Bounded aggregate health counters for one subscriber: fixed categories
@@ -53,6 +55,8 @@ export class Subscriber extends EventEmitter {
    * still checked against {@link lastLine} rather than replayed from byte 0.
    */
   private resumePending = false;
+  /** First bytes of the log as last seen; a change while tailing means it was rewritten. */
+  private head: Buffer = Buffer.alloc(0);
 
   /** Snapshot of the health counters accumulated so far. */
   stats(): SubscriberStats {
@@ -113,9 +117,21 @@ export class Subscriber extends EventEmitter {
       let partial = '';
       // Holds an incomplete multi-byte sequence across read boundaries.
       let decoder = new StringDecoder('utf8');
+      this.head = await readHead(fh);
       this.log(`tailing from position ${position}${this.filterSet ? ` (filter: ${[...this.filterSet].join(',')})` : ''}`);
 
       while (!this.aborted) {
+        // Rotation rewrites the file in place, so a kept tail larger than our
+        // offset never shrinks the file below it: a size check alone would
+        // read mid-way through the new tail. Detect the rewrite by identity.
+        if (position > 0 && !this.resumePending && (await this.headChanged(fh))) {
+          this.log('log file head changed; resuming after rotation');
+          const resumed = await this.resumeAfterRotation(fh);
+          position = resumed.position;
+          partial = resumed.partial;
+          decoder = resumed.decoder;
+          continue;
+        }
         const buf = Buffer.alloc(READ_CHUNK_BYTES);
         const { bytesRead } = await fh.read(buf, 0, buf.length, position);
 
@@ -173,6 +189,7 @@ export class Subscriber extends EventEmitter {
    * never replayed from byte 0 without the marker check.
    */
   private async resumeAfterRotation(fh: FileHandle): Promise<{ position: number; partial: string; decoder: StringDecoder }> {
+    this.head = await readHead(fh);
     let { position, text } = await readFromStart(fh);
     for (let attempt = 0; !text.includes('\n') && attempt < ROTATION_RETRY_LIMIT && !this.aborted; attempt++) {
       await sleep(POLL_INTERVAL_MS);
@@ -190,6 +207,16 @@ export class Subscriber extends EventEmitter {
     const marker = this.lastLine ? lines.lastIndexOf(this.lastLine) : -1;
     for (const line of lines.slice(marker + 1)) this.consumeLine(line);
     return { position, partial, decoder };
+  }
+
+  /** True when the log's leading bytes differ from those remembered. */
+  private async headChanged(fh: FileHandle): Promise<boolean> {
+    const current = await readHead(fh);
+    if (this.head.length === 0) {
+      this.head = current;
+      return false;
+    }
+    return !current.subarray(0, this.head.length).equals(this.head);
   }
 
   private consumeLine(line: string): void {
@@ -219,6 +246,12 @@ export class Subscriber extends EventEmitter {
   stop(): void {
     this.aborted = true;
   }
+}
+
+async function readHead(fh: FileHandle): Promise<Buffer> {
+  const buf = Buffer.alloc(HEAD_FINGERPRINT_BYTES);
+  const { bytesRead } = await fh.read(buf, 0, buf.length, 0);
+  return buf.subarray(0, bytesRead);
 }
 
 async function readFromStart(fh: FileHandle): Promise<{ position: number; text: Buffer }> {
