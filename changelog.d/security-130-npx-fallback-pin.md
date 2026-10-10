@@ -1,1 +1,0 @@
-- `pluk attach` now pins its `npx --yes @hivecommons/pluk` pipe-pane fallback to the running package's own version instead of fetching whatever `latest` the registry serves, so an attach can no longer pull in an unreviewed release at runtime.

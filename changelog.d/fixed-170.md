@@ -1,1 +1,0 @@
-- `pluk subscribe` no longer corrupts multi-byte UTF-8 characters (such as `✻`) that straddle a 16 KiB read boundary into U+FFFD (#170).

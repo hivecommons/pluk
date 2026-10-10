@@ -1,1 +1,0 @@
-- Require a nonempty CHANGELOG section before publishing a tagged version, and create its GitHub release from the curated notes after npm publication. Existing releases are left untouched.

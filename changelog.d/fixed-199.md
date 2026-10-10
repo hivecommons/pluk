@@ -1,1 +1,0 @@
-- Fixed log rotation dropping lines appended while a session log was being trimmed, and tailing subscribers replaying the kept tail as duplicate events when they polled mid-rotation (#199).

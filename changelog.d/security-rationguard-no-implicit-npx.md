@@ -1,1 +1,0 @@
-- `pluk attach --rationguard` no longer falls back to `npx --yes @hivecommons/rationguard` (unpinned `latest`) when `rationguard` is missing from `PATH`. It now fails before creating the tmux session with install instructions; operators who want a registry fetch choose the exact command and version themselves via the new `--rationguard-bin=<cmd>` flag or `PLUK_RATIONGUARD_BIN`.

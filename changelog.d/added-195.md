@@ -1,1 +1,0 @@
-- Added `test/cli-presentation-branches.test.js` and a `stdout-throw` fault kind in `test/fixtures/inject-fault.mjs`, pinning the `pluk watch` onEvent console.log guard, the `sessions` default run-dir and idle-row coloring, and the `patterns` default CLI and `(none)` placeholder (#195).

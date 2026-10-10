@@ -1,1 +1,0 @@
-- `test/tmux-contract.test.js` now fails instead of skipping when `tmux` is missing and `CI` is set, so the real-tmux lane cannot silently go dark in CI; set `PLUK_TMUX_OPTIONAL=1` to skip it deliberately.
