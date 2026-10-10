@@ -6,7 +6,7 @@
 // would be dropped or mis-sectioned when the next version is rolled.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -44,8 +44,14 @@ export function fragmentBodyErrors(name, body) {
   return errors;
 }
 
+// A release roll deletes every fragment; `.gitkeep` keeps the directory in
+// git, but treat a missing directory as "no fragments" rather than ENOENT.
+function listFragmentDir() {
+  return existsSync(FRAGMENT_DIR) ? readdirSync(FRAGMENT_DIR) : [];
+}
+
 test('changelog.d/ fragment filenames follow <category>-<slug>.md', () => {
-  const entries = readdirSync(FRAGMENT_DIR);
+  const entries = listFragmentDir();
   const errors = entries.flatMap((name) => {
     if (statSync(join(FRAGMENT_DIR, name)).isDirectory()) return [`${name}: directories are not allowed in changelog.d/`];
     return fragmentNameErrors(name);
@@ -54,7 +60,7 @@ test('changelog.d/ fragment filenames follow <category>-<slug>.md', () => {
 });
 
 test('changelog.d/ fragments are non-empty markdown bullet lists', () => {
-  const entries = readdirSync(FRAGMENT_DIR).filter((n) => !statSync(join(FRAGMENT_DIR, n)).isDirectory());
+  const entries = listFragmentDir().filter((n) => !statSync(join(FRAGMENT_DIR, n)).isDirectory());
   const errors = entries.flatMap((name) => fragmentBodyErrors(name, readFileSync(join(FRAGMENT_DIR, name), 'utf8')));
   assert.deepEqual(errors, []);
 });
