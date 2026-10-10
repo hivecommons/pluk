@@ -1,1 +1,0 @@
-- Pin the Subscriber size-shrink rotation fallback with a deterministic test: a kept tail whose leading bytes match the old head fingerprint must still be detected and resumed without replay.

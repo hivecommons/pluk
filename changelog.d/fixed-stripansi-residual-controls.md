@@ -1,1 +1,0 @@
-- `stripANSI` now also removes residual control bytes (bare BEL/backspace, a dangling ESC, DEL) left by truncated or malformed sequences, so they no longer reach event payloads (#167).

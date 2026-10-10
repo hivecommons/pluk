@@ -1,1 +1,0 @@
-- `npm test` now fails on a `changelog.d/` fragment whose filename is not `<category>-<slug>.md` (category one of added/changed/deprecated/removed/fixed/security) or whose body is empty or not a markdown bullet list, so malformed fragments are caught on the PR instead of at release roll.

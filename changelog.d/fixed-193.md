@@ -1,1 +1,0 @@
-- Fixed `watch()` stream mode leaking the input stream 'error' listener: `stop()` now removes it and is idempotent (#193).

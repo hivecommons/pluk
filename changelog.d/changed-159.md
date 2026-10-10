@@ -1,1 +1,0 @@
-- CI now tests against Node 26 in addition to Node 22 and 24 (#159).

@@ -1,1 +1,0 @@
-- Fixed `pluk attach`, `pluk send` and `pluk watch --capture` failing on pane-type tmux commands: the exact session target is now `=<session>:`, which `send-keys`, `pipe-pane` and `capture-pane` accept (#188).

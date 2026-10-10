@@ -1,6 +1,6 @@
 {
   "name": "@hivecommons/pluk",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Pluk structured events from AI agent terminal output \u2014 classify, subscribe, and react to JSONL event streams",
   "type": "module",
   "engines": {
