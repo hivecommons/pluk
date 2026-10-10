@@ -431,6 +431,49 @@ test('rotation: an empty log that fills within the retry window resumes after th
   }
 });
 
+test('rotation: a kept tail that preserves the head fingerprint is still detected by the size check', async () => {
+  // Every line starts with the same 300-byte prefix (a long session field
+  // placed first), so after rotation the leading HEAD_FINGERPRINT_BYTES are
+  // byte-identical to the old head and headChanged() reports nothing. Only
+  // the "file shrank below our offset" check can notice this rotation; without
+  // it the tail stalls forever at the stale offset (#209). Pin that fallback
+  // deterministically instead of relying on the poll racing the rewrite.
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot-samehead.jsonl');
+  const prefixLine = seq => JSON.stringify({
+    session: 'x'.repeat(300), v: 1, ts: '2026-01-01T00:00:00.000Z', pid: 1,
+    pane: 'p', source: 't', type: 'raw_output', data: {}, seq,
+  }) + '\n';
+  writeFileSync(log, '');
+  const logged = [];
+  const orig = console.error;
+  console.error = msg => logged.push(String(msg));
+  const { sub, events, done } = await startTail(dir, 'rot-samehead', { verbose: true });
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    let body = '';
+    for (let i = 0; i < 100; i++) body += prefixLine(i);
+    appendFileSync(log, body);
+    await waitFor(() => events.length === 100);
+
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 1000, keepLines: 20 }), true);
+    await waitFor(() => logged.some(l => l.includes('log file shrank')));
+    assert.ok(!logged.some(l => l.includes('head changed')), 'the head fingerprint must not have moved');
+
+    appendFileSync(log, prefixLine(100));
+    await waitFor(() => events.length >= 101);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 101, 'kept lines must not be replayed');
+    assert.equal(events[100].seq, 100);
+    assert.equal(new Set(events.map(e => e.seq)).size, 101, 'no duplicate events');
+  } finally {
+    console.error = orig;
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('verbose log never echoes control characters from event fields to the terminal', async () => {
   const dir = makeRunDir();
   const log = join(dir, 'logs', 'hostile.jsonl');
