@@ -1,11 +1,11 @@
 // Semantic pins for the non-claude bundled pattern files. patterns.test.js
-// proves copilot/gemini/goose patterns *compile* and match the inline
-// BUILTIN_PATTERNS field-for-field, and classifier tests exercise the event
-// machinery — but only ever with claude patterns. Nothing asserted that the
-// copilot/gemini/goose regexes actually classify representative CLI output
-// correctly, so an edit that still compiles but breaks a pattern (dropped
-// alternative, bad escaping) would pass CI. These tests feed each CLI's
-// classifier real-looking lines and pin the resulting event types and data.
+// proves the copilot/gemini/goose/codex/aider patterns *compile* and match the
+// inline BUILTIN_PATTERNS field-for-field, and classifier tests exercise the
+// event machinery — but only ever with claude patterns. Nothing asserted that
+// those regexes actually classify representative CLI output correctly, so an
+// edit that still compiles but breaks a pattern (dropped alternative, bad
+// escaping) would pass CI. These tests feed each CLI's classifier
+// real-looking lines and pin the resulting event types and data.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Classifier, getPatterns } from '../dist/index.js';
@@ -168,6 +168,90 @@ test('goose: rate-limit, login, error, model, and session-end lines classify', (
 
 test('goose: tool bullet lines emit nothing (no tool patterns defined)', () => {
   assert.equal(classifyType('goose', '✓ npm test (shell)'), null);
+});
+
+// --- codex -----------------------------------------------------------------
+// codex/aider shipped with no pattern file at all (#135), so their regexes
+// were never exercised by anything but the compile/parity checks above. Pin
+// their semantics the same way as copilot/gemini/goose.
+
+test('codex: ">" and "❯" prompts are idle, "esc to interrupt"/Working is working', () => {
+  const { c, clock } = makeClassifier('codex');
+  let ev = c.classify('>');
+  assert.ok(ev, '">" prompt should produce a state_change');
+  assert.equal(ev.data.to, 'idle');
+
+  clock.now = 1010;
+  ev = c.classify('● Working (12s · esc to interrupt)');
+  assert.ok(ev);
+  assert.equal(ev.data.to, 'working');
+
+  // The "❯" alternative must also count as the idle prompt once the
+  // debounce window has passed.
+  clock.now = 1020;
+  ev = c.classify('❯');
+  assert.ok(ev, '"❯" prompt after the debounce should flip back to idle');
+  assert.equal(ev.data.to, 'idle');
+
+  for (const line of ['esc to interrupt', '● Working', 'Working (3s)']) {
+    const { c: c2 } = makeClassifier('codex');
+    const w = c2.classify(line);
+    assert.ok(w, `${line} should be working evidence`);
+    assert.equal(w.data.to, 'working');
+  }
+});
+
+test('codex: usage-limit, login, error, model, and session-end lines classify', () => {
+  assert.equal(classifyType('codex', 'You have hit your usage limit'), 'rate_limit');
+  assert.equal(classifyType('codex', 'Please log in to continue'), 'login_required');
+  assert.equal(classifyType('codex', 'authentication required'), 'login_required');
+  assert.equal(classifyType('codex', 'Error: request failed'), 'error');
+  assert.equal(classifyType('codex', 'Using model: gpt-5-codex'), 'model_changed');
+  assert.equal(classifyType('codex', 'switching model o3-mini'), 'model_changed');
+  assert.equal(classifyType('codex', 'Session ended'), 'session_ended');
+});
+
+test('codex: has no tool/trust/bypass patterns — those lines emit nothing', () => {
+  assert.equal(classifyType('codex', '● npm test (shell)'), null);
+  assert.equal(classifyType('codex', '✓ npm test (shell)'), null);
+  assert.equal(classifyType('codex', 'Do you trust the files in this folder?'), null);
+});
+
+// --- aider -----------------------------------------------------------------
+
+test('aider: bare ">" prompt is idle, token counter is working', () => {
+  const { c, clock } = makeClassifier('aider');
+  let ev = c.classify('>');
+  assert.ok(ev, '">" prompt should produce a state_change');
+  assert.equal(ev.data.to, 'idle');
+
+  clock.now = 1010;
+  ev = c.classify('Tokens: 4.2k sent, 1.1k received. Cost: $0.01');
+  assert.ok(ev, 'token counter should be working evidence');
+  assert.equal(ev.data.to, 'working');
+});
+
+test('aider: ">" prompt is anchored — a ">" inside a line is not idle', () => {
+  // IDLE_PATTERN is '^>\s*$'; a quoted reply or a diff marker containing ">"
+  // must not flip the session to idle.
+  assert.equal(classifyType('aider', '> quoted previous message'), null);
+  assert.equal(classifyType('aider', 'a > b'), null);
+  assert.equal(classifyType('aider', 'diff --git a/x b/x >'), null);
+});
+
+test('aider: rate-limit, login, error, model, and session-end lines classify', () => {
+  assert.equal(classifyType('aider', 'quota exceeded for this model'), 'rate_limit');
+  assert.equal(classifyType('aider', 'Please set your API key'), 'login_required');
+  assert.equal(classifyType('aider', 'error: no such file'), 'error');
+  assert.equal(classifyType('aider', 'FATAL: cannot continue'), 'error');
+  assert.equal(classifyType('aider', 'Model: gpt-4o with diff edit format'), 'model_changed');
+  assert.equal(classifyType('aider', 'Main model: claude-3-5-sonnet'), 'model_changed');
+  assert.equal(classifyType('aider', 'Goodbye'), 'session_ended');
+});
+
+test('aider: has no tool/trust/bypass patterns — those lines emit nothing', () => {
+  assert.equal(classifyType('aider', '● npm test (shell)'), null);
+  assert.equal(classifyType('aider', 'Do you trust the files in this folder?'), null);
 });
 
 test('rate_limit: bare 429 inside other tokens is not a rate limit', () => {
