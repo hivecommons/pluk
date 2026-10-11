@@ -305,10 +305,9 @@ test('watch with a bundled --cli does not warn', () => {
   assert.doesNotMatch(r.stderr, /no pattern set/);
 });
 
-test('patterns --cli=unknown reports no pattern set and lists available CLIs', () => {
+test('patterns --cli=unknown warns on stderr and lists available CLIs', () => {
   const r = spawnSync(process.execPath, [CLI, 'patterns', '--cli=nonesuch'], { encoding: 'utf-8' });
   assert.equal(r.status, 0);
-  assert.match(r.stdout, /no pattern set for nonesuch/);
-  assert.match(r.stdout, /Available CLIs: .*omp/);
-  assert.doesNotMatch(r.stdout, /idle\s/);
+  assert.match(r.stderr, /no pattern set for nonesuch; available CLIs: .*omp/);
+  assert.match(r.stdout, /Patterns for nonesuch:/);
 });

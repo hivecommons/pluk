@@ -273,6 +273,8 @@ test('omp: busy tail is working, idle pane is idle', () => {
   assert.deepEqual({ from: ev.data.from, to: ev.data.to }, { from: 'unknown', to: 'working' });
   clock.now = 4000;
   assert.equal(c.classify('⠧ 4m > ◑ GPT-5.6-Terra ▶──20%──'), null);
+  assert.equal(c.classify('╰─'), null, 'idle is outranked by working evidence inside the debounce window');
+  clock.now = 4010;
   ev = c.classify('╰─');
   assert.deepEqual({ from: ev.data.from, to: ev.data.to }, { from: 'working', to: 'idle' });
   assert.equal(classifyType('omp', '╰─                          ⇧⇥ to change thinking effort'), 'state_change');

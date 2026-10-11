@@ -286,9 +286,7 @@ function cmdPatterns(args: string[]): void {
   const patterns = getPatterns(cli);
   const available = listAvailableCLIs(bundledPatternsDir()).join(', ') || 'claude, copilot, gemini, goose, omp (builtin)';
   if (!hasAnyPattern(patterns)) {
-    console.log(`no pattern set for ${cli}`);
-    console.log(`${ANSI_DIM}Available CLIs: ${available}${ANSI_RESET}`);
-    return;
+    log('info', `no pattern set for ${cli}; available CLIs: ${available}`);
   }
   console.log(`${ANSI_BOLD}Patterns for ${cli}:${ANSI_RESET}\n`);
 

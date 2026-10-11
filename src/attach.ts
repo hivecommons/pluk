@@ -142,6 +142,7 @@ function resolveCliCommand(cli: string): string {
     goose: 'goose session',
     codex: 'codex',
     aider: 'aider',
+    omp: 'omp',
   };
   return CLI_COMMANDS[cli] ?? cli;
 }
@@ -151,6 +152,7 @@ function resolveDangerousFlag(cli: string): string {
     claude: '--dangerously-skip-permissions',
     codex: '--full-auto',
     goose: '--non-interactive',
+    omp: '--approval-mode yolo',
   };
   return DANGEROUS_FLAGS[cli] ?? '';
 }

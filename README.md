@@ -107,7 +107,7 @@ tmux attach -t my-agent
 
 | Flag | What it does |
 |------|-------------|
-| `--cli=claude` | CLI type: `claude`, `copilot`, `gemini`, `goose`, `codex`, `aider` (`omp` is watch-only: `pluk watch --cli=omp`) |
+| `--cli=claude` | CLI type: `claude`, `copilot`, `gemini`, `goose`, `codex`, `aider`, `omp` |
 | `--command=<cmd>` | Override the CLI command/executable to launch (instead of the default resolved from `--cli`); combines with `--cli-args` |
 | `--rationguard` | Start rationguard watcher alongside pluk (requires `rationguard` on `PATH` — `npm install -g @hivecommons/rationguard` — or `--rationguard-bin`; pluk never fetches it from the registry implicitly) |
 | `--rationguard-bin=<cmd>` | Explicit rationguard command to run instead of the one on `PATH`, e.g. `--rationguard-bin='npx --yes @hivecommons/rationguard@0.11.0'` (also `PLUK_RATIONGUARD_BIN`) |
