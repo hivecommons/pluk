@@ -3,9 +3,9 @@
 import { basename, join } from 'node:path';
 import { Subscriber } from './subscriber.js';
 import { watch } from './watch.js';
-import { startDiagnostics } from './diagnostics.js';
+import { startDiagnostics, log } from './diagnostics.js';
 import { PLUK_EVENT_TYPES, type PlukEventType } from './event.js';
-import { listAvailableCLIs, bundledPatternsDir, getPatterns } from './patterns.js';
+import { listAvailableCLIs, bundledPatternsDir, getPatterns, hasAnyPattern } from './patterns.js';
 import { discoverSessions } from './sessions.js';
 import { resolveRunDir, rotateLogFileIfNeeded, validateSessionName } from './run-dir.js';
 import { attach } from './attach.js';
@@ -148,6 +148,10 @@ function cmdWatch(args: string[]): void {
 
   const filter = parseFilter(flags['filter']);
 
+  if (!hasAnyPattern(getPatterns(cli, flags['patterns-dir']))) {
+    log('info', `no pattern set for --cli=${cli} (bundled: ${listAvailableCLIs(bundledPatternsDir()).join(', ') || 'none'}); only raw_output will be emitted`);
+  }
+
   // Prevent crash on stdout write errors (EPIPE when pipe-pane closes)
   process.stdout.on('error', () => {});
   process.stdin.on('error', () => {});
@@ -280,6 +284,12 @@ function cmdPatterns(args: string[]): void {
   const cli = flags['cli'] ?? 'claude';
 
   const patterns = getPatterns(cli);
+  const available = listAvailableCLIs(bundledPatternsDir()).join(', ') || 'claude, copilot, gemini, goose, omp (builtin)';
+  if (!hasAnyPattern(patterns)) {
+    console.log(`no pattern set for ${cli}`);
+    console.log(`${ANSI_DIM}Available CLIs: ${available}${ANSI_RESET}`);
+    return;
+  }
   console.log(`${ANSI_BOLD}Patterns for ${cli}:${ANSI_RESET}\n`);
 
   const fields: Array<[string, RegExp | null]> = [
@@ -301,7 +311,7 @@ function cmdPatterns(args: string[]): void {
     console.log(`  ${name.padEnd(14)} ${val}`);
   }
 
-  console.log(`\n${ANSI_DIM}Available CLIs: ${listAvailableCLIs(bundledPatternsDir()).join(', ') || 'claude, copilot, gemini, goose (builtin)'}${ANSI_RESET}`);
+  console.log(`\n${ANSI_DIM}Available CLIs: ${available}${ANSI_RESET}`);
 }
 
 function cmdSend(args: string[]): void {

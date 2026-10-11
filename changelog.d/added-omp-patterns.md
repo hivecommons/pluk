@@ -1,0 +1,2 @@
+- Added a bundled `omp` (Oh My Pi) pattern set for `pluk watch --cli=omp`.
+- `pluk watch` now warns once on stderr when the `--cli` name has no pattern set, and `pluk patterns --cli=<name>` reports `no pattern set` instead of printing an empty set.

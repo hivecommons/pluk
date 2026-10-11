@@ -107,7 +107,7 @@ tmux attach -t my-agent
 
 | Flag | What it does |
 |------|-------------|
-| `--cli=claude` | CLI type: `claude`, `copilot`, `gemini`, `goose`, `codex`, `aider` |
+| `--cli=claude` | CLI type: `claude`, `copilot`, `gemini`, `goose`, `codex`, `aider` (`omp` is watch-only: `pluk watch --cli=omp`) |
 | `--command=<cmd>` | Override the CLI command/executable to launch (instead of the default resolved from `--cli`); combines with `--cli-args` |
 | `--rationguard` | Start rationguard watcher alongside pluk (requires `rationguard` on `PATH` — `npm install -g @hivecommons/rationguard` — or `--rationguard-bin`; pluk never fetches it from the registry implicitly) |
 | `--rationguard-bin=<cmd>` | Explicit rationguard command to run instead of the one on `PATH`, e.g. `--rationguard-bin='npx --yes @hivecommons/rationguard@0.11.0'` (also `PLUK_RATIONGUARD_BIN`) |
@@ -123,7 +123,7 @@ tmux attach -t my-agent
 
 | Command | Flag | What it does |
 |---------|------|-------------|
-| `watch` | `--cli=claude` | CLI whose patterns classify the output |
+| `watch` | `--cli=claude` | CLI whose patterns classify the output; if no pattern set exists for the name (and none in `--patterns-dir`), pluk warns once on stderr and emits only `raw_output` (exit 0). `pluk patterns --cli=<name>` reports `no pattern set for <name>` and lists the available names |
 | `watch` | `--filter=type1,type2` | Emit only the listed event types (also accepted by `subscribe`); unknown or empty entries exit 2 |
 | `watch` | `--include-raw` | Also emit `raw_output` events |
 | `watch` | `--capture[=ms]` | Instead of reading stdin, poll `tmux capture-pane` and classify each whole rendered frame; useful for TUIs whose pipe-pane stream has no line feeds. Interval in milliseconds, default `1000` |

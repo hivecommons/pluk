@@ -288,3 +288,27 @@ test('sessions skips a log file it cannot read instead of crashing', t => {
     chmodSync(bad, 0o600); // let cleanup remove it
   }
 });
+
+test('watch with an unknown --cli warns once on stderr, exits 0 and still emits raw_output', () => {
+  const r = spawnSync(process.execPath, [CLI, 'watch', 's', '--cli=nonesuch', '--include-raw'], {
+    input: 'Error: 429 rate limit\n',
+    encoding: 'utf-8',
+  });
+  assert.equal(r.status, 0);
+  assert.equal(r.stderr.match(/no pattern set for --cli=nonesuch/g)?.length, 1);
+  assert.match(r.stdout, /raw_output/);
+});
+
+test('watch with a bundled --cli does not warn', () => {
+  const r = spawnSync(process.execPath, [CLI, 'watch', 's', '--cli=omp'], { input: '╰─\n', encoding: 'utf-8' });
+  assert.equal(r.status, 0);
+  assert.doesNotMatch(r.stderr, /no pattern set/);
+});
+
+test('patterns --cli=unknown reports no pattern set and lists available CLIs', () => {
+  const r = spawnSync(process.execPath, [CLI, 'patterns', '--cli=nonesuch'], { encoding: 'utf-8' });
+  assert.equal(r.status, 0);
+  assert.match(r.stdout, /no pattern set for nonesuch/);
+  assert.match(r.stdout, /Available CLIs: .*omp/);
+  assert.doesNotMatch(r.stdout, /idle\s/);
+});

@@ -187,6 +187,20 @@ MODEL_PATTERN='^Model:|model.*gpt-|model.*claude-'
 SESSION_END_PATTERN='Session ended|Goodbye'
 `;
 
+const OMP_PATTERNS = `
+IDLE_PATTERN='^╰─'
+WORKING_PATTERNS='^\\s*[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\\s|^\\s*⎋\\s+\\S|Working…|Running… \\((esc|⎋) to cancel\\)|Retrying · attempt [0-9]+ of [0-9]+|Compacting context…'
+RATE_LIMIT_PATTERN='Claude usage limit reached|rate_limit_error|[Ee]rror:? 429|[Ss]tatus( code)?:? 429|[Uu]sage limit'
+LOGIN_PATTERN='No API key found for|No (default )?model selected|Use /login|Sign in to your providers|Select provider to login|Login to '
+TRUST_DIALOG_PATTERN='Allow tool: '
+BYPASS_PATTERN=''
+TOOL_START_PATTERN=''
+TOOL_END_PATTERN=''
+ERROR_PATTERN='^\\s*Error: '
+MODEL_PATTERN=''
+SESSION_END_PATTERN='Resume this session with'
+`;
+
 export const BUILTIN_PATTERNS: Record<string, string> = {
   claude: CLAUDE_PATTERNS,
   copilot: COPILOT_PATTERNS,
@@ -194,7 +208,12 @@ export const BUILTIN_PATTERNS: Record<string, string> = {
   goose: GOOSE_PATTERNS,
   codex: CODEX_PATTERNS,
   aider: AIDER_PATTERNS,
+  omp: OMP_PATTERNS,
 };
+
+export function hasAnyPattern(p: PatternSet): boolean {
+  return Object.values(p).some((v) => v instanceof RegExp);
+}
 
 export function getPatterns(cli: string, patternsDir?: string): PatternSet {
   if (patternsDir) {

@@ -264,3 +264,24 @@ test('rate_limit: bare 429 inside other tokens is not a rate limit', () => {
     }
   }
 });
+
+// --- omp -------------------------------------------------------------------
+
+test('omp: busy tail is working, idle pane is idle', () => {
+  const { c, clock } = makeClassifier('omp');
+  let ev = c.classify(' ⎋ Reading skill improvement guidance');
+  assert.deepEqual({ from: ev.data.from, to: ev.data.to }, { from: 'unknown', to: 'working' });
+  clock.now = 4000;
+  assert.equal(c.classify('⠧ 4m > ◑ GPT-5.6-Terra ▶──20%──'), null);
+  ev = c.classify('╰─');
+  assert.deepEqual({ from: ev.data.from, to: ev.data.to }, { from: 'working', to: 'idle' });
+  assert.equal(classifyType('omp', '╰─                          ⇧⇥ to change thinking effort'), 'state_change');
+});
+
+test('omp: login, rate-limit, trust, error and session-end lines', () => {
+  assert.equal(classifyType('omp', 'No API key found for anthropic.'), 'login_required');
+  assert.equal(classifyType('omp', 'Error: 429 {"type":"rate_limit_error"}'), 'rate_limit');
+  assert.equal(classifyType('omp', 'Resume this session with'), 'session_ended');
+  assert.equal(classifyType('omp', 'Allow tool: bash'), 'trust_dialog');
+  assert.equal(classifyType('omp', ' Error: provider exploded'), 'error');
+});
