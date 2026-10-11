@@ -1,3 +1,11 @@
+import { ANSI_RED, ANSI_DIM, paintStderr } from './ansi.js';
+
+/** Write a leveled diagnostic line to stderr; colour only on a TTY without NO_COLOR. */
+export function log(level: 'error' | 'info', msg: string): void {
+  const tag = level === 'error' ? paintStderr(ANSI_RED, 'Error:') : paintStderr(ANSI_DIM, '[pluk]');
+  console.error(`${tag} ${msg}`);
+}
+
 /** Default period for `--diagnostics` health summaries. */
 const DIAGNOSTICS_INTERVAL_MS = 60_000;
 

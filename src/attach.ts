@@ -1,7 +1,7 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { ensurePrivateDirectory, ensurePrivateLogFile, resolveRunDir, validateSessionName } from './run-dir.js';
-import { ANSI_DIM, ANSI_RESET } from './ansi.js';
+import { ANSI_DIM, paintStderr } from './ansi.js';
 import { exactTarget, tmuxAttach, tmuxHasSession, tmuxNewSession, tmuxPipePane, tmuxRunInherited } from './tmux.js';
 import { plukPackageSpec } from './version.js';
 
@@ -265,7 +265,7 @@ export function attach(opts: AttachOptions): void {
   const verbose = opts.verbose ?? false;
 
   const log = verbose
-    ? (msg: string) => console.error(`${ANSI_DIM}[pluk]${ANSI_RESET} ${msg}`)
+    ? (msg: string) => console.error(`${paintStderr(ANSI_DIM, '[pluk]')} ${msg}`)
     : (_msg: string) => {};
 
   log(`session=${session} cli=${cli} runDir=${runDir} workDir=${workDir}`);

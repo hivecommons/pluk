@@ -10,7 +10,7 @@ import { discoverSessions } from './sessions.js';
 import { resolveRunDir, rotateLogFileIfNeeded, validateSessionName } from './run-dir.js';
 import { attach } from './attach.js';
 import { send } from './send.js';
-import { ANSI_RED, ANSI_GREEN, ANSI_CYAN, ANSI_DIM, ANSI_BOLD, ANSI_RESET } from './ansi.js';
+import { ANSI_RED, ANSI_GREEN, ANSI_CYAN, ANSI_DIM, ANSI_BOLD, ANSI_RESET, paintStderr } from './ansi.js';
 import { packageVersion } from './version.js';
 
 /** How often a running `pluk watch` checks its log file for rotation. */
@@ -88,7 +88,7 @@ function parseFilter(raw: string | undefined): PlukEventType[] | undefined {
   const types = raw.split(',').map(t => t.trim());
   for (const t of types) {
     if (!(PLUK_EVENT_TYPES as readonly string[]).includes(t)) {
-      console.error(`${ANSI_RED}Error:${ANSI_RESET} unknown event type "${t}" (valid: ${PLUK_EVENT_TYPES.join(', ')})`);
+      console.error(`${paintStderr(ANSI_RED, 'Error:')} unknown event type "${t}" (valid: ${PLUK_EVENT_TYPES.join(', ')})`);
       process.exit(2);
     }
   }
@@ -100,7 +100,7 @@ function cmdSubscribe(args: string[]): void {
   const session = positional[0];
 
   if (!session) {
-    console.error(`${ANSI_RED}Error:${ANSI_RESET} session name is required`);
+    console.error(`${paintStderr(ANSI_RED, 'Error:')} session name is required`);
     console.error('  pluk subscribe <session>');
     process.exit(1);
   }
@@ -122,7 +122,7 @@ function cmdSubscribe(args: string[]): void {
   const stopDiagnostics = startDiagnostics('subscribe', () => ({ ...sub.stats() }), flags['diagnostics']);
 
   sub.on('error', err => {
-    console.error(`${ANSI_RED}Error:${ANSI_RESET} ${(err as Error).message}`);
+    console.error(`${paintStderr(ANSI_RED, 'Error:')} ${(err as Error).message}`);
     stopDiagnostics();
     process.exit(1);
   });
@@ -134,7 +134,7 @@ function cmdSubscribe(args: string[]): void {
   });
 
   sub.start().catch(err => {
-    console.error(`${ANSI_RED}Error:${ANSI_RESET} ${(err as Error).message}`);
+    console.error(`${paintStderr(ANSI_RED, 'Error:')} ${(err as Error).message}`);
     process.exit(1);
   });
 }
@@ -157,7 +157,7 @@ function cmdWatch(args: string[]): void {
   if (capture && capture !== 'true') {
     captureIntervalMs = Number(capture);
     if (!Number.isFinite(captureIntervalMs) || captureIntervalMs <= 0) {
-      console.error(`${ANSI_RED}Error:${ANSI_RESET} --capture expects a positive integer number of milliseconds`);
+      console.error(`${paintStderr(ANSI_RED, 'Error:')} --capture expects a positive integer number of milliseconds`);
       process.exit(2);
     }
   }
@@ -218,7 +218,7 @@ function cmdAttach(args: string[]): void {
   const session = positional[0];
 
   if (!session) {
-    console.error(`${ANSI_RED}Error:${ANSI_RESET} session name is required`);
+    console.error(`${paintStderr(ANSI_RED, 'Error:')} session name is required`);
     console.error('  pluk attach my-agent --cli=claude --rationguard');
     process.exit(1);
   }
@@ -310,14 +310,14 @@ function cmdSend(args: string[]): void {
   const text = flags['text'] ?? positional.slice(session === positional[0] ? 1 : 0).join(' ');
 
   if (!session) {
-    console.error(`${ANSI_RED}Error:${ANSI_RESET} session name is required`);
+    console.error(`${paintStderr(ANSI_RED, 'Error:')} session name is required`);
     console.error('  pluk send <session> --text="hello"');
     console.error('  pluk-send --session=my-agent --text="hello" --enter');
     process.exit(1);
   }
 
   if (!text) {
-    console.error(`${ANSI_RED}Error:${ANSI_RESET} text is required`);
+    console.error(`${paintStderr(ANSI_RED, 'Error:')} text is required`);
     console.error('  pluk send <session> --text="hello"');
     process.exit(1);
   }
@@ -330,7 +330,7 @@ function cmdSend(args: string[]): void {
       literal: flags['literal'] === 'true',
     });
   } catch (err) {
-    console.error(`${ANSI_RED}Error:${ANSI_RESET} failed to send to session "${session}": ${(err as Error).message}`);
+    console.error(`${paintStderr(ANSI_RED, 'Error:')} failed to send to session "${session}": ${(err as Error).message}`);
     process.exit(1);
   }
 }
@@ -386,12 +386,12 @@ function main(): void {
         usage();
         break;
       default:
-        console.error(`${ANSI_RED}Unknown command:${ANSI_RESET} ${command}`);
+        console.error(`${paintStderr(ANSI_RED, 'Unknown command:')} ${command}`);
         usage();
         process.exit(1);
     }
   } catch (err) {
-    console.error(`${ANSI_RED}Error:${ANSI_RESET} ${(err as Error).message}`);
+    console.error(`${paintStderr(ANSI_RED, 'Error:')} ${(err as Error).message}`);
     process.exit(1);
   }
 }

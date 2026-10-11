@@ -4,7 +4,7 @@ import { StringDecoder } from 'node:string_decoder';
 import { EventEmitter } from 'node:events';
 import { type PlukEvent, type PlukEventType, parseEvent } from './event.js';
 import { resolveRunDir, validateSessionName } from './run-dir.js';
-import { ANSI_DIM, ANSI_RESET, sanitizeField } from './ansi.js';
+import { ANSI_DIM, paintStderr, sanitizeField } from './ansi.js';
 
 const POLL_INTERVAL_MS = 200;
 const READ_CHUNK_BYTES = 16384;
@@ -77,7 +77,7 @@ export class Subscriber extends EventEmitter {
 
   private log(msg: string): void {
     if (this.verbose) {
-      console.error(`${ANSI_DIM}[pluk:sub]${ANSI_RESET} ${msg}`);
+      console.error(`${paintStderr(ANSI_DIM, '[pluk:sub]')} ${msg}`);
     }
   }
 

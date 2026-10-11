@@ -11,6 +11,16 @@ export const ANSI_DIM = '\x1b[2m';
 export const ANSI_BOLD = '\x1b[1m';
 export const ANSI_RESET = '\x1b[0m';
 
+/** True when stderr diagnostics may carry colour: a TTY and NO_COLOR unset. */
+export function stderrColorEnabled(): boolean {
+  return Boolean(process.stderr.isTTY) && !process.env.NO_COLOR;
+}
+
+/** Wrap text in an ANSI code for stderr, or return it unchanged when colour is off. */
+export function paintStderr(code: string, text: string): string {
+  return stderrColorEnabled() ? `${code}${text}${ANSI_RESET}` : text;
+}
+
 // C0 controls, DEL, and C1 controls — covers ESC (CSI/OSC introducers), BEL,
 // and every other terminal control byte that could be planted in a log
 // field, a log filename, or a monitored agent's output.

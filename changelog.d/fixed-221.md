@@ -1,0 +1,1 @@
+- Diagnostics written to stderr no longer carry ANSI colour codes unless stderr is a TTY and `NO_COLOR` is unset; a small leveled `log()` helper is added in `src/diagnostics.ts`.
