@@ -1,0 +1,1 @@
+- `pluk attach` now writes its progress, warnings and status messages to stderr, and the JSONL event schema is documented in the README as a stable surface.

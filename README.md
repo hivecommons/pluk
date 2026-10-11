@@ -214,6 +214,28 @@ const watcher = watch({
 | `session_ended` | CLI session ended |
 | `command_received` | Command sent via pluk-send |
 
+## Event Schema
+
+The JSONL event stream is pluk's stable telemetry surface. `pluk watch` and `pluk subscribe` write one JSON object per line to **stdout**; diagnostic and human-readable output (`pluk attach` progress and warnings, errors, `--diagnostics`) goes to **stderr**.
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `v` | number | Schema version (currently `1`); changes only on a breaking envelope change |
+| `ts` | string | UTC ISO-8601 timestamp with millisecond precision |
+| `seq` | number | Per-process sequence number |
+| `pid` | number | Process ID of the emitter |
+| `session` | string | Session name |
+| `pane` | string | tmux pane the event came from |
+| `source` | string | Emitting component |
+| `type` | string | One of the event types below |
+| `data` | object | String-to-string map with event-specific details |
+
+```json
+{"v":1,"ts":"2026-01-01T00:00:00.000Z","seq":1,"pid":4242,"session":"my-agent","pane":"my-agent","source":"pluk","type":"state_change","data":{"to":"idle"}}
+```
+
+Existing fields and event types are not renamed or removed within a schema version; new event types and new `data` keys may be added, so consumers should ignore what they do not recognise. Counting events per `type` yields metrics such as classifier hits.
+
 ## Send Command
 
 Inject text into a running tmux session — used by rationguard to send rebuttals, or by you to send commands:

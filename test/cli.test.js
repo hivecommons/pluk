@@ -215,7 +215,7 @@ test('attach rejects unsafe session names before touching tmux', () => {
   const { code, stdout, stderr } = runCli(['attach', 'bad;name']);
   assert.equal(code, 1);
   assert.match(stderr, /Unsafe session name/);
-  assert.doesNotMatch(stdout, /Creating tmux session/);
+  assert.doesNotMatch(stderr, /Creating tmux session/);
   assert.throws(() => readFileSync(tmuxLog), /ENOENT/, 'tmux must not be invoked');
 });
 
@@ -224,14 +224,14 @@ test('attach rejects unsafe session names before touching tmux', () => {
 test('attach --no-open creates the session, starts the CLI, and wires pipe-pane', () => {
   rmSync(tmuxLog, { force: true });
   const runDir = makeRunDir();
-  const { code, stdout } = runCli([
+  const { code, stderr } = runCli([
     'attach', 'agent-x', '--cli=claude', `--run-dir=${runDir}`, '--no-open', '--verbose',
   ]);
   assert.equal(code, 0);
-  assert.match(stdout, /Creating tmux session: agent-x/);
-  assert.match(stdout, /Starting claude: 'claude'/);
-  assert.match(stdout, /Attaching pluk pipe-pane: claude/);
-  assert.match(stdout, /Session ready\. To interact: tmux attach -t agent-x/);
+  assert.match(stderr, /Creating tmux session: agent-x/);
+  assert.match(stderr, /Starting claude: 'claude'/);
+  assert.match(stderr, /Attaching pluk pipe-pane: claude/);
+  assert.match(stderr, /Session ready\. To interact: tmux attach -t agent-x/);
 
   const calls = readFileSync(tmuxLog, 'utf-8');
   assert.match(calls, /^has-session -t =agent-x:$/m);
@@ -246,11 +246,11 @@ test('attach --no-open creates the session, starts the CLI, and wires pipe-pane'
 test('attach --dangerous appends the per-CLI danger flag to the start command', () => {
   rmSync(tmuxLog, { force: true });
   const runDir = makeRunDir();
-  const { code, stdout } = runCli([
+  const { code, stderr } = runCli([
     'attach', 'agent-y', '--cli=claude', `--run-dir=${runDir}`, '--no-open', '--dangerous',
   ]);
   assert.equal(code, 0);
-  assert.match(stdout, /--dangerously-skip-permissions/);
+  assert.match(stderr, /--dangerously-skip-permissions/);
   const calls = readFileSync(tmuxLog, 'utf-8');
   assert.match(calls, /^send-keys -t =agent-y: -- 'claude' '--dangerously-skip-permissions' Enter$/m);
 });

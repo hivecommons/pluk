@@ -118,14 +118,14 @@ function makeRunDir() {
 
 test('attach to an existing session skips create/send-keys and warns about --dangerous', () => {
   const stubs = makeStubs({ hasSession: true, which: ['tmux', 'pluk'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-e', '--cli=claude', `--run-dir=${makeRunDir()}`, '--no-open', '--dangerous'],
     stubs,
   );
   assert.equal(code, 0);
-  assert.match(stdout, /Attaching to existing tmux session: agent-e/);
-  assert.match(stdout, /--dangerous was set but session already exists/);
-  assert.match(stdout, /--dangerously-skip-permissions/);
+  assert.match(stderr, /Attaching to existing tmux session: agent-e/);
+  assert.match(stderr, /--dangerous was set but session already exists/);
+  assert.match(stderr, /--dangerously-skip-permissions/);
   const tmuxCalls = stubs.log('tmux');
   assert.ok(!tmuxCalls.includes('new-session'), `unexpected create: ${tmuxCalls}`);
   assert.ok(!tmuxCalls.includes('send-keys'), `unexpected send-keys: ${tmuxCalls}`);
@@ -133,13 +133,13 @@ test('attach to an existing session skips create/send-keys and warns about --dan
 
 test('re-attaching to an existing session replaces the pipe instead of toggling it off with -o', () => {
   const stubs = makeStubs({ hasSession: true, which: ['tmux', 'pluk'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-r', '--cli=claude', `--run-dir=${makeRunDir()}`, '--no-open'],
     stubs,
   );
   assert.equal(code, 0);
-  assert.match(stdout, /Attaching to existing tmux session: agent-r/);
-  assert.match(stdout, /Attaching pluk pipe-pane: claude/);
+  assert.match(stderr, /Attaching to existing tmux session: agent-r/);
+  assert.match(stderr, /Attaching pluk pipe-pane: claude/);
   const pipeCall = stubs.log('tmux').split('\n').find(l => l.startsWith('pipe-pane'));
   assert.ok(pipeCall, 'pipe-pane should run on the existing-session path');
   assert.match(pipeCall, /^pipe-pane -t =agent-r: PLUK_RUN_DIR=/);
@@ -151,12 +151,12 @@ test('re-attaching to an existing session replaces the pipe instead of toggling 
 
 test('attach --dangerous with a CLI that has no auto-flag logs the skip and sends the bare command', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-a', '--cli=aider', `--run-dir=${makeRunDir()}`, '--no-open', '--dangerous', '--verbose'],
     stubs,
   );
   assert.equal(code, 0);
-  assert.match(stdout, /no dangerous\/auto flag known for cli=aider/);
+  assert.match(stderr, /no dangerous\/auto flag known for cli=aider/);
   assert.match(stubs.log('tmux'), /send-keys -t =agent-a: -- 'aider' Enter/);
 });
 
@@ -164,12 +164,12 @@ test('attach --dangerous with a CLI that has no auto-flag logs the skip and send
 
 test('when pluk is not on PATH the npx fallback is probed and used for pipe-pane', () => {
   const stubs = makeStubs({ which: ['tmux'], npxOk: true });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-n', `--run-dir=${makeRunDir()}`, '--no-open', '--no-raw'],
     stubs,
   );
   assert.equal(code, 0);
-  assert.match(stdout, /Attaching pluk pipe-pane/);
+  assert.match(stderr, /Attaching pluk pipe-pane/);
   // The fallback must be pinned to this package's own version so the
   // pipe-pane never runs whatever `latest` the registry happens to serve.
   const spec = `@hivecommons/pluk@${pkgVersion}`;
@@ -182,13 +182,13 @@ test('when pluk is not on PATH the npx fallback is probed and used for pipe-pane
 
 test('when pluk and the npx fallback are both unavailable, pipe-pane is skipped with a warning', () => {
   const stubs = makeStubs({ which: ['tmux'], npxOk: false });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-m', `--run-dir=${makeRunDir()}`, '--no-open'],
     stubs,
   );
   assert.equal(code, 0);
-  assert.match(stdout, /pluk binary not found, skipping pipe-pane/);
-  assert.match(stdout, /npm install -g @hivecommons\/pluk/);
+  assert.match(stderr, /pluk binary not found, skipping pipe-pane/);
+  assert.match(stderr, /npm install -g @hivecommons\/pluk/);
   assert.ok(!stubs.log('tmux').includes('pipe-pane'), 'pipe-pane should not run');
 });
 
@@ -200,15 +200,15 @@ test('--rationguard kills stale watchers and spawns rationguard with rebuttal/ve
     pgrepPids: '11111\n22222',
   });
   const runDir = makeRunDir();
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-r', '--cli=claude', `--run-dir=${runDir}`, '--no-open',
      '--rationguard', '--rebuttal=log', '--verbose'],
     stubs,
   );
   assert.equal(code, 0);
-  assert.match(stdout, /killing 2 existing rationguard watcher\(s\) for agent-r/);
+  assert.match(stderr, /killing 2 existing rationguard watcher\(s\) for agent-r/);
   assert.equal(stubs.log('kill').trim(), '11111 22222');
-  assert.match(stdout, /Starting rationguard watcher in this terminal/);
+  assert.match(stderr, /Starting rationguard watcher in this terminal/);
   assert.equal(
     stubs.log('rationguard').trim(),
     `watch agent-r --run-dir=${runDir} --cli=claude --rebuttal=log --verbose`,
@@ -217,12 +217,12 @@ test('--rationguard kills stale watchers and spawns rationguard with rebuttal/ve
 
 test('--rationguard without --no-open on a non-mac terminal prints the plain attach hint', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk', 'rationguard'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-u', `--run-dir=${makeRunDir()}`, '--rationguard'],
     stubs,
   );
   assert.equal(code, 0);
-  assert.match(stdout, /To interact with the agent: tmux attach -t agent-u/);
+  assert.match(stderr, /To interact with the agent: tmux attach -t agent-u/);
   assert.equal(stubs.log('osascript'), '', 'osascript must not run off-mac');
 });
 
@@ -237,10 +237,10 @@ test('SIGINT while the rationguard watcher runs kills it and exits 0', async () 
     },
   );
   let out = '';
-  child.stdout.on('data', d => { out += d; });
+  child.stderr.on('data', d => { out += d; });
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`watcher never started; got: ${out}`)), 10000);
-    child.stdout.on('data', () => {
+    child.stderr.on('data', () => {
       if (out.includes('Ctrl+C to stop')) {
         clearTimeout(timer);
         // Give the sleep-based stub a moment to be spawned before interrupting.
@@ -260,13 +260,13 @@ test('SIGINT while the rationguard watcher runs kills it and exits 0', async () 
 
 test('iTerm2 window is opened via osascript with the attach command quoted for AppleScript', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk', 'rationguard'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-i', `--run-dir=${makeRunDir()}`, '--rationguard'],
     stubs,
     { TERM_PROGRAM: 'iTerm.app' },
   );
   assert.equal(code, 0);
-  assert.match(stdout, /Opened iTerm2 window attached to tmux session: agent-i/);
+  assert.match(stderr, /Opened iTerm2 window attached to tmux session: agent-i/);
   const call = stubs.log('osascript');
   assert.match(call, /tell application "iTerm2" to create window/);
   // appleScriptString must escape the double quotes around the shell-quoted command
@@ -275,62 +275,62 @@ test('iTerm2 window is opened via osascript with the attach command quoted for A
 
 test('Apple_Terminal window is opened via osascript do script', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk', 'rationguard'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-t', `--run-dir=${makeRunDir()}`, '--rationguard'],
     stubs,
     { TERM_PROGRAM: 'Apple_Terminal' },
   );
   assert.equal(code, 0);
-  assert.match(stdout, /Opened Terminal window attached to tmux session: agent-t/);
+  assert.match(stderr, /Opened Terminal window attached to tmux session: agent-t/);
   assert.match(stubs.log('osascript'), /tell application "Terminal" to do script/);
 });
 
 test('Apple_Terminal osascript failure falls back to the plain attach hint', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk', 'rationguard'], osascriptOk: false });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-tf', `--run-dir=${makeRunDir()}`, '--rationguard'],
     stubs,
     { TERM_PROGRAM: 'Apple_Terminal' },
   );
   assert.equal(code, 0);
-  assert.ok(!stdout.includes('Opened Terminal window'), stdout);
-  assert.match(stdout, /To interact with the agent: tmux attach -t agent-tf/);
+  assert.ok(!stderr.includes('Opened Terminal window'), stderr);
+  assert.match(stderr, /To interact with the agent: tmux attach -t agent-tf/);
 });
 
 test('osascript failure falls back to the plain attach hint', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk', 'rationguard'], osascriptOk: false });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-f', `--run-dir=${makeRunDir()}`, '--rationguard'],
     stubs,
     { TERM_PROGRAM: 'iTerm.app' },
   );
   assert.equal(code, 0);
-  assert.ok(!stdout.includes('Opened iTerm2 window'), stdout);
-  assert.match(stdout, /To interact with the agent: tmux attach -t agent-f/);
+  assert.ok(!stderr.includes('Opened iTerm2 window'), stderr);
+  assert.match(stderr, /To interact with the agent: tmux attach -t agent-f/);
 });
 
 // --- final tmux attach -------------------------------------------------------------
 
 test('without --no-open and without rationguard, attach execs tmux attach', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-o', `--run-dir=${makeRunDir()}`],
     stubs,
   );
   assert.equal(code, 0);
-  assert.match(stdout, /Attaching to tmux session\.\.\./);
+  assert.match(stderr, /Attaching to tmux session\.\.\./);
   assert.match(stubs.log('tmux'), /^attach -t =agent-o:$/m);
-  assert.ok(!stdout.includes('Session detached'), stdout);
+  assert.ok(!stderr.includes('Session detached'), stderr);
 });
 
 test('a failing tmux attach is caught and prints the reattach hint', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk'], tmuxAttachOk: false });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-d', `--run-dir=${makeRunDir()}`],
     stubs,
   );
   assert.equal(code, 0);
-  assert.match(stdout, /Session detached\. To reattach: tmux attach -t agent-d/);
+  assert.match(stderr, /Session detached\. To reattach: tmux attach -t agent-d/);
 });
 
 // --- splitShellWords escaping ------------------------------------------------------

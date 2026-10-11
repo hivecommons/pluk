@@ -230,7 +230,7 @@ function openTmuxInNewWindow(session: string): void {
           ['-e', `tell application "iTerm2" to create window with default profile command ${appleScriptString(attachCommand)}`],
           { stdio: 'ignore' },
         );
-        console.log(`Opened iTerm2 window attached to tmux session: ${session}`);
+        console.error(`Opened iTerm2 window attached to tmux session: ${session}`);
         return;
       } catch {
         // fall through
@@ -244,7 +244,7 @@ function openTmuxInNewWindow(session: string): void {
           ['-e', `tell application "Terminal" to do script ${appleScriptString(attachCommand)}`],
           { stdio: 'ignore' },
         );
-        console.log(`Opened Terminal window attached to tmux session: ${session}`);
+        console.error(`Opened Terminal window attached to tmux session: ${session}`);
         return;
       } catch {
         // fall through
@@ -252,7 +252,7 @@ function openTmuxInNewWindow(session: string): void {
       break;
   }
 
-  console.log(`To interact with the agent: tmux attach -t ${session}`);
+  console.error(`To interact with the agent: tmux attach -t ${session}`);
 }
 
 export function attach(opts: AttachOptions): void {
@@ -265,7 +265,7 @@ export function attach(opts: AttachOptions): void {
   const verbose = opts.verbose ?? false;
 
   const log = verbose
-    ? (msg: string) => console.log(`${ANSI_DIM}[pluk]${ANSI_RESET} ${msg}`)
+    ? (msg: string) => console.error(`${ANSI_DIM}[pluk]${ANSI_RESET} ${msg}`)
     : (_msg: string) => {};
 
   log(`session=${session} cli=${cli} runDir=${runDir} workDir=${workDir}`);
@@ -285,7 +285,7 @@ export function attach(opts: AttachOptions): void {
   log(`tmux session "${session}" exists: ${sessionExists}`);
 
   if (!sessionExists) {
-    console.log(`Creating tmux session: ${session}`);
+    console.error(`Creating tmux session: ${session}`);
     log(`execFile: tmux new-session -d -s ${shellQuote(session)} -c ${shellQuote(workDir)}`);
     tmuxNewSession(session, workDir);
 
@@ -298,17 +298,17 @@ export function attach(opts: AttachOptions): void {
         log(`no dangerous/auto flag known for cli=${cli}, skipping`);
       }
     }
-    console.log(`Starting ${cli}: ${fullCmd}`);
+    console.error(`Starting ${cli}: ${fullCmd}`);
     const sendArgs = ['send-keys', '-t', exactTarget(session), '--', fullCmd, 'Enter'];
     log(`execFile: tmux ${sendArgs.map(shellQuote).join(' ')}`);
     tmuxRunInherited(sendArgs);
   } else {
-    console.log(`Attaching to existing tmux session: ${session}`);
+    console.error(`Attaching to existing tmux session: ${session}`);
     if (opts.dangerouslySkipPermissions) {
       const dangerFlag = resolveDangerousFlag(cli);
       if (dangerFlag) {
-        console.log(`Warning: --dangerous was set but session already exists. The CLI may not have ${dangerFlag} enabled.`);
-        console.log(`To restart with permissions skipped: pluk send ${session} C-c && tmux send-keys -t ${shellQuote(exactTarget(session))} -- ${shellQuote(buildCliCommand(cliCmd, dangerFlag))} Enter`);
+        console.error(`Warning: --dangerous was set but session already exists. The CLI may not have ${dangerFlag} enabled.`);
+        console.error(`To restart with permissions skipped: pluk send ${session} C-c && tmux send-keys -t ${shellQuote(exactTarget(session))} -- ${shellQuote(buildCliCommand(cliCmd, dangerFlag))} Enter`);
       }
     }
   }
@@ -329,16 +329,16 @@ export function attach(opts: AttachOptions): void {
       logFile,
     });
     log(`pipe-pane command: ${pipeCmd}`);
-    console.log(`Attaching pluk pipe-pane: ${cli}`);
+    console.error(`Attaching pluk pipe-pane: ${cli}`);
     log(`execFile: tmux pipe-pane -t ${shellQuote(exactTarget(session))} ${shellQuote(pipeCmd)}`);
     tmuxPipePane(session, pipeCmd);
     log('pipe-pane attached successfully');
   } else {
-    console.log('Warning: pluk binary not found, skipping pipe-pane attachment');
-    console.log('Install globally: npm install -g @hivecommons/pluk');
+    console.error('Warning: pluk binary not found, skipping pipe-pane attachment');
+    console.error('Install globally: npm install -g @hivecommons/pluk');
   }
 
-  console.log(`Pluk logs: ${logFile}`);
+  console.error(`Pluk logs: ${logFile}`);
 
   if (opts.rationguard) {
     if (!opts.noOpen) {
@@ -376,8 +376,8 @@ export function attach(opts: AttachOptions): void {
     ];
     log(`rationguard command: ${rgArgs.map(shellQuote).join(' ')}`);
 
-    console.log(`Starting rationguard watcher in this terminal...`);
-    console.log(`Detections will appear here. Ctrl+C to stop.\n`);
+    console.error(`Starting rationguard watcher in this terminal...`);
+    console.error(`Detections will appear here. Ctrl+C to stop.\n`);
 
     const [cmd, ...args] = rgArgs;
     const child = spawn(cmd, args, {
@@ -399,15 +399,15 @@ export function attach(opts: AttachOptions): void {
     });
   } else {
     if (!opts.noOpen) {
-      console.log(`\nAttaching to tmux session...`);
+      console.error(`\nAttaching to tmux session...`);
       try {
         tmuxAttach(session);
       } catch {
-        console.log(`Session detached. To reattach: tmux attach -t ${session}`);
+        console.error(`Session detached. To reattach: tmux attach -t ${session}`);
       }
     } else {
-      console.log(`\nSession ready. To interact: tmux attach -t ${session}`);
-      console.log(`To monitor: pluk subscribe ${session} --run-dir=${runDir}`);
+      console.error(`\nSession ready. To interact: tmux attach -t ${session}`);
+      console.error(`To monitor: pluk subscribe ${session} --run-dir=${runDir}`);
     }
   }
 }

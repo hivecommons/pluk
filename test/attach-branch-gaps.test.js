@@ -147,12 +147,12 @@ test('buildPipePaneCommand omits --include-raw when includeRaw is false', () => 
 
 test('an unmapped --cli name is used verbatim as the command', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-fb', '--cli=somecli', `--run-dir=${makeRunDir()}`, '--no-open'],
     stubs,
   );
   assert.equal(code, 0);
-  assert.match(stdout, /Starting somecli: 'somecli'/);
+  assert.match(stderr, /Starting somecli: 'somecli'/);
   assert.match(stubs.log('tmux'), /send-keys -t =agent-fb: -- 'somecli' Enter/);
 });
 
@@ -175,14 +175,14 @@ test('attach --rationguard fails closed when rationguard is not on PATH (no npx 
 
 test('--rationguard-bin runs the operator-chosen command verbatim', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk', 'npx'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-rgb', `--run-dir=${makeRunDir()}`, '--no-open', '--rationguard',
       '--rationguard-bin=npx --yes @hivecommons/rationguard@0.11.0'],
     stubs,
     { PLUK_RATIONGUARD_BIN: undefined },
   );
   assert.equal(code, 0);
-  assert.match(stdout, /Starting rationguard watcher/);
+  assert.match(stderr, /Starting rationguard watcher/);
   assert.match(stubs.log('npx'), /^--yes @hivecommons\/rationguard@0\.11\.0 watch agent-rgb /m);
 });
 
@@ -210,13 +210,13 @@ test('the rationguard exit code is propagated', () => {
 
 test('PLUK_RATIONGUARD_BIN is honoured when rationguard is not on PATH', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-rge', `--run-dir=${makeRunDir()}`, '--no-open', '--rationguard'],
     stubs,
     { PLUK_RATIONGUARD_BIN: `${stubs.dir}/rationguard` },
   );
   assert.equal(code, 0);
-  assert.match(stdout, /Starting rationguard watcher/);
+  assert.match(stderr, /Starting rationguard watcher/);
   assert.match(stubs.log('rationguard'), /^watch agent-rge /m);
   assert.equal(stubs.log('npx'), '');
 });
@@ -253,24 +253,24 @@ test('attach --rationguard-bin with a missing binary fails before any tmux call'
 
 test('a missing TERM_PROGRAM yields the plain attach hint off-mac', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk', 'rationguard'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-nt', `--run-dir=${makeRunDir()}`, '--rationguard'],
     stubs,
     { TERM_PROGRAM: undefined },
   );
   assert.equal(code, 0);
-  assert.match(stdout, /To interact with the agent: tmux attach -t agent-nt/);
+  assert.match(stderr, /To interact with the agent: tmux attach -t agent-nt/);
   assert.equal(stubs.log('osascript'), '', 'osascript must not run off-mac');
 });
 
 test('resolveTmuxPath falls back to a bare tmux when `which tmux` fails', () => {
   const stubs = makeStubs({ which: ['pluk', 'rationguard'] });
-  const { code, stdout } = runAttach(
+  const { code, stderr } = runAttach(
     ['agent-wt', `--run-dir=${makeRunDir()}`, '--rationguard'],
     stubs,
   );
   assert.equal(code, 0);
-  assert.match(stdout, /To interact with the agent: tmux attach -t agent-wt/);
+  assert.match(stderr, /To interact with the agent: tmux attach -t agent-wt/);
 });
 
 // --- attach() option defaults --------------------------------------------------------
@@ -288,7 +288,7 @@ attach({ session: 'agent-def', runDir: ${JSON.stringify(runDir)}, noOpen: true }
     env: { ...process.env, PATH: `${stubs.dir}:${process.env.PATH}` },
   });
   assert.equal(res.status, 0, res.stderr);
-  assert.match(res.stdout, /Starting claude: 'claude'/);
+  assert.match(res.stderr, /Starting claude: 'claude'/);
 });
 
 test('--dir sets the tmux new-session working directory', () => {
