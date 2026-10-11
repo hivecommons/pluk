@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { watch, emptyWatchStats } from '../dist/watch.js';
 import { Subscriber } from '../dist/subscriber.js';
-import { startDiagnostics } from '../dist/diagnostics.js';
+import { startDiagnostics, log } from '../dist/diagnostics.js';
 
 const CLI = join(process.cwd(), 'dist', 'cli.js');
 const settle = (ms = 60) => new Promise(r => setTimeout(r, ms));
@@ -137,4 +137,32 @@ test('pluk watch --diagnostics prints a final summary on stderr and keeps stdout
   assert.equal(diag[0].eventsEmitted, events.length);
   assert.ok(!('session' in diag[0]), 'summary never names the session');
   assert.ok(!res.stderr.includes('diag-cli'), 'summary never includes the session name');
+});
+
+test('log() tags error and info lines and colours only on a TTY without NO_COLOR', () => {
+  const desc = Object.getOwnPropertyDescriptor(process.stderr, 'isTTY');
+  const prevNoColor = process.env.NO_COLOR;
+  const origError = console.error;
+  const lines = [];
+  console.error = (...args) => lines.push(args.join(' '));
+  try {
+    process.stderr.isTTY = true;
+    delete process.env.NO_COLOR;
+    log('error', 'boom');
+    log('info', 'started');
+    assert.equal(lines.length, 2);
+    assert.ok(lines[0].includes('\x1b[31mError:\x1b[0m boom'), `expected red Error tag, got ${JSON.stringify(lines[0])}`);
+    assert.ok(lines[1].includes('\x1b[2m[pluk]\x1b[0m started'), `expected dim [pluk] tag, got ${JSON.stringify(lines[1])}`);
+
+    lines.length = 0;
+    process.env.NO_COLOR = '1';
+    log('error', 'boom');
+    log('info', 'started');
+    assert.deepEqual(lines, ['Error: boom', '[pluk] started']);
+    assert.ok(lines.every(l => !l.includes('\x1b')), 'NO_COLOR output must carry no ESC bytes');
+  } finally {
+    console.error = origError;
+    if (desc) Object.defineProperty(process.stderr, 'isTTY', desc); else delete process.stderr.isTTY;
+    if (prevNoColor === undefined) delete process.env.NO_COLOR; else process.env.NO_COLOR = prevNoColor;
+  }
 });
