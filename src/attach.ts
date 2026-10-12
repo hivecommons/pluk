@@ -295,7 +295,9 @@ export function attach(opts: AttachOptions): void {
     if (opts.dangerouslySkipPermissions) {
       const dangerFlag = resolveDangerousFlag(cli);
       if (dangerFlag) {
-        fullCmd += ` ${shellQuote(dangerFlag)}`;
+        // Word-split: some flags are two tokens (omp's `--approval-mode yolo`),
+        // and a single shellQuote() would hand the CLI one argv entry.
+        fullCmd += ` ${splitShellWords(dangerFlag).map(shellQuote).join(' ')}`;
       } else {
         log(`no dangerous/auto flag known for cli=${cli}, skipping`);
       }

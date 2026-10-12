@@ -255,6 +255,17 @@ test('attach --dangerous appends the per-CLI danger flag to the start command', 
   assert.match(calls, /^send-keys -t =agent-y: -- 'claude' '--dangerously-skip-permissions' Enter$/m);
 });
 
+test('attach --dangerous word-splits a multi-token danger flag (omp)', () => {
+  rmSync(tmuxLog, { force: true });
+  const runDir = makeRunDir();
+  const { code } = runCli([
+    'attach', 'agent-omp', '--cli=omp', `--run-dir=${runDir}`, '--no-open', '--dangerous',
+  ]);
+  assert.equal(code, 0);
+  const calls = readFileSync(tmuxLog, 'utf-8');
+  assert.match(calls, /^send-keys -t =agent-omp: -- 'omp' '--approval-mode' 'yolo' Enter$/m);
+});
+
 // --- watch over stdin -------------------------------------------------------------
 
 test('watch classifies stdin lines and emits JSONL events', () => {
