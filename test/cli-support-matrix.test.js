@@ -83,3 +83,50 @@ test('README --cli row, CLI_COMMANDS, and bundled patterns agree on the supporte
   assert.deepEqual(bundled, launchable, 'patterns/ should bundle exactly the CLIs attach can launch');
   assert.deepEqual(Object.keys(BUILTIN_PATTERNS).sort(), launchable, 'BUILTIN_PATTERNS should cover exactly the CLIs attach can launch');
 });
+
+// --- --dangerous flag documentation ------------------------------------------------
+//
+// The README `--dangerous` row names the exact flag each CLI gets. #225 added
+// `omp: '--approval-mode yolo'` to DANGEROUS_FLAGS without touching that row,
+// so the docs advertised three CLIs while attach knew four. Pin the row to the
+// source the same way the `--cli` row is pinned to CLI_COMMANDS above.
+
+// Entries of a `const NAME: Record<string, string> = { key: 'value', ... }`
+// literal in attach.ts as a { key: value } object.
+function recordEntries(source, name) {
+  const re = new RegExp(`const ${name}: Record<string, string> = \\{([\\s\\S]*?)\\};`);
+  const m = source.match(re);
+  assert.ok(m, `src/attach.ts should still declare ${name} as a Record<string, string> literal`);
+  const entries = {};
+  for (const e of m[1].matchAll(/^\s*([A-Za-z0-9_-]+)\s*:\s*'([^']*)'/gm)) entries[e[1]] = e[2];
+  assert.ok(Object.keys(entries).length > 0, `${name} should declare at least one CLI`);
+  return entries;
+}
+
+// { cli: flag } pairs from the README row `| \`--dangerous\` | ... (\`flag\` for cli, ...) |`.
+function readmeDangerousFlags(text) {
+  const row = text.split('\n').find((l) => l.startsWith('| `--dangerous`'));
+  assert.ok(row, 'README.md should document the --dangerous option in the attach flags table');
+  const pairs = {};
+  for (const m of row.matchAll(/`([^`]+)` for ([a-z0-9-]+)/g)) pairs[m[2]] = m[1];
+  assert.ok(Object.keys(pairs).length > 0, 'README --dangerous row should list at least one `flag` for cli pair');
+  return pairs;
+}
+
+test('README --dangerous row lists every DANGEROUS_FLAGS entry with its exact flag', () => {
+  const flags = recordEntries(attachSource, 'DANGEROUS_FLAGS');
+  const documented = readmeDangerousFlags(readme);
+  for (const [cli, flag] of Object.entries(flags)) {
+    assert.equal(
+      documented[cli],
+      flag,
+      `README --dangerous row should say \`${flag}\` for ${cli} (attach.ts DANGEROUS_FLAGS); ` +
+        `got ${documented[cli] === undefined ? 'no entry' : `\`${documented[cli]}\``}`,
+    );
+  }
+  assert.deepEqual(
+    Object.keys(documented).sort(),
+    Object.keys(flags).sort(),
+    'README --dangerous row should list exactly the CLIs DANGEROUS_FLAGS knows',
+  );
+});
