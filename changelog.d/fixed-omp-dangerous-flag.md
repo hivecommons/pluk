@@ -1,0 +1,1 @@
+- `pluk attach --cli=omp --dangerous` now passes `--approval-mode yolo` as two arguments; previously omp received a single `--approval-mode yolo` token and the flag had no effect.
