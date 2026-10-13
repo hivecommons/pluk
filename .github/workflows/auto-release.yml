@@ -1,0 +1,72 @@
+name: Auto Release
+
+# GITHUB_TOKEN-created tags do not trigger push workflows; dispatch Publish
+# explicitly on the tag so its version, ancestry, tests and changelog gates apply.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  tag-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether this version needs a release
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver="$(node -p "require('./package.json').version")"
+          if [[ ! "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Invalid package version"
+            exit 1
+          fi
+          tag="v$ver"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "$tag already exists; nothing to release"
+            exit 0
+          else
+            status=$?
+            # Only exit code 2 means no matching tag; fail on network/auth errors.
+            if [ "$status" -ne 2 ]; then
+              exit "$status"
+            fi
+          fi
+          awk -v h="## $ver" 'index($0, h " ")==1 || $0==h {f=1; next} f && /^## /{exit} f' CHANGELOG.md > /tmp/auto-release-notes.md
+          if ! grep -q '[^[:space:]]' /tmp/auto-release-notes.md; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No nonempty CHANGELOG section for $ver; not tagging"
+            exit 0
+          fi
+          echo "release=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create tag
+        if: steps.version.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA"
+
+      - name: Dispatch publish.yml on the tag
+        if: steps.version.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "refs/tags/$TAG"
