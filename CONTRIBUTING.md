@@ -20,7 +20,7 @@ npm test
 
 `npm test` runs the TypeScript build first and then the Node test suite (via `scripts/run-tests.mjs`). Run it before opening a pull request.
 
-To check coverage against the project thresholds (lines 95, branches 85, functions 90), run:
+To check coverage against the project thresholds (lines 98, branches 93, functions 97), run:
 
 ```sh
 npm run test:coverage

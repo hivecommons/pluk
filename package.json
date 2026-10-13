@@ -23,7 +23,7 @@
   "scripts": {
     "build": "tsc",
     "test": "npm run build && node scripts/run-tests.mjs",
-    "test:coverage": "npm run build && node --test --experimental-test-coverage --test-coverage-lines=95 --test-coverage-branches=85 --test-coverage-functions=90 test/*.test.js",
+    "test:coverage": "npm run build && node --test --experimental-test-coverage --test-coverage-lines=98 --test-coverage-branches=93 --test-coverage-functions=97 test/*.test.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

@@ -2,7 +2,7 @@
 // Test runner invoked by `npm test`.
 //
 // On Node >= 22 it enforces the same coverage thresholds as `npm run
-// test:coverage` (lines 95 / branches 85 / functions 90). The
+// test:coverage` (lines 98 / branches 93 / functions 97). The
 // --test-coverage-* flags do not exist on Node 20, so on older majors it
 // falls back to a plain `node --test` run. This makes the Node 22 CI leg
 // coverage-gated without any workflow change.
@@ -12,9 +12,9 @@ import { pathToFileURL } from 'node:url';
 
 export const COVERAGE_FLAGS = [
   '--experimental-test-coverage',
-  '--test-coverage-lines=95',
-  '--test-coverage-branches=85',
-  '--test-coverage-functions=90',
+  '--test-coverage-lines=98',
+  '--test-coverage-branches=93',
+  '--test-coverage-functions=97',
 ];
 
 // Coverage-threshold flags for the given Node major version; empty on

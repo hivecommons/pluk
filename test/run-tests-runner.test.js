@@ -24,12 +24,12 @@ test('coverageArgs returns a copy, not the shared flag array', () => {
   assert.equal(COVERAGE_FLAGS.includes('tampered'), false);
 });
 
-test('COVERAGE_FLAGS enforce the documented 95/85/90 thresholds', () => {
+test('COVERAGE_FLAGS enforce the documented 98/93/97 thresholds', () => {
   assert.deepEqual(COVERAGE_FLAGS, [
     '--experimental-test-coverage',
-    '--test-coverage-lines=95',
-    '--test-coverage-branches=85',
-    '--test-coverage-functions=90',
+    '--test-coverage-lines=98',
+    '--test-coverage-branches=93',
+    '--test-coverage-functions=97',
   ]);
 });
 
