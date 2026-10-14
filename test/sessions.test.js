@@ -94,22 +94,42 @@ test('discoverSessions sorts sessions by most recent activity first', () => {
   }
 });
 
-test('discoverSessions only inspects the last 100 lines for state', () => {
+test('discoverSessions only inspects the last 50 non-raw events for state', () => {
   const dir = makeRunDir();
   try {
     const lines = [
       eventLine({ ts: '2026-01-01T00:00:00.000Z', type: 'state_change', data: { to: 'working', cli: 'claude' } }),
     ];
-    for (let i = 0; i < 150; i++) {
-      lines.push(eventLine({ ts: `2026-01-01T00:10:${String(i % 60).padStart(2, '0')}.000Z` }));
+    for (let i = 0; i < 60; i++) {
+      lines.push(eventLine({ ts: `2026-01-01T00:10:${String(i % 60).padStart(2, '0')}.000Z`, type: 'rate_limit' }));
     }
     writeFileSync(join(dir, 'logs', 'long.jsonl'), lines.join('\n') + '\n');
 
     const s = discoverSessions(dir)[0];
-    // early state_change and cli marker fell outside the 100-line tail window
+    // early state_change and cli marker fell outside the 50-event tail window
     assert.equal(s.state, 'unknown');
     assert.equal(s.cli, 'unknown');
-    assert.equal(s.eventCount, 151);
+    assert.equal(s.eventCount, 61);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('discoverSessions keeps state and cli when raw_output floods after the last state_change', () => {
+  const dir = makeRunDir();
+  try {
+    const lines = [
+      eventLine({ ts: '2026-01-01T00:00:00.000Z', type: 'state_change', data: { to: 'working', cli: 'claude' } }),
+    ];
+    for (let i = 0; i < 500; i++) {
+      lines.push(eventLine({ ts: `2026-01-01T00:10:${String(i % 60).padStart(2, '0')}.000Z`, data: { line: `out ${i}` } }));
+    }
+    writeFileSync(join(dir, 'logs', 'noisy.jsonl'), lines.join('\n') + '\n');
+
+    const s = discoverSessions(dir)[0];
+    assert.equal(s.state, 'working');
+    assert.equal(s.cli, 'claude');
+    assert.equal(s.eventCount, 501);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

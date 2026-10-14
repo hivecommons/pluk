@@ -12,7 +12,6 @@ export { sanitizeField } from './ansi.js';
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
 const SECONDS_PER_DAY = 86400;
-const MAX_TAIL_LINES = 100;
 
 export interface SessionInfo {
   session: string;
@@ -30,11 +29,18 @@ function readLastEvents(filePath: string, maxEvents: number): PlukEvent[] {
   try {
     const content = readFileSync(filePath, 'utf-8');
     const lines = content.split('\n').filter(l => l.trim());
-    const start = Math.max(0, lines.length - MAX_TAIL_LINES);
+    let sawRaw = false;
 
-    for (let i = lines.length - 1; i >= start && events.length < maxEvents; i--) {
+    // raw_output lines (attach --include-raw) carry no state or cli, so they must not
+    // push state_change events out of the window; only the newest one is kept for lastActivity
+    for (let i = lines.length - 1; i >= 0 && events.length < maxEvents; i--) {
       const event = parseEvent(lines[i]);
-      if (event) events.unshift(event);
+      if (!event) continue;
+      if (event.type === 'raw_output') {
+        if (sawRaw) continue;
+        sawRaw = true;
+      }
+      events.unshift(event);
     }
   } catch {
     // file unreadable
