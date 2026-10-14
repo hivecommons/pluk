@@ -5,7 +5,7 @@ import { Subscriber } from './subscriber.js';
 import { watch } from './watch.js';
 import { startDiagnostics, log } from './diagnostics.js';
 import { PLUK_EVENT_TYPES, type PlukEventType } from './event.js';
-import { listAvailableCLIs, bundledPatternsDir, getPatterns, hasAnyPattern } from './patterns.js';
+import { listAvailableCLIs, bundledPatternsDir, getPatterns, hasAnyPattern, BUILTIN_PATTERNS } from './patterns.js';
 import { discoverSessions } from './sessions.js';
 import { resolveRunDir, rotateLogFileIfNeeded, validateSessionName } from './run-dir.js';
 import { attach } from './attach.js';
@@ -149,7 +149,7 @@ function cmdWatch(args: string[]): void {
   const filter = parseFilter(flags['filter']);
 
   if (!hasAnyPattern(getPatterns(cli, flags['patterns-dir']))) {
-    log('info', `no pattern set for --cli=${cli} (bundled: ${listAvailableCLIs(bundledPatternsDir()).join(', ') || 'none'}); only raw_output will be emitted`);
+    log('info', `no pattern set for --cli=${cli} (bundled: ${listAvailableCLIs(bundledPatternsDir()).join(', ') || builtinCLIList()}); only raw_output will be emitted`);
   }
 
   // Prevent crash on stdout write errors (EPIPE when pipe-pane closes)
@@ -279,12 +279,16 @@ function cmdSessions(args: string[]): void {
   }
 }
 
+function builtinCLIList(): string {
+  return `${Object.keys(BUILTIN_PATTERNS).join(', ')} (builtin)`;
+}
+
 function cmdPatterns(args: string[]): void {
   const { flags } = parseArgs(args);
   const cli = flags['cli'] ?? 'claude';
 
   const patterns = getPatterns(cli);
-  const available = listAvailableCLIs(bundledPatternsDir()).join(', ') || 'claude, copilot, gemini, goose, omp (builtin)';
+  const available = listAvailableCLIs(bundledPatternsDir()).join(', ') || builtinCLIList();
   if (!hasAnyPattern(patterns)) {
     log('info', `no pattern set for ${cli}; available CLIs: ${available}`);
   }
