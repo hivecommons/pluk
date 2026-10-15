@@ -85,7 +85,8 @@ test('watch rotates an oversized session log on its periodic check', async t => 
     writeFileSync(logFile, original);
 
     const child = spawnFast(['watch', 'rot', '--cli=claude', `--run-dir=${dir}`], {
-      PLUK_LOG_MAX_BYTES: '1',
+      // Over the cap at 5 lines (~620 B) while the 2 kept lines (~250 B) fit.
+      PLUK_LOG_MAX_BYTES: '400',
       PLUK_LOG_KEEP_LINES: '2',
     });
     reapOnFailure(t, child);

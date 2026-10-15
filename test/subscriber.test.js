@@ -241,7 +241,7 @@ test('rotation: resumes after the last delivered line and never duplicates', asy
     appendFileSync(log, body);
     await waitFor(() => events.length === 200);
 
-    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 1000, keepLines: 50 }), true);
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10_000, keepLines: 50 }), true);
     appendFileSync(log, seqLine(999, 'bypass_permissions'));
 
     await waitFor(() => events.length >= 201);
@@ -273,7 +273,7 @@ test('rotation: lines appended between read and rotation are delivered once', as
     appendFileSync(log, extra);
     // Only a synchronous append + rotate (no poll in between) exercises the
     // marker lookup inside the kept window.
-    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 100, keepLines: 50 }), true);
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10_000, keepLines: 50 }), true);
 
     await waitFor(() => events.length >= 120);
     await new Promise(r => setTimeout(r, 300));
@@ -300,7 +300,7 @@ test('rotation: a kept tail larger than the read offset is detected without dupl
 
     // Rotating down to 90 lines shrinks the file only slightly; the two
     // appended lines push it past our old offset, so no shrink is ever seen.
-    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10, keepLines: 90 }), true);
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 12_000, keepLines: 90 }), true);
     appendFileSync(log, seqLine(100) + seqLine(101));
 
     await waitFor(() => events.length >= 102);
@@ -333,7 +333,7 @@ test('rotation: when the last seen line was trimmed away, the whole kept tail is
     let extra = '';
     for (let i = 300; i < 400; i++) extra += seqLine(i);
     appendFileSync(log, extra);
-    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10, keepLines: 50 }), true);
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 20_000, keepLines: 50 }), true);
 
     await waitFor(() => events.length >= 350);
     await new Promise(r => setTimeout(r, 300));
@@ -359,7 +359,7 @@ test('rotation: before any line was seen, the kept tail is delivered and a trail
   try {
     await new Promise(r => setTimeout(r, 300));
     assert.equal(events.length, 0);
-    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10, keepLines: 5 }), true);
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 5000, keepLines: 5 }), true);
     // Append a partial line so the resume path must carry it over.
     const half = seqLine(500, 'error');
     appendFileSync(log, half.slice(0, 10));
@@ -456,7 +456,7 @@ test('rotation: a kept tail that preserves the head fingerprint is still detecte
     appendFileSync(log, body);
     await waitFor(() => events.length === 100);
 
-    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 1000, keepLines: 20 }), true);
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 20_000, keepLines: 20 }), true);
     await waitFor(() => logged.some(l => l.includes('log file shrank')));
     assert.ok(!logged.some(l => l.includes('head changed')), 'the head fingerprint must not have moved');
 
