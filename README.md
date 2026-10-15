@@ -263,7 +263,7 @@ In addition to the `pluk <command>` subcommand form, three standalone binaries a
 
 ## Supported CLIs
 
-Built-in event-classification pattern files exist for: **Claude Code**, **GitHub Copilot CLI**, **Gemini CLI**, **Goose CLI**, **OpenAI Codex CLI**, **Aider**.
+Built-in event-classification pattern files exist for: **Claude Code**, **GitHub Copilot CLI**, **Gemini CLI**, **Goose CLI**, **OpenAI Codex CLI**, **Aider**, **Oh My Pi (`omp`)**.
 
 Custom patterns can be loaded from a directory with `--patterns-dir` or `getPatterns(cli, patternsDir)`.
 
