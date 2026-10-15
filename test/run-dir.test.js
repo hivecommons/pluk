@@ -343,3 +343,24 @@ test('rotateLogFileIfNeeded keeps appends intact afterward (O_APPEND safety)', (
     rmSync(base, { recursive: true, force: true });
   }
 });
+
+test('rotateLogFileIfNeeded drops oldest kept lines until the log fits under maxBytes', () => {
+  const base = mkdtempSync(join(tmpdir(), 'pluk-rotate-bytes-'));
+  try {
+    const file = join(base, 'long.jsonl');
+    const lines = Array.from({ length: 10 }, (_, i) => `{"n":${i},"pad":"${'x'.repeat(100)}"}`);
+    writeFileSync(file, lines.join('\n') + '\n');
+    const maxBytes = 450;
+
+    assert.strictEqual(rotateLogFileIfNeeded(file, { maxBytes, keepLines: 8 }), true);
+
+    const content = readFileSync(file, 'utf-8');
+    assert.ok(Buffer.byteLength(content) <= maxBytes);
+    const after = content.split('\n').slice(0, -1);
+    assert.ok(after.length >= 1 && after.length < 8);
+    assert.deepEqual(after, lines.slice(-after.length));
+    assert.strictEqual(rotateLogFileIfNeeded(file, { maxBytes, keepLines: 8 }), false);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});

@@ -144,6 +144,10 @@ export function logKeepLines(): number {
  * right after the kept tail. Called on a size threshold so normal-sized logs
  * never pay the read/rewrite cost.
  *
+ * The kept tail is at most keepLines lines and, when possible, at most
+ * maxBytes: the oldest kept lines are dropped until it fits, but the newest
+ * line is always kept even if it alone exceeds maxBytes.
+ *
  * Returns whether the file was rewritten.
  */
 export function rotateLogFileIfNeeded(
@@ -175,7 +179,16 @@ export function rotateLogFileIfNeeded(
 
   // A snapshot ending mid-line keeps that partial line unterminated so the
   // rest of it, copied from past the snapshot below, completes it.
-  const kept = usableLines.slice(-keepLines);
+  let kept = usableLines.slice(-keepLines);
+  // maxBytes is the binding cap: drop the oldest kept lines until the tail
+  // fits, always keeping at least the newest line.
+  let keptBytes = Buffer.byteLength(kept.join('\n') + (hasTrailingNewline ? '\n' : ''), 'utf-8');
+  let drop = 0;
+  while (keptBytes > maxBytes && drop < kept.length - 1) {
+    keptBytes -= Buffer.byteLength(kept[drop]!, 'utf-8') + 1;
+    drop++;
+  }
+  kept = kept.slice(drop);
   const rebuilt = Buffer.from(kept.join('\n') + (hasTrailingNewline ? '\n' : ''), 'utf-8');
 
   // Test seam: lets a test append between the snapshot and the rewrite.

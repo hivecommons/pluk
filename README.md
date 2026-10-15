@@ -88,8 +88,8 @@ tmux attach -t my-agent
 | Variable | Default | What it does |
 |----------|---------|---------------|
 | `PLUK_RUN_DIR` | `/tmp/pluk-run` | Directory for session metadata and JSONL event logs |
-| `PLUK_LOG_MAX_BYTES` | `10485760` (10 MiB) | Rotate a session's event log once it exceeds this many bytes |
-| `PLUK_LOG_KEEP_LINES` | `5000` | Trailing lines kept in the log across rotation |
+| `PLUK_LOG_MAX_BYTES` | `10485760` (10 MiB) | Byte cap for a session's event log: once exceeded, the log is trimmed to the newest lines that fit under it |
+| `PLUK_LOG_KEEP_LINES` | `5000` | Keep up to this many trailing lines across rotation, within the `PLUK_LOG_MAX_BYTES` cap |
 | `PLUK_RATIONGUARD_BIN` | *(unset)* | Rationguard command for `pluk attach --rationguard` when it is not on `PATH`; same as `--rationguard-bin` |
 
 ## CLI Commands
