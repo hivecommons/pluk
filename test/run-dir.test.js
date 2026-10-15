@@ -364,3 +364,25 @@ test('rotateLogFileIfNeeded drops oldest kept lines until the log fits under max
     rmSync(base, { recursive: true, force: true });
   }
 });
+
+test('rotateLogFileIfNeeded never drops the newest line, even when it alone exceeds maxBytes', () => {
+  const base = mkdtempSync(join(tmpdir(), 'pluk-rotate-newest-'));
+  try {
+    const file = join(base, 'giant.jsonl');
+    const small = Array.from({ length: 5 }, (_, i) => `{"n":${i}}`);
+    const giant = `{"n":5,"pad":"${'x'.repeat(2000)}"}`;
+    writeFileSync(file, [...small, giant].join('\n') + '\n');
+    const maxBytes = 500;
+
+    // The byte cap would drop every kept line; the floor is the newest one.
+    assert.strictEqual(rotateLogFileIfNeeded(file, { maxBytes, keepLines: 3 }), true);
+    assert.strictEqual(readFileSync(file, 'utf-8'), giant + '\n');
+
+    // Still over maxBytes, but a single line cannot be trimmed further: no
+    // second rewrite, so the periodic size check does not loop on it (#248).
+    assert.strictEqual(rotateLogFileIfNeeded(file, { maxBytes, keepLines: 3 }), false);
+    assert.strictEqual(readFileSync(file, 'utf-8'), giant + '\n');
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
