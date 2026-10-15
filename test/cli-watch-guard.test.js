@@ -106,6 +106,14 @@ for (const cmd of ['watch', 'subscribe']) {
   }
 }
 
+for (const cmd of ['watch', 'subscribe']) {
+  test(`${cmd} --filter= (empty value) exits 2 asking for an event type`, () => {
+    const { code, stderr } = run(CLI, [cmd, 'x', '--filter=']);
+    assert.equal(code, 2);
+    assert.match(stderr, /--filter requires at least one event type \(valid: raw_output, /);
+  });
+}
+
 test('watch --filter with valid types is not rejected as a usage error', () => {
   const { code, stderr } = run(CLI, ['watch', 'x', '--filter=rate_limit, error', '--capture=0']);
   assert.equal(code, 2);

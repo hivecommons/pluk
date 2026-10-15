@@ -61,3 +61,14 @@ test('cmdWatch no-pattern warning names the bundled CLIs when patterns/ is prese
   assert.match(r.stderr, /no pattern set for --cli=nonesuch \(bundled: /);
   assert.doesNotMatch(r.stderr, /\(builtin\)/, 'builtin fallback must not fire when patterns/ exists');
 });
+
+test('cmdWatch emits raw_output without --include-raw when no pattern set exists', () => {
+  const r = spawnSync(process.execPath, [join(root, 'dist', 'cli.js'), 'watch', 's', '--cli=nonesuch'], {
+    input: 'hello world\n',
+    encoding: 'utf-8',
+  });
+  assert.equal(r.status, 0);
+  const events = r.stdout.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+  assert.equal(events.length, 1);
+  assert.equal(events[0].type, 'raw_output');
+});

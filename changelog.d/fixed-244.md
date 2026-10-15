@@ -1,0 +1,1 @@
+- `pluk watch` now emits `raw_output` events when no pattern set exists for the chosen `--cli`, as its warning promises, without needing `--include-raw`.

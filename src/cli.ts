@@ -84,7 +84,11 @@ function installPipePaneErrorHandlers(): void {
 }
 
 function parseFilter(raw: string | undefined): PlukEventType[] | undefined {
-  if (!raw) return undefined;
+  if (raw === undefined) return undefined;
+  if (raw === '') {
+    console.error(`${paintStderr(ANSI_RED, 'Error:')} --filter requires at least one event type (valid: ${PLUK_EVENT_TYPES.join(', ')})`);
+    process.exit(2);
+  }
   const types = raw.split(',').map(t => t.trim());
   for (const t of types) {
     if (!(PLUK_EVENT_TYPES as readonly string[]).includes(t)) {
@@ -148,7 +152,8 @@ function cmdWatch(args: string[]): void {
 
   const filter = parseFilter(flags['filter']);
 
-  if (!hasAnyPattern(getPatterns(cli, flags['patterns-dir']))) {
+  const noPatternSet = !hasAnyPattern(getPatterns(cli, flags['patterns-dir']));
+  if (noPatternSet) {
     log('info', `no pattern set for --cli=${cli} (bundled: ${listAvailableCLIs(bundledPatternsDir()).join(', ') || builtinCLIList()}); only raw_output will be emitted`);
   }
 
@@ -171,7 +176,7 @@ function cmdWatch(args: string[]): void {
     cli,
     patternsDir: flags['patterns-dir'],
     filter,
-    includeRaw: flags['include-raw'] === 'true',
+    includeRaw: flags['include-raw'] === 'true' || noPatternSet,
     mode: capture ? 'capture' : 'stream',
     pane: flags['pane'],
     captureIntervalMs,
