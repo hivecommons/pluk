@@ -1,0 +1,1 @@
+- `pluk attach --rationguard` now also kills existing watchers that were started with a custom `--rationguard-bin`, so re-attaching no longer stacks duplicate watchers.

@@ -42,9 +42,12 @@ export function shellQuote(value: string): string {
  * word boundary (a space — pgrep renders cmdline arg separators as
  * spaces — or end-of-cmdline) after the session name.
  */
-export function rationguardWatcherPattern(session: string): string {
+export function rationguardWatcherPattern(session: string, rgBin?: string): string {
   const escaped = session.replace(/\./g, '\\.');
-  return `rationguard watch ${escaped}( |$)`;
+  const prefix = rgBin
+    ? splitShellWords(rgBin).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join(' ')
+    : 'rationguard';
+  return `${prefix} watch ${escaped}( |$)`;
 }
 
 function appleScriptString(value: string): string {
@@ -353,20 +356,23 @@ export function attach(opts: AttachOptions): void {
       log('skipping terminal window (--no-open)');
     }
 
-    try {
-      const existing = execFileSync('pgrep', ['-f', rationguardWatcherPattern(session)], {
-        encoding: 'utf-8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      }).trim();
-      if (existing) {
-        const pids = existing.split('\n').filter(p => p && p !== String(process.pid));
-        if (pids.length > 0) {
-          log(`killing ${pids.length} existing rationguard watcher(s) for ${session}: ${pids.join(', ')}`);
-          execFileSync('kill', pids, { stdio: 'ignore' });
+    const patterns = new Set([rationguardWatcherPattern(session, rgBin), rationguardWatcherPattern(session)]);
+    for (const pattern of patterns) {
+      try {
+        const existing = execFileSync('pgrep', ['-f', pattern], {
+          encoding: 'utf-8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+        }).trim();
+        if (existing) {
+          const pids = existing.split('\n').filter(p => p && p !== String(process.pid));
+          if (pids.length > 0) {
+            log(`killing ${pids.length} existing rationguard watcher(s) for ${session}: ${pids.join(', ')}`);
+            execFileSync('kill', pids, { stdio: 'ignore' });
+          }
         }
+      } catch {
+        // no existing watchers
       }
-    } catch {
-      // no existing watchers
     }
 
     const rgArgs = [
