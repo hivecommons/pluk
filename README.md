@@ -308,7 +308,6 @@ See `patterns/*.patterns` in this repo for complete, real-world examples.
 
 - **[@hivecommons/rationguard](https://www.npmjs.com/package/@hivecommons/rationguard)** — real-time rationalization detection and rebuttal
 - **[@hivecommons/promptargs](https://www.npmjs.com/package/@hivecommons/promptargs)** — template variable substitution for AI prompts
-- **[hivecommons/pluk](https://github.com/hivecommons/pluk)** — the Go binary (this package is the TypeScript port)
 
 ## License
 
