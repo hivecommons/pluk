@@ -356,23 +356,26 @@ export function attach(opts: AttachOptions): void {
       log('skipping terminal window (--no-open)');
     }
 
+    // Both patterns may match the same process; collect PIDs once so kill never sees duplicates.
     const patterns = new Set([rationguardWatcherPattern(session, rgBin), rationguardWatcherPattern(session)]);
+    const pids = new Set<string>();
     for (const pattern of patterns) {
       try {
         const existing = execFileSync('pgrep', ['-f', pattern], {
           encoding: 'utf-8',
           stdio: ['ignore', 'pipe', 'ignore'],
         }).trim();
-        if (existing) {
-          const pids = existing.split('\n').filter(p => p && p !== String(process.pid));
-          if (pids.length > 0) {
-            log(`killing ${pids.length} existing rationguard watcher(s) for ${session}: ${pids.join(', ')}`);
-            execFileSync('kill', pids, { stdio: 'ignore' });
-          }
+        for (const p of existing.split('\n')) {
+          if (p && p !== String(process.pid)) pids.add(p);
         }
       } catch {
-        // no existing watchers
+        // no existing watchers for this pattern
       }
+    }
+    if (pids.size > 0) {
+      const list = [...pids];
+      log(`killing ${list.length} existing rationguard watcher(s) for ${session}: ${list.join(', ')}`);
+      execFileSync('kill', list, { stdio: 'ignore' });
     }
 
     const rgArgs = [
