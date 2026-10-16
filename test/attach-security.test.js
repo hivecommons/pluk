@@ -131,3 +131,12 @@ test('rationguardWatcherPattern escapes regex dots in session names', () => {
   assert.ok(re.test('rationguard watch a.b --cli=claude'));
   assert.ok(!re.test('rationguard watch aXb --cli=claude'));
 });
+
+test('rationguardWatcherPattern matches watchers started with an explicit --rationguard-bin', () => {
+  const bin = 'npx --yes @hivecommons/rationguard@0.11.0';
+  const re = new RegExp(rationguardWatcherPattern('SESSION', bin));
+  assert.ok(re.test('npx --yes @hivecommons/rationguard@0.11.0 watch SESSION --run-dir=/x'));
+  assert.ok(re.test('npx --yes @hivecommons/rationguard@0.11.0 watch SESSION'));
+  assert.ok(!re.test('npx --yes @hivecommons/rationguard@0.11.0 watch SESSION2 --run-dir=/x'));
+  assert.ok(!re.test('npx --yes @hivecommons/rationguardX0Y11Z0 watch SESSION'));
+});
