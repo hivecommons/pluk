@@ -28,8 +28,11 @@ export function stripANSI(line: string): string {
   return line.replace(ANSI_RE, '').replace(RESIDUAL_CONTROL_RE, '').trim();
 }
 
+// Counts code points, not UTF-16 units, so a surrogate pair is never split.
 function truncate(s: string, max: number): string {
-  return s.length > max ? s.slice(0, max) : s;
+  if (s.length <= max) return s;
+  const chars = Array.from(s);
+  return chars.length > max ? chars.slice(0, max).join('') : s;
 }
 
 const TOOL_PAREN_RE = /\(([a-z]+)\)$/;
