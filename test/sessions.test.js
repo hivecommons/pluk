@@ -192,3 +192,23 @@ test('discoverSessions picks up cli from a state_change event (#197)', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('discoverSessions ignores events whose ts is not a valid date (#270)', () => {
+  const dir = makeRunDir();
+  try {
+    const lines = [
+      eventLine({ ts: '2026-01-01T00:00:00.000Z', type: 'state_change', data: { to: 'idle' } }),
+      eventLine({ ts: 'zzz', type: 'raw_output' }),
+    ];
+    writeFileSync(join(dir, 'logs', 'a.jsonl'), lines.join('\n') + '\n');
+    writeFileSync(join(dir, 'logs', 'b.jsonl'), eventLine({ ts: 'zzz' }) + '\n');
+
+    const byName = Object.fromEntries(discoverSessions(dir).map(s => [s.session, s]));
+    assert.equal(byName.a.lastActivity, '2026-01-01T00:00:00.000Z');
+    assert.match(byName.a.lastActivityAgo, /^\d+d ago$/);
+    assert.equal(byName.b.lastActivity, '');
+    assert.equal(byName.b.lastActivityAgo, 'unknown');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
