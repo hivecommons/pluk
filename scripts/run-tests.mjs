@@ -2,19 +2,24 @@
 // Test runner invoked by `npm test`.
 //
 // On Node >= 22 it enforces the same coverage thresholds as `npm run
-// test:coverage` (lines 98 / branches 93 / functions 97). The
+// test:coverage` (lines 99 / branches 96 / functions 98). The
 // --test-coverage-* flags do not exist on Node 20, so on older majors it
 // falls back to a plain `node --test` run. This makes the Node 22 CI leg
 // coverage-gated without any workflow change.
+//
+// test/** is excluded explicitly: Node 24+ drops test files from the report
+// by default but Node 22 does not, so without the exclude the matrix legs
+// gate different aggregates and a threshold that holds on 26 can fail on 22.
 import { readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
 export const COVERAGE_FLAGS = [
   '--experimental-test-coverage',
-  '--test-coverage-lines=98',
-  '--test-coverage-branches=93',
-  '--test-coverage-functions=97',
+  '--test-coverage-exclude=test/**',
+  '--test-coverage-lines=99',
+  '--test-coverage-branches=96',
+  '--test-coverage-functions=98',
 ];
 
 // Coverage-threshold flags for the given Node major version; empty on
