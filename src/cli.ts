@@ -31,7 +31,7 @@ ${ANSI_CYAN}Usage:${ANSI_RESET}
 ${ANSI_CYAN}Commands:${ANSI_RESET}
   attach      Create tmux session, start AI CLI, wire pluk + rationguard
   sessions    List active pluk-monitored sessions
-  subscribe   Tail a pluk JSONL log file (from Go binary or other publisher)
+  subscribe   Tail a pluk JSONL log file (from pluk watch or any other publisher)
   watch       Classify stdin line-by-line, or poll whole tmux frames (--capture)
   send        Send text to a tmux session (inject rebuttals, commands)
   patterns    Show loaded patterns for a CLI
