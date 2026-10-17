@@ -30,8 +30,11 @@ The tag does not match `package.json`, is not reachable from `main`, or
 ## `publish` failed (version not on npm)
 
 If `npm view @hivecommons/pluk@X.Y.Z version` returns nothing, the failure was
-tests, build, smoke-test, or registry/auth (`NPM_TOKEN`). Fix the cause, then use
-**Re-run failed jobs** on the run. If the fix needs a code change, follow the
+tests, build, smoke-test, or registry/auth (a misconfigured npm Trusted Publisher). If npm rejected the OIDC
+token, check the Trusted Publisher on npmjs.com for `@hivecommons/pluk`
+(Settings → Trusted Publisher → GitHub Actions: owner `hivecommons`, repository
+`pluk`, workflow filename `publish.yml`, environment blank); no `NPM_TOKEN`
+secret is used. Fix the cause, then use **Re-run failed jobs** on the run. If the fix needs a code change, follow the
 `verify-tag` path above to retag.
 
 ## `publish` succeeded but `release` failed (version on npm)

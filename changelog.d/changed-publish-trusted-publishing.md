@@ -1,0 +1,1 @@
+- Releases publish to npm via Trusted Publishing (OIDC); the NPM_TOKEN secret is no longer used.

@@ -43,6 +43,10 @@ jobs:
             exit 1
           fi
 
+  # Publishes with npm Trusted Publishing (OIDC); no NPM_TOKEN secret.
+  # The npm-side Trusted Publisher for @hivecommons/pluk must match:
+  #   provider: GitHub Actions, owner: hivecommons, repository: pluk,
+  #   workflow filename: publish.yml, environment: (blank — this job uses none)
   publish:
     needs: verify-tag
     runs-on: ubuntu-latest
@@ -51,9 +55,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org/
           cache: npm
+      # Trusted Publishing needs npm >= 11.5.1.
+      - name: Ensure npm supports Trusted Publishing
+        run: |
+          have="$(npm --version)"
+          if [ "$(printf '%s\n' 11.5.1 "$have" | sort -V | head -n1)" != "11.5.1" ]; then
+            echo "npm $have is too old for Trusted Publishing; upgrading"
+            npm install -g npm@latest
+          fi
+          npm --version
       # Dependency lifecycle scripts must not run in the job that holds the
       # OIDC token used for npm provenance.
       - run: npm ci --ignore-scripts
@@ -69,9 +82,14 @@ jobs:
           echo "$out"
           test "$out" = "@hivecommons/pluk ${GITHUB_REF_NAME#v}"
           test -d node_modules/@hivecommons/pluk/patterns
-      - run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Require OIDC token for npm Trusted Publishing
+        run: |
+          if [ -z "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
+            echo "::error::ACTIONS_ID_TOKEN_REQUEST_URL is not set; the job needs 'id-token: write' for npm Trusted Publishing; see runbooks/publish-failure.md"
+            exit 1
+          fi
+      - name: Publish to npm (Trusted Publishing)
+        run: npm publish --access public --provenance
 
   release:
     name: GitHub release
