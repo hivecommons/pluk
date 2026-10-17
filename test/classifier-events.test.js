@@ -252,3 +252,33 @@ test('state_change carries patterns.cli so sessions can resolve the CLI (#197)',
   assert.equal(ev.type, 'state_change');
   assert.equal(ev.data.cli, 'claude');
 });
+
+function previewFor(cluster) {
+  // 119 single-grapheme chars, so the 120th grapheme is the first whole cluster.
+  const head = '● Read(' + 'X'.repeat(112);
+  const ev = makeClassifier().classify(head + cluster.repeat(10) + ')');
+  assert.ok(ev);
+  assert.equal(ev.type, 'tool_call_started');
+  return { head, preview: ev.data.input_preview };
+}
+
+test('tool_call_started: input_preview truncation never splits a ZWJ emoji sequence', () => {
+  const family = '👨\u200D👩\u200D👧';
+  const { head, preview } = previewFor(family);
+  assert.equal(preview, head + family);
+  assert.equal(Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(preview)).length, 120);
+});
+
+test('tool_call_started: input_preview truncation never splits a flag pair', () => {
+  const flag = '🇫🇷';
+  const { head, preview } = previewFor(flag);
+  assert.equal(preview, head + flag);
+  assert.equal(Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(preview)).length, 120);
+});
+
+test('tool_call_started: input_preview truncation never splits a base + combining mark', () => {
+  const accented = 'e\u0301';
+  const { head, preview } = previewFor(accented);
+  assert.equal(preview, head + accented);
+  assert.equal(Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(preview)).length, 120);
+});
