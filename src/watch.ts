@@ -95,12 +95,24 @@ export function watch(opts: WatchOptions): WatchHandle {
         ? opts.captureIntervalMs
         : DEFAULT_CAPTURE_INTERVAL_MS;
 
+    const includeRaw = opts.includeRaw ?? false;
+    let lastRawFrame: string | undefined;
+
     const timer = setInterval(() => {
       stats.framesPolled++;
       try {
         const frame = tmuxCapturePane(target);
         const event = classifier.classifyFrame(frame);
         if (event) emit(event);
+
+        // Frames are whole screens: emit raw output once per changed frame.
+        if (includeRaw) {
+          const clean = stripANSI(frame);
+          if (clean !== lastRawFrame) {
+            lastRawFrame = clean;
+            if (clean) emit(classifier.rawOutput(clean));
+          }
+        }
       } catch {
         // Pane may be gone or tmux unavailable — keep polling quietly, but
         // count it so --diagnostics can tell a quiet pane from a dead one.
