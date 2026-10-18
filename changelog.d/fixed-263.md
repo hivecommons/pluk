@@ -1,0 +1,1 @@
+- `tool_call_started` events no longer cut an emoji or other astral character in half at the 120-character `input_preview` limit; truncation now counts code points, so the preview never ends in an invalid lone surrogate.

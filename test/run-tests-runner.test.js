@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -24,13 +24,22 @@ test('coverageArgs returns a copy, not the shared flag array', () => {
   assert.equal(COVERAGE_FLAGS.includes('tampered'), false);
 });
 
-test('COVERAGE_FLAGS enforce the documented 98/93/97 thresholds', () => {
+test('COVERAGE_FLAGS enforce the documented 99/96/98 thresholds over non-test files only', () => {
   assert.deepEqual(COVERAGE_FLAGS, [
     '--experimental-test-coverage',
-    '--test-coverage-lines=98',
-    '--test-coverage-branches=93',
-    '--test-coverage-functions=97',
+    '--test-coverage-exclude=test/**',
+    '--test-coverage-lines=99',
+    '--test-coverage-branches=96',
+    '--test-coverage-functions=98',
   ]);
+});
+
+test('CONTRIBUTING.md documents the thresholds COVERAGE_FLAGS actually enforce', () => {
+  // The numbers contributors read must be the numbers CI gates on, or a
+  // ratchet in one place silently leaves the other stale.
+  const doc = readFileSync(join(process.cwd(), 'CONTRIBUTING.md'), 'utf-8');
+  const pct = (name) => COVERAGE_FLAGS.find((f) => f.startsWith(`--test-coverage-${name}=`)).split('=')[1];
+  assert.match(doc, new RegExp(`lines ${pct('lines')}, branches ${pct('branches')}, functions ${pct('functions')}`));
 });
 
 test('listTestFiles returns only sorted *.test.js entries', () => {

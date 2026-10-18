@@ -28,8 +28,24 @@ export function stripANSI(line: string): string {
   return line.replace(ANSI_RE, '').replace(RESIDUAL_CONTROL_RE, '').trim();
 }
 
+const graphemeSegmenter =
+  typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+
+/* node:coverage disable */
+// Fallback for runtimes without Intl.Segmenter: code points, never UTF-16 units.
+function splitCodePoints(s: string): string[] {
+  return Array.from(s);
+}
+/* node:coverage enable */
+
+// Counts grapheme clusters so a ZWJ sequence, flag pair or base + combining
+// mark is never cut in half.
 function truncate(s: string, max: number): string {
-  return s.length > max ? s.slice(0, max) : s;
+  if (s.length <= max) return s;
+  const units = graphemeSegmenter
+    ? Array.from(graphemeSegmenter.segment(s), (seg) => seg.segment)
+    : splitCodePoints(s);
+  return units.length > max ? units.slice(0, max).join('') : s;
 }
 
 const TOOL_PAREN_RE = /\(([a-z]+)\)$/;
