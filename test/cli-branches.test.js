@@ -154,6 +154,47 @@ test('patterns honors --patterns-dir and lists its CLIs', () => {
   assert.ok(avail && avail.includes('testcli'), `got: ${stdout}`);
 });
 
+test('patterns --patterns-dir overrides a bundled CLI and lists it once', () => {
+  const patternsDir = join(scratch, 'patterns-override');
+  mkdirSync(patternsDir, { recursive: true });
+  // Shadow the bundled claude set: custom dir must win and the name must not
+  // be listed twice (custom + bundled are unioned by name).
+  writeFileSync(
+    join(patternsDir, 'claude.patterns'),
+    "WORKING_PATTERNS='OVERRIDE_BUSY_MARKER'\n",
+  );
+  const { code, stdout } = runCli(['patterns', '--cli=claude', `--patterns-dir=${patternsDir}`]);
+  assert.equal(code, 0);
+  const working = stdout.split('\n').find(l => l.includes('working'));
+  assert.ok(working && working.includes('OVERRIDE_BUSY_MARKER'), `got: ${stdout}`);
+  const avail = stdout.split('\n').find(l => l.includes('Available CLIs:'));
+  assert.ok(avail, `got: ${stdout}`);
+  const names = avail.replace(/\x1b\[[0-9;]*m/g, '').replace('Available CLIs: ', '').split(', ');
+  assert.equal(names.filter(n => n === 'claude').length, 1, `claude listed twice: ${avail}`);
+  assert.ok(names.includes('copilot'), `bundled CLIs still listed: ${avail}`);
+});
+
+test('patterns --patterns-dir with an unknown CLI warns and still lists both dirs', () => {
+  const patternsDir = join(scratch, 'patterns-unknown');
+  mkdirSync(patternsDir, { recursive: true });
+  writeFileSync(join(patternsDir, 'customcli.patterns'), "IDLE_PATTERNS='zzz'\n");
+  const { code, stdout, stderr } = runCli(
+    ['patterns', '--cli=nonesuch', `--patterns-dir=${patternsDir}`],
+  );
+  assert.equal(code, 0);
+  assert.match(stderr, /no pattern set for nonesuch; available CLIs: customcli, .*claude/);
+  assert.match(stdout, /Available CLIs: customcli, /);
+});
+
+test('patterns --patterns-dir pointing at a missing dir falls back to bundled', () => {
+  const missing = join(scratch, 'patterns-does-not-exist');
+  const { code, stdout, stderr } = runCli(['patterns', '--cli=claude', `--patterns-dir=${missing}`]);
+  assert.equal(code, 0);
+  assert.doesNotMatch(stderr, /no pattern set/);
+  assert.match(stdout, /Available CLIs: .*claude/);
+  assert.doesNotMatch(stdout, /Available CLIs: ,/);
+});
+
 // --- watch: capture mode --pane target ------------------------------------------
 
 test('watch --capture polls the pane named by --pane, not the session', async () => {
