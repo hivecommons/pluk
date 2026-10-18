@@ -8,7 +8,7 @@ package and its relationship with the wider Hive Commons agent-tooling stack.
 
 - TypeScript CLI and library support for attaching tmux sessions, classifying
   output, subscribing to JSONL logs, and sending text back into sessions.
-- Built-in pattern sets for Claude, Copilot, Gemini, and Goose.
+- Built-in pattern sets for Claude, Copilot, Gemini, Goose, Codex, and Aider.
 - Rationguard integration through `pluk attach --rationguard` and stable event
   fields consumed by companion tools.
 
