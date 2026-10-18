@@ -175,7 +175,6 @@ export function rotateLogFileIfNeeded(
   const lines = snapshot.toString('utf-8').split('\n');
   const hasTrailingNewline = lines.length > 0 && lines[lines.length - 1] === '';
   const usableLines = hasTrailingNewline ? lines.slice(0, -1) : lines;
-  if (usableLines.length <= keepLines) return false;
 
   // A snapshot ending mid-line keeps that partial line unterminated so the
   // rest of it, copied from past the snapshot below, completes it.
@@ -188,6 +187,7 @@ export function rotateLogFileIfNeeded(
     keptBytes -= Buffer.byteLength(kept[drop]!, 'utf-8') + 1;
     drop++;
   }
+  if (drop === 0 && kept.length === usableLines.length) return false;
   kept = kept.slice(drop);
   const rebuilt = Buffer.from(kept.join('\n') + (hasTrailingNewline ? '\n' : ''), 'utf-8');
 

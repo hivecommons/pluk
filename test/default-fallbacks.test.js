@@ -94,17 +94,16 @@ test('defaultRunDir falls back to pluk-user when process.getuid is unavailable',
 
 // --- rotateLogFileIfNeeded with too few lines to trim -----------------------------
 
-test('rotateLogFileIfNeeded leaves an oversized log alone when it has no more than keepLines lines', () => {
+test('rotateLogFileIfNeeded trims an oversized log with fewer than keepLines lines to the byte cap', () => {
   const base = mkdtempSync(join(tmpdir(), 'pluk-fallbacks-'));
   try {
     const file = join(base, 'wide.jsonl');
-    // Two lines, each far past maxBytes: over the byte threshold, but
-    // trimming to the last 5 lines would keep everything, so no rewrite.
+    // Two lines, each far past maxBytes: only the newest line is kept.
     const content = `{"pad":"${'x'.repeat(200)}"}\n{"pad":"${'y'.repeat(200)}"}\n`;
     writeFileSync(file, content);
 
-    assert.strictEqual(rotateLogFileIfNeeded(file, { maxBytes: 10, keepLines: 5 }), false);
-    assert.equal(readFileSync(file, 'utf-8'), content);
+    assert.strictEqual(rotateLogFileIfNeeded(file, { maxBytes: 10, keepLines: 5 }), true);
+    assert.equal(readFileSync(file, 'utf-8'), `{"pad":"${'y'.repeat(200)}"}\n`);
   } finally {
     rmSync(base, { recursive: true, force: true });
   }

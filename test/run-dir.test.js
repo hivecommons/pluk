@@ -249,6 +249,21 @@ test('rotateLogFileIfNeeded trims an oversized log to the last N lines', () => {
   }
 });
 
+test('rotateLogFileIfNeeded applies the byte cap when the log has fewer than keepLines lines', () => {
+  const base = tempBase();
+  try {
+    const file = join(base, 'few.jsonl');
+    const lines = Array.from({ length: 6 }, (_, i) => `{"n":${i}}`);
+    writeFileSync(file, lines.join('\n') + '\n');
+
+    // Each line is 8 bytes with its newline; 20 bytes fits the last two.
+    assert.strictEqual(rotateLogFileIfNeeded(file, { maxBytes: 20, keepLines: 100 }), true);
+    assert.equal(readFileSync(file, 'utf-8'), lines.slice(-2).join('\n') + '\n');
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
 test('rotateLogFileIfNeeded is a no-op for a missing file', () => {
   const base = tempBase();
   try {
