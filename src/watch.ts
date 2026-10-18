@@ -51,7 +51,8 @@ export interface WatchOptions {
   /**
    * 'stream' (default): classify stdin line-by-line (pipe-pane).
    * 'capture': poll `tmux capture-pane -p` and classify each whole rendered
-   * frame at once (state_change only). Frame classification is order-immune
+   * frame at once (state_change, plus raw_output per changed frame with
+   * includeRaw). Frame classification is order-immune
    * and also covers TUIs whose pipe-pane byte stream carries no line feeds.
    */
   mode?: 'stream' | 'capture';
@@ -107,7 +108,10 @@ export function watch(opts: WatchOptions): WatchHandle {
 
         // Frames are whole screens: emit raw output once per changed frame.
         if (includeRaw) {
-          const clean = stripANSI(frame);
+          // Capture mode deliberately emits the ANSI-stripped frame (stream
+          // mode emits the unstripped line). stripANSI is line-scoped, so strip
+          // per line to keep the screen's line structure.
+          const clean = frame.split('\n').map(stripANSI).join('\n');
           if (clean !== lastRawFrame) {
             lastRawFrame = clean;
             if (clean) emit(classifier.rawOutput(clean));
