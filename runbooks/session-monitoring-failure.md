@@ -51,8 +51,9 @@ bundled patterns (`codex`, `aider`): pass `--patterns-dir`.
 ## Recover
 
 1. Re-run `pluk attach <session> --cli=<cli>` to re-establish `pipe-pane`.
-2. If the log is oversized or corrupt, rotation keeps the trailing
-   `PLUK_LOG_KEEP_LINES` lines; move the file aside and let the watcher
+2. If the log is oversized or corrupt, rotation keeps the newest
+   lines, up to `PLUK_LOG_KEEP_LINES` lines and within the
+   `PLUK_LOG_MAX_BYTES` byte cap (default 10 MiB); move the file aside and let the watcher
    recreate it.
 3. If a recent pluk release is the cause, follow `release-rollback.md`.
 
