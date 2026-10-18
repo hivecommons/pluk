@@ -1,0 +1,1 @@
+- `tool_call_started` events no longer cut a ZWJ emoji sequence, flag or base-plus-combining-mark character in half at the 120-character `input_preview` limit; truncation now counts grapheme clusters.

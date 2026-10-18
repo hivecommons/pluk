@@ -1,0 +1,1 @@
+- `pluk sessions` no longer shows `NaNd ago` (or sorts a session first) when a log event carries an unparseable `ts`; such timestamps are ignored for last activity.

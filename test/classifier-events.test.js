@@ -82,6 +82,28 @@ test('tool_call_started: input_preview is truncated to 120 chars', () => {
   assert.equal(ev.data.input_preview, long.slice(0, 120));
 });
 
+test('tool_call_started: input_preview truncation never splits a surrogate pair', () => {
+  // 119 BMP code units, then astral emoji: a UTF-16 slice(0, 120) would end
+  // on a lone high surrogate.
+  const head = '● Read(' + 'X'.repeat(112);
+  assert.equal(head.length, 119);
+  const long = head + '🚀'.repeat(10) + ')';
+  const ev = makeClassifier().classify(long);
+  assert.ok(ev);
+  assert.equal(ev.type, 'tool_call_started');
+  assert.equal(ev.data.input_preview, head + '🚀');
+  assert.equal(Array.from(ev.data.input_preview).length, 120);
+  assert.doesNotMatch(ev.data.input_preview, /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/);
+});
+
+test('tool_call_started: a line over 120 UTF-16 units but within 120 code points is kept whole', () => {
+  const line = '● Read(' + '🚀'.repeat(60) + ')'; // 128 code units, 68 code points
+  const ev = makeClassifier().classify(line);
+  assert.ok(ev);
+  assert.equal(ev.type, 'tool_call_started');
+  assert.equal(ev.data.input_preview, line);
+});
+
 test('tool_call_completed: tool from ✓ bullet, duration from "(N.Ns)"', () => {
   const ev = makeClassifier().classify('✓ Read(src/classifier.ts) (2.3s)');
   assert.ok(ev);
@@ -229,4 +251,34 @@ test('state_change carries patterns.cli so sessions can resolve the CLI (#197)',
   assert.ok(ev);
   assert.equal(ev.type, 'state_change');
   assert.equal(ev.data.cli, 'claude');
+});
+
+function previewFor(cluster) {
+  // 119 single-grapheme chars, so the 120th grapheme is the first whole cluster.
+  const head = '● Read(' + 'X'.repeat(112);
+  const ev = makeClassifier().classify(head + cluster.repeat(10) + ')');
+  assert.ok(ev);
+  assert.equal(ev.type, 'tool_call_started');
+  return { head, preview: ev.data.input_preview };
+}
+
+test('tool_call_started: input_preview truncation never splits a ZWJ emoji sequence', () => {
+  const family = '👨\u200D👩\u200D👧';
+  const { head, preview } = previewFor(family);
+  assert.equal(preview, head + family);
+  assert.equal(Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(preview)).length, 120);
+});
+
+test('tool_call_started: input_preview truncation never splits a flag pair', () => {
+  const flag = '🇫🇷';
+  const { head, preview } = previewFor(flag);
+  assert.equal(preview, head + flag);
+  assert.equal(Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(preview)).length, 120);
+});
+
+test('tool_call_started: input_preview truncation never splits a base + combining mark', () => {
+  const accented = 'e\u0301';
+  const { head, preview } = previewFor(accented);
+  assert.equal(preview, head + accented);
+  assert.equal(Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(preview)).length, 120);
 });

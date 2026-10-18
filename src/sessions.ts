@@ -105,7 +105,8 @@ export function discoverSessions(runDir?: string): SessionInfo[] {
     let lastTs = '';
 
     for (const e of events) {
-      if (e.ts > lastTs) lastTs = e.ts;
+      // An unparseable ts would render as "NaNd ago" and outrank valid ones.
+      if (!Number.isNaN(Date.parse(e.ts)) && e.ts > lastTs) lastTs = e.ts;
 
       if (e.data['cli'] && e.data['cli'] !== 'unknown') {
         cli = sanitizeField(e.data['cli']);

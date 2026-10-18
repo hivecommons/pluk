@@ -129,6 +129,7 @@ tmux attach -t my-agent
 | `watch` | `--capture[=ms]` | Instead of reading stdin, poll `tmux capture-pane` and classify each whole rendered frame; useful for TUIs whose pipe-pane stream has no line feeds. Interval in milliseconds, default `1000` |
 | `watch` | `--pane=<target>` | tmux pane to poll in `--capture` mode (defaults to the session name) |
 | `watch` | `--patterns-dir=<dir>` | Load pattern files from this directory |
+| `patterns` | `--patterns-dir=<dir>` | Show the patterns loaded from this directory (same lookup as `watch`) |
 | `subscribe` | `--from-beginning` | Replay the existing log from the start instead of only new lines |
 | `subscribe` | `--verbose` | Show debug output |
 | `sessions`, `subscribe` | `--run-dir=<path>` | Run directory to read (overrides `PLUK_RUN_DIR`) |
