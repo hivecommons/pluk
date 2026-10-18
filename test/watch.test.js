@@ -161,7 +161,7 @@ test('capture mode emits raw_output per changed frame when includeRaw is set', a
     assert.equal(raw().length, 1);
     assert.equal(raw()[0].data.line, 'hello screen\n');
 
-    writeFileSync(frameFile, 'a different screen');
+    writeFileSync(frameFile, 'a different screen\n');
     await settle(250);
     assert.equal(raw().length, 2);
     assert.equal(raw()[1].data.line, 'a different screen\n');
