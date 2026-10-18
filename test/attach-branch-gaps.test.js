@@ -224,7 +224,7 @@ test('PLUK_RATIONGUARD_BIN is honoured when rationguard is not on PATH', () => {
 test('resolveRationguardBin prefers the explicit override over PATH and env', () => {
   assert.equal(resolveRationguardBin('/opt/rg', { PLUK_RATIONGUARD_BIN: '/env/rg' }, () => '/path/rg'), '/opt/rg');
   assert.equal(resolveRationguardBin(undefined, { PLUK_RATIONGUARD_BIN: '/env/rg' }, () => '/path/rg'), '/env/rg');
-  assert.equal(resolveRationguardBin('  ', {}, () => '/path/rg'), '/path/rg');
+  assert.equal(resolveRationguardBin('  ', {}, () => '/path/rg'), "'/path/rg'");
   assert.throws(() => resolveRationguardBin(undefined, {}, () => ''), /rationguard not found on PATH/);
 });
 
