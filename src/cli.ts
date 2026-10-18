@@ -173,7 +173,10 @@ function cmdWatch(args: string[]): void {
 
   const capture = flags['capture'];
   let captureIntervalMs: number | undefined;
-  if (capture && capture !== 'true') {
+  if (flags['pane'] !== undefined && !capture) {
+    console.error('Warning: --pane is ignored without --capture');
+  }
+  if (capture !== undefined && capture !== 'true') {
     captureIntervalMs = Number(capture);
     if (!Number.isFinite(captureIntervalMs) || captureIntervalMs <= 0) {
       console.error(`${paintStderr(ANSI_RED, 'Error:')} --capture expects a positive integer number of milliseconds`);

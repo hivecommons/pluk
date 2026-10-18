@@ -86,13 +86,19 @@ test('run-tests.mjs propagates the child suite exit status', () => {
 
 // --- watch: invalid --capture interval is rejected -------------------------------
 
-for (const bad of ['0', '-5', 'abc']) {
+for (const bad of ['0', '-5', 'abc', '']) {
   test(`watch --capture=${bad} exits 2 with a usage error`, () => {
     const { code, stderr } = run(CLI, ['watch', 'x', `--capture=${bad}`]);
     assert.equal(code, 2);
     assert.match(stderr, /--capture expects a positive integer/);
   });
 }
+
+test('watch --pane without --capture warns that --pane is ignored', () => {
+  const { code, stderr } = run(CLI, ['watch', 'x', '--pane=%1'], { input: '' });
+  assert.equal(code, 0);
+  assert.match(stderr, /Warning: --pane is ignored without --capture/);
+});
 
 // --- --filter validation ---------------------------------------------------------
 
