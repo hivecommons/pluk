@@ -136,6 +136,24 @@ test('watch without a session labels events "stdin" and honors --patterns-dir', 
   );
 });
 
+test('patterns honors --patterns-dir and lists its CLIs', () => {
+  const patternsDir = join(scratch, 'patterns-cmd');
+  mkdirSync(patternsDir, { recursive: true });
+  writeFileSync(
+    join(patternsDir, 'testcli.patterns'),
+    "WORKING_PATTERNS='CUSTOM_BUSY_MARKER'\n",
+  );
+  const { code, stdout, stderr } = runCli(
+    ['patterns', '--cli=testcli', `--patterns-dir=${patternsDir}`],
+  );
+  assert.equal(code, 0);
+  const working = stdout.split('\n').find(l => l.includes('working'));
+  assert.ok(working && working.includes('CUSTOM_BUSY_MARKER'), `got: ${stdout}`);
+  assert.ok(!stdout.includes('no pattern set') && !stderr.includes('no pattern set'));
+  const avail = stdout.split('\n').find(l => l.includes('Available CLIs:'));
+  assert.ok(avail && avail.includes('testcli'), `got: ${stdout}`);
+});
+
 // --- watch: capture mode --pane target ------------------------------------------
 
 test('watch --capture polls the pane named by --pane, not the session', async () => {
