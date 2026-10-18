@@ -202,7 +202,7 @@ const watcher = watch({
 
 | Type | Meaning |
 |------|---------|
-| `raw_output` | Every non-empty terminal line |
+| `raw_output` | Every non-empty terminal line (in `--capture` mode, each changed ANSI-stripped screen) |
 | `state_change` | Agent went idle or started working |
 | `rate_limit` | Usage limit / quota exhausted |
 | `login_required` | Authentication needed |
