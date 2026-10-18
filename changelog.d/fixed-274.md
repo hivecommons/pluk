@@ -1,0 +1,1 @@
+- `pluk attach` no longer word-splits `pluk`/`rationguard` paths resolved from `PATH` when they contain spaces; the resolved path is shell-quoted so the pipe-pane, rationguard spawn, and watcher cleanup pattern see a single word (#274).

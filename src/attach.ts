@@ -162,7 +162,7 @@ function resolveDangerousFlag(cli: string): string {
 
 function resolvePlukBin(): string {
   const path = findExecutable(['pluk', 'pluk-classify']);
-  if (path) return path;
+  if (path) return shellQuote(path);
 
   // Pin to the running release: the pipe-pane must run the same pluk that
   // performed the attach, not whatever `latest` the registry serves.
@@ -203,7 +203,7 @@ export function resolveRationguardBin(
     return explicit;
   }
   const found = lookup(['rationguard']);
-  if (found) return found;
+  if (found) return shellQuote(found);
   throw new Error(
     'rationguard not found on PATH. Install it (npm install -g @hivecommons/rationguard) ' +
       'or pass --rationguard-bin=COMMAND (also PLUK_RATIONGUARD_BIN).',

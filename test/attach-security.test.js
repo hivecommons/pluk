@@ -140,3 +140,27 @@ test('rationguardWatcherPattern matches watchers started with an explicit --rati
   assert.ok(!re.test('npx --yes @hivecommons/rationguard@0.11.0 watch SESSION2 --run-dir=/x'));
   assert.ok(!re.test('npx --yes @hivecommons/rationguardX0Y11Z0 watch SESSION'));
 });
+
+test('resolveRationguardBin keeps a which-resolved path with spaces as one word', async () => {
+  const { resolveRationguardBin } = await import('../dist/attach.js');
+  const result = resolveRationguardBin(undefined, {}, () => '/opt/my tools/bin/rationguard');
+  assert.deepEqual(splitShellWords(result), ['/opt/my tools/bin/rationguard']);
+});
+
+test('buildPipePaneCommand keeps a quoted pluk path with spaces as one word', () => {
+  const cmd = buildPipePaneCommand({
+    runDir: '/run',
+    plukBin: shellQuote('/opt/my tools/bin/pluk'),
+    session: 's',
+    cli: 'claude',
+    includeRaw: false,
+    logFile: '/run/logs/s.jsonl',
+  });
+  assert.ok(cmd.includes("'/opt/my tools/bin/pluk'"));
+  assert.ok(!cmd.includes("'/opt/my' 'tools/bin/pluk'"));
+});
+
+test('rationguardWatcherPattern treats a quoted path with spaces as one word', () => {
+  const pattern = rationguardWatcherPattern('s', shellQuote('/opt/my tools/bin/rationguard'));
+  assert.ok(pattern.startsWith('/opt/my tools/bin/rationguard watch s( |$)'));
+});
