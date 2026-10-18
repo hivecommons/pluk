@@ -58,6 +58,11 @@ ${ANSI_CYAN}Examples:${ANSI_RESET}
 `);
 }
 
+const VALUE_FLAGS = new Set([
+  'text', 'session', 'run-dir', 'cli', 'command', 'cli-args', 'rebuttal',
+  'dir', 'rationguard-bin', 'patterns-dir', 'pane', 'filter',
+]);
+
 function parseArgs(args: string[]): { positional: string[]; flags: Record<string, string> } {
   const positional: string[] = [];
   const flags: Record<string, string> = {};
@@ -68,7 +73,12 @@ function parseArgs(args: string[]): { positional: string[]; flags: Record<string
       if (eqIdx > 0) {
         flags[arg.slice(2, eqIdx)] = arg.slice(eqIdx + 1);
       } else {
-        flags[arg.slice(2)] = 'true';
+        const name = arg.slice(2);
+        if (VALUE_FLAGS.has(name)) {
+          console.error(`${paintStderr(ANSI_RED, 'Error:')} --${name} requires a value: use --${name}=<value>`);
+          process.exit(2);
+        }
+        flags[name] = 'true';
       }
     } else {
       positional.push(arg);

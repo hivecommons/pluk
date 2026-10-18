@@ -311,3 +311,24 @@ test('patterns --cli=unknown warns on stderr and lists available CLIs', () => {
   assert.match(r.stderr, /no pattern set for nonesuch; available CLIs: .*omp/);
   assert.match(r.stdout, /Patterns for nonesuch:/);
 });
+
+test('bare value-taking flags exit 2 with a --flag=<value> hint', () => {
+  for (const [args, flag] of [
+    [['send', 's', '--text', 'hello'], 'text'],
+    [['attach', 's', '--run-dir', '/x'], 'run-dir'],
+    [['subscribe', 's', '--filter', 'rate_limit'], 'filter'],
+  ]) {
+    const r = spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8' });
+    assert.equal(r.status, 2, args.join(' '));
+    assert.match(r.stderr, new RegExp(`--${flag} requires a value: use --${flag}=<value>`));
+  }
+});
+
+test('bare boolean switches are still accepted', () => {
+  const r = spawnSync(process.execPath, [CLI, 'sessions', '--json'], {
+    encoding: 'utf8',
+    env: { ...process.env, PATH: `${stubBin}:${process.env.PATH}` },
+  });
+  assert.equal(r.status, 0);
+  assert.doesNotMatch(r.stderr, /requires a value/);
+});
