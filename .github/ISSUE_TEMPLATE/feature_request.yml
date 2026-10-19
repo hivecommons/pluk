@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest an improvement or new capability for pluk
+title: "feature: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What problem are you trying to solve, and who is affected?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: The command, flag, event type, or library API change you want.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds or other designs you have considered.
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility
+      description: Would this change the JSONL event schema, existing flags, or pattern file format?
