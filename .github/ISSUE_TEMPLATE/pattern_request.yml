@@ -1,0 +1,57 @@
+name: Pattern request
+description: An agent CLI's output was misclassified, or you want a pattern set for a new CLI
+title: "patterns: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        pluk classifies terminal output with per-CLI regex pattern files in
+        [`patterns/`](https://github.com/hivecommons/pluk/tree/main/patterns). See the
+        [Pattern File Format](https://github.com/hivecommons/pluk#pattern-file-format) section of the README
+        for the recognized keys. You can try a fix locally with `--patterns-dir`.
+        Redact tokens and private data from any terminal output you paste.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Request type
+      options:
+        - Existing pattern set misclassifies output
+        - New pattern set for a CLI pluk does not support yet
+    validations:
+      required: true
+  - type: input
+    id: cli
+    attributes:
+      label: Agent CLI and version
+      description: For example `claude` / Claude Code 2.x, or the name and version of the new CLI.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: pluk version
+      description: Output of `pluk version`.
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample terminal output
+      description: The exact lines (or `--capture` screen) that should produce an event.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected event
+      description: Which event type should these lines produce (for example `rate_limit`, `state_change`, `tool_call_started`), and what did pluk emit instead?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed pattern (optional)
+      description: A `KEY='regex'` line you tested with `--patterns-dir`, if you have one.
+      render: shell
