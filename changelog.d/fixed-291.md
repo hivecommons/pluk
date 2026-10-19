@@ -1,0 +1,1 @@
+- `pluk watch --capture=<ms>` now rejects fractional intervals such as `--capture=1.5`, accepting only positive integers as documented (#291).

@@ -178,7 +178,7 @@ function cmdWatch(args: string[]): void {
   }
   if (capture !== undefined && capture !== 'true') {
     captureIntervalMs = Number(capture);
-    if (!Number.isFinite(captureIntervalMs) || captureIntervalMs <= 0) {
+    if (!Number.isInteger(captureIntervalMs) || captureIntervalMs <= 0) {
       console.error(`${paintStderr(ANSI_RED, 'Error:')} --capture expects a positive integer number of milliseconds`);
       process.exit(2);
     }
