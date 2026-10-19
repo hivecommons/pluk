@@ -372,11 +372,12 @@ test('rotation: tailing an existing log without fromBeginning does not replay th
   }
 });
 
-test('rotation: before any line was seen, the kept tail is delivered and a trailing partial line is held', async () => {
+test('rotation: before any line was seen, the kept tail is skipped and a trailing partial line is held', async () => {
   const dir = makeRunDir();
   const log = join(dir, 'logs', 'rot4.jsonl');
   // Start at EOF of a large file, then rotate without the subscriber ever
-  // having consumed a line (lastLine is empty → no marker → replay all).
+  // having consumed a line. The resume marker was seeded from the last
+  // complete line at start-up, so nothing already in the file is replayed.
   let body = '';
   for (let i = 0; i < 100; i++) body += seqLine(i);
   writeFileSync(log, body);
@@ -388,12 +389,14 @@ test('rotation: before any line was seen, the kept tail is delivered and a trail
     // Append a partial line so the resume path must carry it over.
     const half = seqLine(500, 'error');
     appendFileSync(log, half.slice(0, 10));
-    await waitFor(() => events.length >= 5);
-    assert.deepEqual(events.map(e => e.seq), [95, 96, 97, 98, 99]);
+    await new Promise(r => setTimeout(r, 500));
+    assert.equal(events.length, 0, 'kept tail must not be replayed and the partial line must be held');
     appendFileSync(log, half.slice(10));
-    await waitFor(() => events.length >= 6);
-    assert.equal(events[5].seq, 500);
-    assert.equal(events[5].type, 'error');
+    await waitFor(() => events.length >= 1);
+    await new Promise(r => setTimeout(r, 200));
+    assert.equal(events.length, 1);
+    assert.equal(events[0].seq, 500);
+    assert.equal(events[0].type, 'error');
   } finally {
     sub.stop();
     await done;
