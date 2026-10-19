@@ -372,6 +372,37 @@ test('rotation: tailing an existing log without fromBeginning does not replay th
   }
 });
 
+test('rotation: the resume marker is seeded even when the last complete line exceeds the tail chunk', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot4b.jsonl');
+  let body = '';
+  for (let i = 0; i < 20; i++) body += seqLine(i);
+  // One trailing line larger than the 16 KB tail chunk: the chunk holds at most one newline.
+  const big = JSON.stringify({
+    v: 1, ts: new Date().toISOString(), seq: 20, pid: 1,
+    session: 's', pane: 'p', source: 't', type: 'raw_output', data: { pad: 'x'.repeat(20_000) },
+  }) + '\n';
+  body += big;
+  writeFileSync(log, body);
+  const { sub, events, done } = await startTail(dir, 'rot4b');
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10_000, keepLines: 10 }), true);
+    await new Promise(r => setTimeout(r, 500));
+    assert.equal(events.length, 0, 'pre-existing lines must not be replayed');
+
+    appendFileSync(log, seqLine(999, 'bypass_permissions'));
+    await waitFor(() => events.length >= 1);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 1);
+    assert.equal(events[0].type, 'bypass_permissions');
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('rotation: before any line was seen, the kept tail is skipped and a trailing partial line is held', async () => {
   const dir = makeRunDir();
   const log = join(dir, 'logs', 'rot4.jsonl');

@@ -221,14 +221,16 @@ export class Subscriber extends EventEmitter {
   /**
    * Seed {@link lastLine} with the last complete (newline-terminated)
    * non-blank line in the first `size` bytes, without consuming or emitting
-   * anything. Reads only the final chunk unless it holds no newline at all.
+   * anything. Reads only the final chunk unless it holds fewer than two
+   * newlines (a mid-file chunk needs one to cut the leading partial line and
+   * one to terminate a complete line).
    */
   private async seedResumeMarker(fh: FileHandle, size: number): Promise<void> {
     let start = Math.max(0, size - READ_CHUNK_BYTES);
     const buf = Buffer.alloc(size - start);
     const { bytesRead } = await fh.read(buf, 0, buf.length, start);
     let text = buf.subarray(0, bytesRead).toString('utf8');
-    if (!text.includes('\n') && start > 0) {
+    if (start > 0 && text.indexOf('\n') === text.lastIndexOf('\n')) {
       text = (await readFromStart(fh)).text.subarray(0, size).toString('utf8');
       start = 0;
     }
