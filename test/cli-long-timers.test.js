@@ -119,6 +119,7 @@ test('watch keeps classifying when the rotation check throws', async t => {
   }
   const dir = makeRunDir('pluk-watch-rotate-fail-');
   const logFile = join(dir, 'logs', 'rotfail.jsonl');
+  const traceFile = join(dir, 'timer-trace.log');
   try {
     const original = [0, 1, 2].map(sampleLine).join('\n') + '\n';
     writeFileSync(logFile, original);
@@ -129,6 +130,7 @@ test('watch keeps classifying when the rotation check throws', async t => {
     const child = spawnFast(['watch', 'rotfail', '--cli=claude', `--run-dir=${dir}`], {
       PLUK_LOG_MAX_BYTES: '1',
       PLUK_LOG_KEEP_LINES: '1',
+      PLUK_TEST_TIMER_TRACE: traceFile,
     });
     reapOnFailure(t, child);
     let stdout = '';
@@ -137,8 +139,18 @@ test('watch keeps classifying when the rotation check throws', async t => {
     child.stderr.on('data', d => { stderr += d; });
 
     // Let several (clamped) rotation ticks fail before proving the
-    // classifier is still alive.
-    await new Promise(r => setTimeout(r, 200));
+    // classifier is still alive. The swallowed throw leaves no trace of its
+    // own, so wait for the fixture to record the 30 s interval firing rather
+    // than sleeping: under a loaded suite a fixed delay can elapse before the
+    // child has even booted, and the catch is then never exercised.
+    const rotationTicks = () => {
+      try {
+        return readFileSync(traceFile, 'utf-8').split('\n').filter(l => l === '30000').length;
+      } catch {
+        return 0;
+      }
+    };
+    await waitFor(() => rotationTicks() >= 3, { label: 'three rotation ticks' });
     child.stdin.write('esc to interrupt\n');
     await waitFor(() => stdout.includes('"type":"state_change"'), { label: 'state_change event' });
 
