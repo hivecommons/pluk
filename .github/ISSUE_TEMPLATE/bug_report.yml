@@ -1,0 +1,88 @@
+name: Bug report
+description: Report a reproducible problem in pluk
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. If an agent CLI's output was classified as the
+        wrong event type (or not classified at all), use the **Pattern request** form instead.
+        Redact tokens and private data from any output you paste.
+  - type: input
+    id: version
+    attributes:
+      label: pluk version
+      description: Output of `pluk version`.
+      placeholder: "0.10.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, `node --version` (pluk requires Node.js 22 or newer), and `tmux -V` if you used `attach`, `watch --capture`, or `send`.
+      placeholder: "Ubuntu 24.04, Node v22.11.0, tmux 3.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: command
+    attributes:
+      label: Command
+      description: Which pluk command shows the problem?
+      options:
+        - attach
+        - watch
+        - subscribe
+        - send
+        - sessions
+        - patterns
+        - library API (import from @hivecommons/pluk)
+        - other
+    validations:
+      required: true
+  - type: dropdown
+    id: cli
+    attributes:
+      label: Agent CLI (`--cli`)
+      options:
+        - claude
+        - copilot
+        - gemini
+        - goose
+        - codex
+        - aider
+        - omp
+        - custom pattern set (`--patterns-dir`)
+        - not applicable
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The exact commands you ran, including flags.
+      placeholder: |
+        1. pluk attach my-agent --cli=claude
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead, including any stderr output.
+    validations:
+      required: true
+  - type: textarea
+    id: events
+    attributes:
+      label: JSONL events or logs
+      description: Relevant lines from `pluk watch` / `pluk subscribe` output or the session log.
+      render: shell
