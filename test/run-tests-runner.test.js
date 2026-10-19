@@ -42,6 +42,12 @@ test('CONTRIBUTING.md documents the thresholds COVERAGE_FLAGS actually enforce',
   assert.match(doc, new RegExp(`lines ${pct('lines')}, branches ${pct('branches')}, functions ${pct('functions')}`));
 });
 
+test('test:coverage delegates to the shared runner without inline coverage flags', () => {
+  const { scripts } = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8'));
+  assert.equal(scripts['test:coverage'], 'npm run build && node scripts/run-tests.mjs');
+  assert.doesNotMatch(scripts['test:coverage'], /--(?:experimental-test-coverage|test-coverage-)/);
+});
+
 test('listTestFiles returns only sorted *.test.js entries', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pluk-run-tests-'));
   try {
