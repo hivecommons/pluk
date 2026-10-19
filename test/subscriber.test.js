@@ -347,6 +347,31 @@ test('rotation: when the last seen line was trimmed away, the whole kept tail is
   }
 });
 
+test('rotation: tailing an existing log without fromBeginning does not replay the kept tail', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot4.jsonl');
+  let body = '';
+  for (let i = 0; i < 200; i++) body += seqLine(i);
+  writeFileSync(log, body);
+  const { sub, events, done } = await startTail(dir, 'rot4');
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10_000, keepLines: 50 }), true);
+    await new Promise(r => setTimeout(r, 500));
+    assert.equal(events.length, 0, 'pre-existing lines must not be replayed');
+
+    appendFileSync(log, seqLine(999, 'bypass_permissions'));
+    await waitFor(() => events.length >= 1);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 1);
+    assert.equal(events[0].type, 'bypass_permissions');
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('rotation: before any line was seen, the kept tail is delivered and a trailing partial line is held', async () => {
   const dir = makeRunDir();
   const log = join(dir, 'logs', 'rot4.jsonl');

@@ -47,7 +47,12 @@ export class Subscriber extends EventEmitter {
   private verbose: boolean;
   private counters: SubscriberStats = { linesRead: 0, malformedLines: 0, eventsFiltered: 0, eventsEmitted: 0 };
   private eventCount = 0;
-  /** Last non-blank line consumed — the resume marker after a rotation. */
+  /**
+   * Last non-blank line consumed — the resume marker after a rotation. When
+   * tailing an existing log without fromBeginning it is seeded with the last
+   * complete line already in the file, so a rotation before the first new
+   * line does not replay the kept tail.
+   */
   private lastLine = '';
   /**
    * Set when a rotation re-read found no complete line yet: the next bytes
@@ -118,6 +123,7 @@ export class Subscriber extends EventEmitter {
       // Holds an incomplete multi-byte sequence across read boundaries.
       let decoder = new StringDecoder('utf8');
       this.head = await readHead(fh);
+      if (!this.fromBeginning && position > 0) await this.seedResumeMarker(fh, position);
       this.log(`tailing from position ${position}${this.filterSet ? ` (filter: ${[...this.filterSet].join(',')})` : ''}`);
 
       while (!this.aborted) {
@@ -187,6 +193,9 @@ export class Subscriber extends EventEmitter {
    * progress: it is re-read a bounded number of times, and if it is still
    * empty the resume is deferred until content appears, so the kept tail is
    * never replayed from byte 0 without the marker check.
+   *
+   * The marker is the last consumed line, or — if nothing was consumed yet —
+   * the line seeded by {@link seedResumeMarker} at start-up.
    */
   private async resumeAfterRotation(fh: FileHandle): Promise<{ position: number; partial: string; decoder: StringDecoder }> {
     this.head = await readHead(fh);
@@ -207,6 +216,32 @@ export class Subscriber extends EventEmitter {
     const marker = this.lastLine ? lines.lastIndexOf(this.lastLine) : -1;
     for (const line of lines.slice(marker + 1)) this.consumeLine(line);
     return { position, partial, decoder };
+  }
+
+  /**
+   * Seed {@link lastLine} with the last complete (newline-terminated)
+   * non-blank line in the first `size` bytes, without consuming or emitting
+   * anything. Reads only the final chunk unless it holds no newline at all.
+   */
+  private async seedResumeMarker(fh: FileHandle, size: number): Promise<void> {
+    let start = Math.max(0, size - READ_CHUNK_BYTES);
+    const buf = Buffer.alloc(size - start);
+    const { bytesRead } = await fh.read(buf, 0, buf.length, start);
+    let text = buf.subarray(0, bytesRead).toString('utf8');
+    if (!text.includes('\n') && start > 0) {
+      text = (await readFromStart(fh)).text.subarray(0, size).toString('utf8');
+      start = 0;
+    }
+    const lines = text.split('\n');
+    lines.pop();
+    // The first line of a mid-file chunk may be cut; only trust it when the chunk starts at byte 0.
+    if (start > 0) lines.shift();
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i].trim()) {
+        this.lastLine = lines[i];
+        return;
+      }
+    }
   }
 
   /** True when the log's leading bytes differ from those remembered. */
