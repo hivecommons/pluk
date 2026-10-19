@@ -7,7 +7,16 @@
 // check) therefore runs its real logic in milliseconds, with no test seam
 // in the production source. Only Date.now() is skewed: `new Date()` and
 // event timestamps keep the real clock.
+//
+// When PLUK_TEST_TIMER_TRACE names a file, every clamped timer that fires
+// appends its originally requested delay (one per line) to it. A test whose
+// timer callback has no observable side effect — e.g. the rotation check
+// swallowing a throw — waits on the trace instead of sleeping and hoping
+// the tick landed before the child was torn down.
+import { appendFileSync } from 'node:fs';
+
 const CLAMP_MS = Number(process.env['PLUK_TEST_TIMER_CLAMP_MS']) || 20;
+const TRACE = process.env['PLUK_TEST_TIMER_TRACE'];
 
 let skew = 0;
 const realNow = Date.now;
@@ -21,6 +30,7 @@ function clamp(orig) {
     return orig(
       (...callArgs) => {
         skew += skipped;
+        if (TRACE) appendFileSync(TRACE, `${requested}\n`);
         return fn(...callArgs);
       },
       CLAMP_MS,
