@@ -111,6 +111,24 @@ test('pluk-send --session takes all positional args as text', () => {
   assert.deepEqual(calls, ['send-keys -t =agent-q: -- ping pong']);
 });
 
+test('send --session keeps a positional text word equal to the session name', () => {
+  rmSync(tmuxLog, { force: true });
+  const { code } = runCli(['send', '--session=foo', 'foo', 'bar']);
+  assert.equal(code, 0);
+  const calls = readFileSync(tmuxLog, 'utf-8').trim().split('\n');
+  assert.deepEqual(calls, ['send-keys -t =foo: -- foo bar']);
+});
+
+test('pluk-send --session sends a single positional word equal to the session name', () => {
+  const link = join(scratch, 'pluk-send');
+  try { symlinkSync(CLI, link); } catch {}
+  rmSync(tmuxLog, { force: true });
+  const { code } = runCli(['--session=foo', 'foo'], { argv1: link });
+  assert.equal(code, 0);
+  const calls = readFileSync(tmuxLog, 'utf-8').trim().split('\n');
+  assert.deepEqual(calls, ['send-keys -t =foo: -- foo']);
+});
+
 // --- watch: default session, --patterns-dir ------------------------------------
 
 test('watch without a session labels events "stdin" and honors --patterns-dir', () => {

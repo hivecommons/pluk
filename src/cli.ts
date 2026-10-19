@@ -355,8 +355,11 @@ function cmdPatterns(args: string[]): void {
 
 function cmdSend(args: string[]): void {
   const { positional, flags } = parseArgs(args);
-  const session = flags['session'] ?? positional[0];
-  const text = flags['text'] ?? positional.slice(session === positional[0] ? 1 : 0).join(' ');
+  // The leading positional is the session only when --session was not given;
+  // deciding by value would drop a text word that happens to equal the name.
+  const sessionFromFlag = flags['session'] !== undefined;
+  const session = sessionFromFlag ? flags['session'] : positional[0];
+  const text = flags['text'] ?? positional.slice(sessionFromFlag ? 0 : 1).join(' ');
 
   if (!session) {
     console.error(`${paintStderr(ANSI_RED, 'Error:')} session name is required`);
