@@ -347,11 +347,68 @@ test('rotation: when the last seen line was trimmed away, the whole kept tail is
   }
 });
 
-test('rotation: before any line was seen, the kept tail is delivered and a trailing partial line is held', async () => {
+test('rotation: tailing an existing log without fromBeginning does not replay the kept tail', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot4.jsonl');
+  let body = '';
+  for (let i = 0; i < 200; i++) body += seqLine(i);
+  writeFileSync(log, body);
+  const { sub, events, done } = await startTail(dir, 'rot4');
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10_000, keepLines: 50 }), true);
+    await new Promise(r => setTimeout(r, 500));
+    assert.equal(events.length, 0, 'pre-existing lines must not be replayed');
+
+    appendFileSync(log, seqLine(999, 'bypass_permissions'));
+    await waitFor(() => events.length >= 1);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 1);
+    assert.equal(events[0].type, 'bypass_permissions');
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('rotation: the resume marker is seeded even when the last complete line exceeds the tail chunk', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot4b.jsonl');
+  let body = '';
+  for (let i = 0; i < 20; i++) body += seqLine(i);
+  // One trailing line larger than the 16 KB tail chunk: the chunk holds at most one newline.
+  const big = JSON.stringify({
+    v: 1, ts: new Date().toISOString(), seq: 20, pid: 1,
+    session: 's', pane: 'p', source: 't', type: 'raw_output', data: { pad: 'x'.repeat(20_000) },
+  }) + '\n';
+  body += big;
+  writeFileSync(log, body);
+  const { sub, events, done } = await startTail(dir, 'rot4b');
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10_000, keepLines: 10 }), true);
+    await new Promise(r => setTimeout(r, 500));
+    assert.equal(events.length, 0, 'pre-existing lines must not be replayed');
+
+    appendFileSync(log, seqLine(999, 'bypass_permissions'));
+    await waitFor(() => events.length >= 1);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 1);
+    assert.equal(events[0].type, 'bypass_permissions');
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('rotation: before any line was seen, the kept tail is skipped and a trailing partial line is held', async () => {
   const dir = makeRunDir();
   const log = join(dir, 'logs', 'rot4.jsonl');
   // Start at EOF of a large file, then rotate without the subscriber ever
-  // having consumed a line (lastLine is empty → no marker → replay all).
+  // having consumed a line. The resume marker was seeded from the last
+  // complete line at start-up, so nothing already in the file is replayed.
   let body = '';
   for (let i = 0; i < 100; i++) body += seqLine(i);
   writeFileSync(log, body);
@@ -363,12 +420,14 @@ test('rotation: before any line was seen, the kept tail is delivered and a trail
     // Append a partial line so the resume path must carry it over.
     const half = seqLine(500, 'error');
     appendFileSync(log, half.slice(0, 10));
-    await waitFor(() => events.length >= 5);
-    assert.deepEqual(events.map(e => e.seq), [95, 96, 97, 98, 99]);
+    await new Promise(r => setTimeout(r, 500));
+    assert.equal(events.length, 0, 'kept tail must not be replayed and the partial line must be held');
     appendFileSync(log, half.slice(10));
-    await waitFor(() => events.length >= 6);
-    assert.equal(events[5].seq, 500);
-    assert.equal(events[5].type, 'error');
+    await waitFor(() => events.length >= 1);
+    await new Promise(r => setTimeout(r, 200));
+    assert.equal(events.length, 1);
+    assert.equal(events[0].seq, 500);
+    assert.equal(events[0].type, 'error');
   } finally {
     sub.stop();
     await done;
