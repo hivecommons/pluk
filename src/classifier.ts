@@ -65,7 +65,8 @@ const RESET_REL_RE = /in [0-9]+ (hour|minute|second)s?/;
 
 function extractDuration(line: string): string {
   const m = DURATION_RE.exec(line);
-  return m ? m[1] : '';
+  // Terminal displays seconds; event duration_ms field expects milliseconds.
+  return m ? String(Math.round(Number(m[1]) * 1000)) : '';
 }
 
 function extractResetTime(line: string): string {

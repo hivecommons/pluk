@@ -109,7 +109,15 @@ test('tool_call_completed: tool from ✓ bullet, duration from "(N.Ns)"', () => 
   assert.ok(ev);
   assert.equal(ev.type, 'tool_call_completed');
   assert.equal(ev.data.tool, 'Read');
-  assert.equal(ev.data.duration_ms, '2.3');
+  assert.equal(ev.data.duration_ms, '2300');
+});
+
+test('tool_call_completed: sub-second duration is rounded to nearest millisecond', () => {
+  const ev = makeClassifier().classify('✓ Bash(make build) (0.45s)');
+  assert.ok(ev);
+  assert.equal(ev.type, 'tool_call_completed');
+  assert.equal(ev.data.tool, 'Bash');
+  assert.equal(ev.data.duration_ms, '450');
 });
 
 test('tool_call_completed: non-seconds parenthetical yields empty duration', () => {
