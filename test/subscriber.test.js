@@ -435,6 +435,32 @@ test('rotation: before any line was seen, the kept tail is skipped and a trailin
   }
 });
 
+test('rotation: with no resume marker at all, every line of the rewritten log is delivered', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot-nomarker.jsonl');
+  // The log holds only an unterminated line when the subscriber attaches at
+  // EOF: there is no complete line to seed the marker from, and nothing is
+  // consumed before the rewrite. Everything the rotation writes is therefore
+  // newer than anything delivered and must be replayed in full — the
+  // marker-less arm of resumeAfterRotation, as opposed to the seeded one.
+  writeFileSync(log, 'unterminated-first-line-still-being-written');
+  const { sub, events, done } = await startTail(dir, 'rot-nomarker');
+  try {
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 0);
+    // Rotation rewrites the file in place with a different head.
+    writeFileSync(log, Array.from({ length: 5 }, (_, i) => seqLine(10 + i)).join(''));
+    await waitFor(() => events.length >= 5);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 5, 'every rewritten line must be delivered exactly once');
+    assert.deepEqual(events.map(e => e.seq), [10, 11, 12, 13, 14]);
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('rotation: a poll that sees the log empty mid-rotation does not replay the kept tail', async () => {
   const dir = makeRunDir();
   const log = join(dir, 'logs', 'rot5.jsonl');
