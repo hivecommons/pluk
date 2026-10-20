@@ -1,0 +1,1 @@
+- `--help` and `-h` passed after a subcommand (`pluk watch --help`, `pluk attach <session> --help`, `pluk send --help`, `pluk subscribe --help`) or to standalone binaries (`pluk-classify`, `pluk-send`, `pluk-subscribe`) now print usage and exit 0 without running the command.

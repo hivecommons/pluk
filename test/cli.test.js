@@ -112,6 +112,37 @@ test('--help and -h print usage and exit 0', () => {
   }
 });
 
+test('--help and -h after subcommands print usage and exit 0 without running command', () => {
+  const cases = [
+    ['watch', '--help'],
+    ['watch', '-h'],
+    ['attach', 'my-agent', '--help'],
+    ['attach', '-h', 'my-agent'],
+    ['subscribe', '--help'],
+    ['send', '--help'],
+    ['sessions', '--help'],
+    ['patterns', '--help'],
+    ['version', '--help'],
+  ];
+  for (const args of cases) {
+    const { code, stdout } = runCli(args);
+    assert.equal(code, 0, `failed for ${args.join(' ')}`);
+    assert.match(stdout, /Usage:/);
+  }
+});
+
+test('--help and -h on standalone binaries print usage and exit 0', () => {
+  for (const binName of ['pluk-subscribe', 'pluk-classify', 'pluk-send']) {
+    const link = join(scratch, binName);
+    try { symlinkSync(CLI, link); } catch {}
+    for (const flag of ['--help', '-h']) {
+      const { code, stdout } = runCli([flag], { argv1: link });
+      assert.equal(code, 0, `failed for ${binName} ${flag}`);
+      assert.match(stdout, /Usage:/);
+    }
+  }
+});
+
 test('an unknown command prints an error plus usage and exits 1', () => {
   const { code, stdout, stderr } = runCli(['frobnicate']);
   assert.equal(code, 1);

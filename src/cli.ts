@@ -387,25 +387,51 @@ function cmdSend(args: string[]): void {
   }
 }
 
+function hasHelpFlag(args: string[]): boolean {
+  return args.includes('--help') || args.includes('-h');
+}
+
 function main(): void {
   const bin = basename(process.argv[1] ?? '');
   const args = process.argv.slice(2);
 
   if (bin === 'pluk-subscribe') {
+    if (hasHelpFlag(args)) {
+      usage();
+      return;
+    }
     cmdSubscribe(args);
     return;
   }
   if (bin === 'pluk-classify') {
+    if (hasHelpFlag(args)) {
+      usage();
+      return;
+    }
     cmdWatch(args);
     return;
   }
   if (bin === 'pluk-send') {
+    if (hasHelpFlag(args)) {
+      usage();
+      return;
+    }
     cmdSend(args);
     return;
   }
 
   const command = args[0];
   const rest = args.slice(1);
+
+  if (command === '--help' || command === '-h' || command === undefined) {
+    usage();
+    return;
+  }
+
+  if (hasHelpFlag(rest)) {
+    usage();
+    return;
+  }
 
   try {
     switch (command) {
@@ -431,11 +457,6 @@ function main(): void {
         break;
       case 'version':
         console.log(`@hivecommons/pluk ${packageVersion()}`);
-        break;
-      case '--help':
-      case '-h':
-      case undefined:
-        usage();
         break;
       default:
         console.error(`${paintStderr(ANSI_RED, 'Unknown command:')} ${command}`);
