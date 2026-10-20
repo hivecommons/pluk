@@ -112,34 +112,25 @@ test('--help and -h print usage and exit 0', () => {
   }
 });
 
-test('--help and -h after a subcommand print usage and exit 0 without side effects', () => {
-  for (const argv of [['watch'], ['attach', 'my-agent'], ['subscribe'], ['send'], ['sessions']]) {
+test('--help and -h after a subcommand print usage and exit 0 without touching tmux', () => {
+  for (const argv of [['watch'], ['attach', 'my-agent'], ['subscribe'], ['send'], ['send', 'my-agent'], ['sessions']]) {
     for (const flag of ['--help', '-h']) {
+      // `send my-agent -h` is message text, covered by the test below.
+      if (flag === '-h' && argv[0] === 'send' && argv.length > 1) continue;
+      rmSync(tmuxLog, { force: true });
       const { code, stdout } = runCli([...argv, flag]);
       assert.equal(code, 0, `${argv.join(' ')} ${flag}`);
       assert.match(stdout, /Usage:/);
+      assert.throws(() => readFileSync(tmuxLog), /ENOENT/, `tmux must not be invoked for ${argv.join(' ')} ${flag}`);
     }
   }
 });
 
-test('--help after attach <session> does not touch tmux', () => {
+test('a bare -h word inside send text is forwarded, not treated as help', () => {
   rmSync(tmuxLog, { force: true });
-  const { code, stdout } = runCli(['attach', 'my-agent', '--help']);
+  const { code, stdout } = runCli(['send', 'my-agent', 'run', 'ls', '-h']);
   assert.equal(code, 0);
-  assert.match(stdout, /Usage:/);
-  assert.throws(() => readFileSync(tmuxLog), /ENOENT/, 'tmux must not be invoked');
-});
-
-test('a bare -h/--help word inside send text is forwarded, not treated as help', () => {
-  for (const word of ['-h', '--help']) {
-    rmSync(tmuxLog, { force: true });
-    const { code, stdout } = runCli(['send', 'my-agent', 'run', 'ls', word]);
-    assert.equal(code, 0);
-    assert.doesNotMatch(stdout, /Usage:/);
-  }
-  rmSync(tmuxLog, { force: true });
-  const { code } = runCli(['send', 'my-agent', 'run', 'ls', '-h']);
-  assert.equal(code, 0);
+  assert.doesNotMatch(stdout, /Usage:/);
   assert.match(readFileSync(tmuxLog, 'utf-8'), /run ls -h/);
 });
 

@@ -387,12 +387,14 @@ function cmdSend(args: string[]): void {
   }
 }
 
-// For send, trailing positionals are message text, so only tokens up to and
-// including the first positional (the session name) can request help.
-function wantsHelp(args: string[], stopAtPositional: boolean): boolean {
+// `--help` is always a flag to parseArgs, but `-h` is a positional, so inside
+// `send` it is message text once the session positional has been seen.
+function wantsHelp(args: string[], isSend: boolean): boolean {
+  let seenPositional = false;
   for (const arg of args) {
-    if (arg === '--help' || arg === '-h') return true;
-    if (stopAtPositional && !arg.startsWith('--')) return false;
+    if (arg === '--help') return true;
+    if (arg === '-h' && !(isSend && seenPositional)) return true;
+    if (!arg.startsWith('--')) seenPositional = true;
   }
   return false;
 }
@@ -401,8 +403,12 @@ function main(): void {
   const bin = basename(process.argv[1] ?? '');
   const args = process.argv.slice(2);
 
-  const sendSub = bin !== 'pluk-send' && bin !== 'pluk-subscribe' && bin !== 'pluk-classify' && args[0] === 'send';
-  if (bin === 'pluk-send' ? wantsHelp(args, true) : wantsHelp(sendSub ? args.slice(1) : args, sendSub)) {
+  const sendArgs = bin === 'pluk-send'
+    ? args
+    : bin !== 'pluk-subscribe' && bin !== 'pluk-classify' && args[0] === 'send'
+      ? args.slice(1)
+      : undefined;
+  if (sendArgs ? wantsHelp(sendArgs, true) : wantsHelp(args, false)) {
     usage();
     return;
   }
@@ -448,8 +454,6 @@ function main(): void {
       case 'version':
         console.log(`@hivecommons/pluk ${packageVersion()}`);
         break;
-      case '--help':
-      case '-h':
       case undefined:
         usage();
         break;

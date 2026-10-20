@@ -1,2 +1,2 @@
 - `--help` / `-h` after a subcommand (for example `pluk watch --help`) now prints usage and exits 0 instead of being ignored.
-- `pluk send <session> ...` text containing a bare `-h` is still sent as message text and does not trigger help.
+- A bare `-h` inside `pluk send <session> ...` message text is still sent as text; use `--help` (or `--text=...`) when the text itself contains `-h`.
