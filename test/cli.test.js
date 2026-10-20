@@ -122,6 +122,27 @@ test('--help and -h after a subcommand print usage and exit 0 without side effec
   }
 });
 
+test('--help after attach <session> does not touch tmux', () => {
+  rmSync(tmuxLog, { force: true });
+  const { code, stdout } = runCli(['attach', 'my-agent', '--help']);
+  assert.equal(code, 0);
+  assert.match(stdout, /Usage:/);
+  assert.throws(() => readFileSync(tmuxLog), /ENOENT/, 'tmux must not be invoked');
+});
+
+test('a bare -h/--help word inside send text is forwarded, not treated as help', () => {
+  for (const word of ['-h', '--help']) {
+    rmSync(tmuxLog, { force: true });
+    const { code, stdout } = runCli(['send', 'my-agent', 'run', 'ls', word]);
+    assert.equal(code, 0);
+    assert.doesNotMatch(stdout, /Usage:/);
+  }
+  rmSync(tmuxLog, { force: true });
+  const { code } = runCli(['send', 'my-agent', 'run', 'ls', '-h']);
+  assert.equal(code, 0);
+  assert.match(readFileSync(tmuxLog, 'utf-8'), /run ls -h/);
+});
+
 test('an unknown command prints an error plus usage and exits 1', () => {
   const { code, stdout, stderr } = runCli(['frobnicate']);
   assert.equal(code, 1);

@@ -387,11 +387,22 @@ function cmdSend(args: string[]): void {
   }
 }
 
+// For send, trailing positionals are message text, so only tokens up to and
+// including the first positional (the session name) can request help.
+function wantsHelp(args: string[], stopAtPositional: boolean): boolean {
+  for (const arg of args) {
+    if (arg === '--help' || arg === '-h') return true;
+    if (stopAtPositional && !arg.startsWith('--')) return false;
+  }
+  return false;
+}
+
 function main(): void {
   const bin = basename(process.argv[1] ?? '');
   const args = process.argv.slice(2);
 
-  if (args.includes('--help') || args.includes('-h')) {
+  const sendSub = bin !== 'pluk-send' && bin !== 'pluk-subscribe' && bin !== 'pluk-classify' && args[0] === 'send';
+  if (bin === 'pluk-send' ? wantsHelp(args, true) : wantsHelp(sendSub ? args.slice(1) : args, sendSub)) {
     usage();
     return;
   }
