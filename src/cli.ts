@@ -388,14 +388,32 @@ function cmdSend(args: string[]): void {
   }
 }
 
+// Dedicated bin names are pinned to one subcommand; the generic `pluk` bin
+// reads it from argv. Keep this the only place that mapping lives.
+const BIN_COMMANDS: Record<string, string> = {
+  'pluk-send': 'send',
+  'pluk-subscribe': 'subscribe',
+  'pluk-classify': 'classify',
+};
+
+function resolveCommand(bin: string, args: string[]): { command: string | undefined; rest: string[] } {
+  const pinned = BIN_COMMANDS[bin];
+  return pinned !== undefined
+    ? { command: pinned, rest: args }
+    : { command: args[0], rest: args.slice(1) };
+}
+
 // `--help` is always a flag to parseArgs, but `-h` is a positional, so inside
-// `send` it is message text once the session positional has been seen.
-function wantsHelp(args: string[], isSend: boolean): boolean {
-  let seenPositional = false;
-  for (const arg of args) {
+// `send` it is message text once the session is known — either from the
+// leading positional or from `--session=` (mirrors cmdSend's split).
+function wantsHelp(command: string | undefined, rest: string[]): boolean {
+  if (command === '--help' || command === '-h') return true;
+  const isSend = command === 'send';
+  let sessionKnown = isSend && rest.some((arg) => arg.startsWith('--session='));
+  for (const arg of rest) {
     if (arg === '--help') return true;
-    if (arg === '-h' && !(isSend && seenPositional)) return true;
-    if (!arg.startsWith('--')) seenPositional = true;
+    if (arg === '-h' && !sessionKnown) return true;
+    if (isSend && !arg.startsWith('--')) sessionKnown = true;
   }
   return false;
 }
@@ -403,32 +421,12 @@ function wantsHelp(args: string[], isSend: boolean): boolean {
 function main(): void {
   const bin = basename(process.argv[1] ?? '');
   const args = process.argv.slice(2);
+  const { command, rest } = resolveCommand(bin, args);
 
-  const sendArgs = bin === 'pluk-send'
-    ? args
-    : bin !== 'pluk-subscribe' && bin !== 'pluk-classify' && args[0] === 'send'
-      ? args.slice(1)
-      : undefined;
-  if (sendArgs ? wantsHelp(sendArgs, true) : wantsHelp(args, false)) {
+  if (wantsHelp(command, rest)) {
     usage();
     return;
   }
-
-  if (bin === 'pluk-subscribe') {
-    cmdSubscribe(args);
-    return;
-  }
-  if (bin === 'pluk-classify') {
-    cmdWatch(args);
-    return;
-  }
-  if (bin === 'pluk-send') {
-    cmdSend(args);
-    return;
-  }
-
-  const command = args[0];
-  const rest = args.slice(1);
 
   try {
     switch (command) {
