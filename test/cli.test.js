@@ -356,6 +356,43 @@ test('pluk-subscribe bin name dispatches straight to subscribe (arg validation)'
   assert.match(stderr, /session name is required/);
 });
 
+test('--help and -h on the pinned bin names print usage and exit 0 without touching tmux', () => {
+  for (const binName of ['pluk-send', 'pluk-classify', 'pluk-subscribe']) {
+    const link = join(scratch, binName);
+    try { symlinkSync(CLI, link); } catch {}
+    for (const flag of ['--help', '-h']) {
+      rmSync(tmuxLog, { force: true });
+      const { code, stdout, stderr } = runCli([flag], { argv1: link });
+      assert.equal(code, 0, `${binName} ${flag}: ${stderr}`);
+      assert.match(stdout, /Usage:/, `${binName} ${flag}`);
+      assert.throws(() => readFileSync(tmuxLog), /ENOENT/, `tmux must not be invoked for ${binName} ${flag}`);
+    }
+  }
+});
+
+test('pluk-send treats a bare -h after the session as message text, but --help as help', () => {
+  const link = join(scratch, 'pluk-send');
+  try { symlinkSync(CLI, link); } catch {}
+
+  rmSync(tmuxLog, { force: true });
+  let res = runCli(['my-agent', '-h'], { argv1: link });
+  assert.equal(res.code, 0, res.stderr);
+  assert.doesNotMatch(res.stdout, /Usage:/);
+  assert.match(readFileSync(tmuxLog, 'utf-8'), /send-keys.*-h/);
+
+  rmSync(tmuxLog, { force: true });
+  res = runCli(['--session=my-agent', '-h'], { argv1: link });
+  assert.equal(res.code, 0, res.stderr);
+  assert.doesNotMatch(res.stdout, /Usage:/);
+  assert.match(readFileSync(tmuxLog, 'utf-8'), /send-keys.*-h/);
+
+  rmSync(tmuxLog, { force: true });
+  res = runCli(['my-agent', '--help'], { argv1: link });
+  assert.equal(res.code, 0, res.stderr);
+  assert.match(res.stdout, /Usage:/);
+  assert.throws(() => readFileSync(tmuxLog), /ENOENT/, 'tmux must not be invoked for pluk-send my-agent --help');
+});
+
 // --- subscribe end-to-end -----------------------------------------------------------
 
 test('subscribe --from-beginning replays events from an existing log then is stopped', async () => {
