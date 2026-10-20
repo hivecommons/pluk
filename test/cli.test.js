@@ -112,6 +112,16 @@ test('--help and -h print usage and exit 0', () => {
   }
 });
 
+test('--help and -h after a subcommand print usage and exit 0 without side effects', () => {
+  for (const argv of [['watch'], ['attach', 'my-agent'], ['subscribe'], ['send'], ['sessions']]) {
+    for (const flag of ['--help', '-h']) {
+      const { code, stdout } = runCli([...argv, flag]);
+      assert.equal(code, 0, `${argv.join(' ')} ${flag}`);
+      assert.match(stdout, /Usage:/);
+    }
+  }
+});
+
 test('an unknown command prints an error plus usage and exits 1', () => {
   const { code, stdout, stderr } = runCli(['frobnicate']);
   assert.equal(code, 1);

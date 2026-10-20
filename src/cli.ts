@@ -391,6 +391,11 @@ function main(): void {
   const bin = basename(process.argv[1] ?? '');
   const args = process.argv.slice(2);
 
+  if (args.includes('--help') || args.includes('-h')) {
+    usage();
+    return;
+  }
+
   if (bin === 'pluk-subscribe') {
     cmdSubscribe(args);
     return;

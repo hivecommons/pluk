@@ -1,0 +1,1 @@
+- `--help` / `-h` after a subcommand (for example `pluk watch --help`) now prints usage and exits 0 instead of being ignored.
