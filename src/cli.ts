@@ -36,6 +36,7 @@ ${ANSI_CYAN}Commands:${ANSI_RESET}
   send        Send text to a tmux session (inject rebuttals, commands)
   patterns    Show loaded patterns for a CLI
   version     Print version
+  --help, -h  Show this usage (also works after a subcommand)
 
 ${ANSI_CYAN}Examples:${ANSI_RESET}
   ${ANSI_DIM}# One command: tmux + claude + pluk + rationguard${ANSI_RESET}

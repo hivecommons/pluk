@@ -102,6 +102,7 @@ tmux attach -t my-agent
 | `pluk watch <session>` | Classify stdin line-by-line |
 | `pluk send <session> --text="..." --enter` | Send text to a tmux session |
 | `pluk patterns --cli=claude` | Show loaded patterns for a CLI |
+| `pluk <command> --help` / `-h` | Show usage (works after any subcommand) |
 
 ### Attach Flags
 
