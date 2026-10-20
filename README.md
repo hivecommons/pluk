@@ -43,7 +43,7 @@ pluk attach my-agent --cli=goose
 
 > **Note:** When attaching to an existing session with `--dangerous`, the CLI may not have permission-skip enabled (the flag only applies when creating a new session). pluk will print a warning with the command to restart the CLI with the right flag.
 
-By default, pluk attaches to the tmux session: with `--rationguard` on macOS, a new terminal window is opened; on other platforms or without `--rationguard`, the current terminal is used. Use `--no-open` to suppress this (only has effect with `--rationguard`).
+By default, pluk attaches to the tmux session. Without `--rationguard`, it attaches in the current terminal. With `--rationguard` on macOS (iTerm2 / Terminal.app), it opens a new terminal window; elsewhere it prints a `tmux attach -t <session>` hint, since rationguard runs in the foreground. Use `--no-open` to suppress this: without `--rationguard` the session is left detached and the attach hint is printed instead; with `--rationguard` it suppresses the new window (macOS) or the hint (elsewhere).
 
 ## See What's Running
 
@@ -115,7 +115,7 @@ tmux attach -t my-agent
 | `--dangerous` | Skip CLI permission prompts (`--dangerously-skip-permissions` for claude, `--full-auto` for codex, `--non-interactive` for goose, `--approval-mode yolo` for omp) |
 | `--dir=/path` | Working directory for the agent |
 | `--cli-args="..."` | Extra arguments to pass to the CLI |
-| `--no-open` | With `--rationguard` on macOS, don't open a new window; on other platforms or without `--rationguard`, has no effect |
+| `--no-open` | Don't attach: without `--rationguard`, leave the session detached and print the attach hint; with `--rationguard`, don't open a new window (macOS) or print the hint (elsewhere) |
 | `--no-raw` | Suppress `raw_output` events from the watcher `attach` starts (on by default for `attach`, unlike plain `pluk watch`, which requires `--include-raw` to emit them) |
 | `--verbose` | Show debug output |
 
