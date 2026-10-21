@@ -6,6 +6,7 @@ import {
   buildCliCommand,
   buildPipePaneCommand,
   rationguardWatcherPattern,
+  pgrepUserScope,
   shellQuote,
   splitShellWords,
   validateSessionName,
@@ -163,4 +164,13 @@ test('buildPipePaneCommand keeps a quoted pluk path with spaces as one word', ()
 test('rationguardWatcherPattern treats a quoted path with spaces as one word', () => {
   const pattern = rationguardWatcherPattern('s', shellQuote('/opt/my tools/bin/rationguard'));
   assert.ok(pattern.startsWith('/opt/my tools/bin/rationguard watch s( |$)'));
+});
+
+test('pgrepUserScope restricts the watcher reap to the invoking uid', () => {
+  assert.deepEqual(pgrepUserScope(() => 1234), ['-u', '1234']);
+  assert.deepEqual(pgrepUserScope(), ['-u', String(process.getuid())]);
+});
+
+test('pgrepUserScope adds nothing on runtimes without getuid', () => {
+  assert.deepEqual(pgrepUserScope(null), []);
 });

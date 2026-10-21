@@ -70,9 +70,10 @@ esac
 printf '%s\\n' "$*" >> '${logFor('npx')}'
 exit ${npxOk ? 0 : 1}
 `);
-  writeStub(dir, 'pgrep', pgrepPids
-    ? `#!/bin/sh\nprintf '%s\\n' '${pgrepPids}'\nexit 0\n`
-    : '#!/bin/sh\nexit 1\n');
+  writeStub(dir, 'pgrep', `#!/bin/sh
+printf '%s\\n' "$*" >> '${logFor('pgrep')}'
+${pgrepPids ? `printf '%s\\n' '${pgrepPids}'\nexit 0` : 'exit 1'}
+`);
   writeStub(dir, 'kill', `#!/bin/sh
 printf '%s\\n' "$*" >> '${logFor('kill')}'
 exit 0
@@ -261,6 +262,15 @@ test('--rationguard kills stale watchers and spawns rationguard with rebuttal/ve
   assert.equal(code, 0);
   assert.match(stderr, /killing 2 existing rationguard watcher\(s\) for agent-r/);
   assert.equal(stubs.log('kill').trim(), '11111 22222');
+  // The reap must only ever see the invoking user's processes (#322).
+  const pgrepCalls = stubs.log('pgrep').trim().split('\n');
+  assert.ok(pgrepCalls.length >= 1, 'pgrep should have run');
+  for (const call of pgrepCalls) {
+    assert.ok(
+      call.startsWith(`-u ${process.getuid()} -f `),
+      `pgrep must be scoped to uid ${process.getuid()}: ${call}`,
+    );
+  }
   assert.match(stderr, /Starting rationguard watcher in this terminal/);
   assert.equal(
     stubs.log('rationguard').trim(),

@@ -50,6 +50,18 @@ export function rationguardWatcherPattern(session: string, rgBin?: string): stri
   return `${prefix} watch ${escaped}( |$)`;
 }
 
+/**
+ * `pgrep -f` alone matches every process on the host, whoever owns it. A
+ * foreign process whose cmdline happens to match the watcher pattern would
+ * land in the kill list, `kill` would fail on it with EPERM, and the attach
+ * would abort after the session and pipe-pane were wired but before the
+ * watcher started. Restrict the reap to the invoking user's processes; the
+ * uid form of `-u` is accepted by both procps and BSD/macOS pgrep.
+ */
+export function pgrepUserScope(getuid: (() => number) | null | undefined = process.getuid): string[] {
+  return typeof getuid === 'function' ? ['-u', String(getuid())] : [];
+}
+
 function appleScriptString(value: string): string {
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
@@ -361,7 +373,7 @@ export function attach(opts: AttachOptions): void {
     const pids = new Set<string>();
     for (const pattern of patterns) {
       try {
-        const existing = execFileSync('pgrep', ['-f', pattern], {
+        const existing = execFileSync('pgrep', [...pgrepUserScope(), '-f', pattern], {
           encoding: 'utf-8',
           stdio: ['ignore', 'pipe', 'ignore'],
         }).trim();

@@ -1,0 +1,1 @@
+- `pluk attach --rationguard` now scopes its stale-watcher reap (`pgrep -f`) to the invoking user's processes, so another user's process with a matching command line no longer makes `kill` fail and abort the attach before the rationguard watcher starts.
