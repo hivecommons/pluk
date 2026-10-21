@@ -48,7 +48,7 @@ ${paintStdout(ANSI_CYAN, 'Examples:')}
   ${paintStdout(ANSI_DIM, '# Attach to existing tmux session')}
   pluk attach my-agent --cli=goose --rationguard
 
-  ${paintStdout(ANSI_DIM, '# See what's running')}
+  ${paintStdout(ANSI_DIM, "# See what's running")}
   pluk sessions
 
   ${paintStdout(ANSI_DIM, '# Subscribe to events from a running pluk publisher')}
