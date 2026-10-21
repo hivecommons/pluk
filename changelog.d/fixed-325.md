@@ -1,0 +1,1 @@
+- `pluk attach --cli=copilot` now launches the standalone `copilot` CLI (the `gh copilot` extension was retired) and `--dangerous` maps to `--allow-all-tools` for it.
