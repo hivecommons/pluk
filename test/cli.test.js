@@ -189,8 +189,19 @@ test('sessions renders a table row per discovered session (ls alias)', () => {
   );
   const { code, stdout } = runCli(['ls', `--run-dir=${dir}`]);
   assert.equal(code, 0);
-  assert.match(stdout, /SESSION\s+CLI\s+STATE\s+TMUX\s+LAST ACTIVITY.*EVENTS/);
+  assert.match(stdout, /SESSION\s+CLI\s+STATE\s+TMUX\s+LAST ACTIVITY\s+EVENTS/);
   assert.match(stdout, /agent-a\s+claude\s+.*idle/);
+
+  // Verify column alignment by checking header and row positions
+  const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
+  const lines = stdout.split('\n');
+  const header = stripAnsi(lines[0]);
+  const row = stripAnsi(lines.find(l => l.includes('agent-a')));
+
+  assert.ok(row, 'row with agent-a found');
+  assert.equal(header.indexOf('TMUX'), row.search(/[●○]/), 'TMUX header aligns with icon');
+  assert.equal(header.indexOf('LAST ACTIVITY'), row.search(/\d+[smhd] ago/), 'LAST ACTIVITY header aligns with time');
+  assert.equal(header.indexOf('EVENTS'), row.search(/\d+$/), 'EVENTS header aligns with event count');
 });
 
 // --- send ----------------------------------------------------------------------

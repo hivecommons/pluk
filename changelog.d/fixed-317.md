@@ -1,0 +1,1 @@
+- `pluk sessions` now prints the `LAST ACTIVITY` and `EVENTS` headings with a gap between them and aligns every row with its column heading; the table matches the README example again.
