@@ -311,6 +311,10 @@ See `patterns/*.patterns` in this repo for complete, real-world examples.
 - **[@hivecommons/rationguard](https://www.npmjs.com/package/@hivecommons/rationguard)** — real-time rationalization detection and rebuttal
 - **[@hivecommons/promptargs](https://www.npmjs.com/package/@hivecommons/promptargs)** — template variable substitution for AI prompts
 
+## Contributing
+
+Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers local setup, tests, and how to add or fix a CLI pattern set. If an agent CLI's output is misclassified, or you want pluk to support a new CLI, open a [pattern request](https://github.com/hivecommons/pluk/issues/new?template=pattern_request.yml). For questions, join the [Hive Commons Discord](https://hivecommons.dev/discord).
+
 ## License
 
 Apache-2.0
