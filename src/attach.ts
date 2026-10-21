@@ -152,7 +152,7 @@ function findExecutable(candidates: string[]): string {
 function resolveCliCommand(cli: string): string {
   const CLI_COMMANDS: Record<string, string> = {
     claude: 'claude',
-    copilot: 'gh copilot',
+    copilot: 'copilot',
     gemini: 'gemini',
     goose: 'goose session',
     codex: 'codex',
@@ -165,6 +165,7 @@ function resolveCliCommand(cli: string): string {
 function resolveDangerousFlag(cli: string): string {
   const DANGEROUS_FLAGS: Record<string, string> = {
     claude: '--dangerously-skip-permissions',
+    copilot: '--allow-all-tools',
     codex: '--full-auto',
     goose: '--non-interactive',
     omp: '--approval-mode yolo',
