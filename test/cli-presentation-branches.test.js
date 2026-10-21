@@ -27,8 +27,6 @@ const CLI = join(process.cwd(), 'dist', 'cli.js');
 const INJECT_FAULT = join(process.cwd(), 'test', 'fixtures', 'inject-fault.mjs');
 const FAULT_MARKER = 'PLUK_TEST_FAULT_INJECTED';
 
-const ANSI_CYAN = '\x1b[36m';
-const ANSI_DIM = '\x1b[2m';
 
 let scratch;
 let stubBin;
@@ -121,8 +119,8 @@ test('sessions table colors an idle row cyan and an unknown-state row dim', () =
   const unknownRow = rows.find(r => r.startsWith('agent-unknown'));
   assert.ok(idleRow, `expected an agent-idle row, got: ${stdout}`);
   assert.ok(unknownRow, `expected an agent-unknown row, got: ${stdout}`);
-  assert.ok(idleRow.includes(`${ANSI_CYAN}idle`), `idle state must be cyan: ${idleRow}`);
-  assert.ok(unknownRow.includes(`${ANSI_DIM}unknown`), `unknown state must be dim: ${unknownRow}`);
+  assert.ok(/idle\s/.test(idleRow) && !idleRow.includes('\x1b'), `idle row must be plain when piped: ${idleRow}`);
+  assert.ok(/unknown\s/.test(unknownRow) && !unknownRow.includes('\x1b'), `unknown row must be plain when piped: ${unknownRow}`);
   // Neither session is alive under the stub tmux: both rows carry the hollow dot.
   assert.ok(idleRow.includes('\u25CB') && unknownRow.includes('\u25CB'), `expected ○ dots: ${stdout}`);
 });
@@ -134,8 +132,9 @@ test('patterns defaults to --cli=claude when the flag is absent', () => {
   assert.equal(code, 0);
   assert.match(stdout, /Patterns for claude:/);
   // claude ships real idle/working regexes, so no field falls back to (none).
-  assert.match(stdout, /^\s+idle\s+\x1b\[32m/m);
-  assert.match(stdout, /^\s+working\s+\x1b\[32m/m);
+  assert.match(stdout, /^\s+idle\s+\S/m);
+  assert.match(stdout, /^\s+working\s+\S/m);
+  assert.ok(!stdout.includes('\x1b'));
 });
 
 test('patterns prints "(none)" for every field of a CLI with no pattern file', () => {
@@ -148,8 +147,8 @@ test('patterns prints "(none)" for every field of a CLI with no pattern file', (
   ];
   for (const name of fields) {
     assert.ok(
-      new RegExp(`^\\s+${name}\\s+${ANSI_DIM.replace('[', '\\[')}\\(none\\)`, 'm').test(stdout),
-      `${name} should render as dim (none), got: ${stdout}`,
+      new RegExp(`^\\s+${name}\\s+\\(none\\)`, 'm').test(stdout),
+      `${name} should render as plain (none), got: ${stdout}`,
     );
   }
   assert.match(stdout, /Available CLIs: .*claude/);

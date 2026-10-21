@@ -16,6 +16,16 @@ export function stderrColorEnabled(): boolean {
   return Boolean(process.stderr.isTTY) && !process.env.NO_COLOR;
 }
 
+/** True when stdout may carry colour: a TTY and NO_COLOR unset. */
+export function stdoutColorEnabled(): boolean {
+  return Boolean(process.stdout.isTTY) && !process.env.NO_COLOR;
+}
+
+/** Wrap text in an ANSI code for stdout, or return it unchanged when colour is off. */
+export function paintStdout(code: string, text: string): string {
+  return stdoutColorEnabled() ? `${code}${text}${ANSI_RESET}` : text;
+}
+
 /** Wrap text in an ANSI code for stderr, or return it unchanged when colour is off. */
 export function paintStderr(code: string, text: string): string {
   return stderrColorEnabled() ? `${code}${text}${ANSI_RESET}` : text;

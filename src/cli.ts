@@ -10,16 +10,16 @@ import { discoverSessions } from './sessions.js';
 import { resolveRunDir, rotateLogFileIfNeeded, validateSessionName } from './run-dir.js';
 import { attach } from './attach.js';
 import { send } from './send.js';
-import { ANSI_RED, ANSI_GREEN, ANSI_CYAN, ANSI_DIM, ANSI_BOLD, ANSI_RESET, paintStderr } from './ansi.js';
+import { ANSI_RED, ANSI_GREEN, ANSI_CYAN, ANSI_DIM, ANSI_BOLD, ANSI_RESET, paintStderr, paintStdout } from './ansi.js';
 import { packageVersion } from './version.js';
 
 /** How often a running `pluk watch` checks its log file for rotation. */
 const LOG_ROTATE_CHECK_INTERVAL_MS = 30_000;
 
 function usage(): void {
-  console.log(`${ANSI_BOLD}pluk${ANSI_RESET} — structured events from AI agent terminal output
+  console.log(`${paintStdout(ANSI_BOLD, 'pluk')} — structured events from AI agent terminal output
 
-${ANSI_CYAN}Usage:${ANSI_RESET}
+${paintStdout(ANSI_CYAN, 'Usage:')}
   pluk attach <session> [--cli=claude] [--rationguard] [--rationguard-bin=<cmd>] [--rebuttal=send] [--dangerous] [--verbose]
   pluk sessions [--run-dir=<path>] [--json]
   pluk subscribe <session> [--filter=type1,type2] [--from-beginning] [--verbose] [--diagnostics[=secs]]
@@ -28,7 +28,7 @@ ${ANSI_CYAN}Usage:${ANSI_RESET}
   pluk patterns [--cli=claude] [--patterns-dir=<dir>]
   pluk version
 
-${ANSI_CYAN}Commands:${ANSI_RESET}
+${paintStdout(ANSI_CYAN, 'Commands:')}
   attach      Create tmux session, start AI CLI, wire pluk + rationguard
   sessions    List active pluk-monitored sessions
   subscribe   Tail a pluk JSONL log file (from pluk watch or any other publisher)
@@ -38,23 +38,23 @@ ${ANSI_CYAN}Commands:${ANSI_RESET}
   version     Print version
   --help, -h  Show this usage (also works after a subcommand)
 
-${ANSI_CYAN}Examples:${ANSI_RESET}
-  ${ANSI_DIM}# One command: tmux + claude + pluk + rationguard${ANSI_RESET}
+${paintStdout(ANSI_CYAN, 'Examples:')}
+  ${paintStdout(ANSI_DIM, '# One command: tmux + claude + pluk + rationguard')}
   pluk attach my-agent --cli=claude --rationguard --rebuttal=send
 
-  ${ANSI_DIM}# Just tmux + pluk (no rationguard)${ANSI_RESET}
+  ${paintStdout(ANSI_DIM, '# Just tmux + pluk (no rationguard)')}
   pluk attach my-agent --cli=claude
 
-  ${ANSI_DIM}# Attach to existing tmux session${ANSI_RESET}
+  ${paintStdout(ANSI_DIM, '# Attach to existing tmux session')}
   pluk attach my-agent --cli=goose --rationguard
 
-  ${ANSI_DIM}# See what's running${ANSI_RESET}
+  ${paintStdout(ANSI_DIM, '# See what's running')}
   pluk sessions
 
-  ${ANSI_DIM}# Subscribe to events from a running pluk publisher${ANSI_RESET}
+  ${paintStdout(ANSI_DIM, '# Subscribe to events from a running pluk publisher')}
   pluk subscribe my-agent --filter=rate_limit,error,state_change
 
-  ${ANSI_DIM}# Manual: pipe agent output through the classifier${ANSI_RESET}
+  ${paintStdout(ANSI_DIM, '# Manual: pipe agent output through the classifier')}
   tmux pipe-pane -t my-agent -o "pluk watch my-agent --cli=claude >> \\"\\$XDG_RUNTIME_DIR/pluk/logs/my-agent.jsonl\\""
 `);
 }
@@ -288,8 +288,8 @@ function cmdSessions(args: string[]): void {
   }
 
   if (sessions.length === 0) {
-    console.log(`${ANSI_DIM}No active pluk sessions found.${ANSI_RESET}`);
-    console.log(`${ANSI_DIM}Run dir: ${runDir ?? resolveRunDir()}${ANSI_RESET}`);
+    console.log(paintStdout(ANSI_DIM, 'No active pluk sessions found.'));
+    console.log(paintStdout(ANSI_DIM, `Run dir: ${runDir ?? resolveRunDir()}`));
     return;
   }
 
@@ -300,14 +300,17 @@ function cmdSessions(args: string[]): void {
   const COL_AGO = 14;
 
   console.log(
-    `${ANSI_BOLD}${'SESSION'.padEnd(COL_SESSION)}${'CLI'.padEnd(COL_CLI)}${'STATE'.padEnd(COL_STATE)}${'TMUX'.padEnd(COL_TMUX)}${'LAST ACTIVITY'.padEnd(COL_AGO)}EVENTS${ANSI_RESET}`,
+    paintStdout(
+      ANSI_BOLD,
+      `${'SESSION'.padEnd(COL_SESSION)}${'CLI'.padEnd(COL_CLI)}${'STATE'.padEnd(COL_STATE)}${'TMUX'.padEnd(COL_TMUX)}${'LAST ACTIVITY'.padEnd(COL_AGO)}EVENTS`,
+    ),
   );
 
   for (const s of sessions) {
-    const tmuxIcon = s.tmuxAlive ? `${ANSI_GREEN}●${ANSI_RESET}` : `${ANSI_DIM}○${ANSI_RESET}`;
+    const tmuxIcon = s.tmuxAlive ? paintStdout(ANSI_GREEN, '●') : paintStdout(ANSI_DIM, '○');
     const stateColor = s.state === 'working' ? ANSI_GREEN : s.state === 'idle' ? ANSI_CYAN : ANSI_DIM;
     console.log(
-      `${s.session.padEnd(COL_SESSION)}${s.cli.padEnd(COL_CLI)}${stateColor}${s.state.padEnd(COL_STATE)}${ANSI_RESET}${tmuxIcon}${''.padEnd(COL_TMUX - 1)}${s.lastActivityAgo.padEnd(COL_AGO)}${s.eventCount}`,
+      `${s.session.padEnd(COL_SESSION)}${s.cli.padEnd(COL_CLI)}${paintStdout(stateColor, s.state.padEnd(COL_STATE))}${tmuxIcon}${''.padEnd(COL_TMUX - 1)}${s.lastActivityAgo.padEnd(COL_AGO)}${s.eventCount}`,
     );
   }
 }
@@ -330,7 +333,7 @@ function cmdPatterns(args: string[]): void {
   if (!hasAnyPattern(patterns)) {
     log('info', `no pattern set for ${cli}; available CLIs: ${available}`);
   }
-  console.log(`${ANSI_BOLD}Patterns for ${cli}:${ANSI_RESET}\n`);
+  console.log(`${paintStdout(ANSI_BOLD, `Patterns for ${cli}:`)}\n`);
 
   const fields: Array<[string, RegExp | null]> = [
     ['idle', patterns.idle],
@@ -347,11 +350,11 @@ function cmdPatterns(args: string[]): void {
   ];
 
   for (const [name, re] of fields) {
-    const val = re ? `${ANSI_GREEN}${re.source}${ANSI_RESET}` : `${ANSI_DIM}(none)${ANSI_RESET}`;
+    const val = re ? paintStdout(ANSI_GREEN, re.source) : paintStdout(ANSI_DIM, '(none)');
     console.log(`  ${name.padEnd(14)} ${val}`);
   }
 
-  console.log(`\n${ANSI_DIM}Available CLIs: ${available}${ANSI_RESET}`);
+  console.log(`\n${paintStdout(ANSI_DIM, `Available CLIs: ${available}`)}`);
 }
 
 function cmdSend(args: string[]): void {

@@ -256,7 +256,7 @@ test('sessions table marks a live tmux session with a filled dot and colors work
   assert.equal(code, 0);
   assert.match(stdout, /agent-live\s+copilot\s+.*working/);
   assert.ok(stdout.includes('\u25CF'), `expected live dot ●, got: ${stdout}`);
-  assert.ok(stdout.includes('\x1b[32m\u25CF'), `working rows use the green live dot: ${stdout}`);
+  assert.ok(!stdout.includes('\x1b'), `piped stdout must carry no ANSI: ${stdout}`);
 });
 
 // --- subscribe: PLUK_RUN_DIR fallback --------------------------------------------

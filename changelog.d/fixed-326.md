@@ -1,0 +1,1 @@
+- `pluk --help`, `pluk sessions` and `pluk patterns` no longer emit ANSI colour codes when stdout is not a TTY or `NO_COLOR` is set; previously only stderr was gated.
