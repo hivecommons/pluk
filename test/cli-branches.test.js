@@ -243,7 +243,7 @@ test('watch --capture polls the pane named by --pane, not the session', async ()
 
 // --- sessions: live tmux row (green dot + working state) -------------------------
 
-test('sessions table marks a live tmux session with a filled dot and colors working state', () => {
+test('sessions table carries no ESC bytes when stdout is piped', () => {
   const dir = makeRunDir();
   writeFileSync(
     join(dir, 'logs', 'agent-live.jsonl'),
