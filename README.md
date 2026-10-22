@@ -63,23 +63,26 @@ goose-exp        goose     idle      ○     3m ago        156
 If you prefer to wire things up yourself:
 
 ```bash
-# 1. Start an AI agent in tmux
+# 1. Create a tmux session (don't start the CLI yet)
 tmux new-session -d -s my-agent
-tmux send-keys -t my-agent "claude" Enter
 
-# 2. Attach pluk to capture output
+# 2. Attach pluk to capture output before the CLI starts, so start-up
+#    output (trust prompts, login, model banner) is classified too
 export PLUK_RUN_DIR=/tmp/pluk-run
 mkdir -p "$PLUK_RUN_DIR/logs"
 tmux pipe-pane -t my-agent "PLUK_RUN_DIR=$PLUK_RUN_DIR pluk watch my-agent --cli=claude >> $PLUK_RUN_DIR/logs/my-agent.jsonl"
 
-# 3. Subscribe to events (another terminal)
+# 3. Start the AI agent inside the session
+tmux send-keys -t my-agent "claude" Enter
+
+# 4. Subscribe to events (another terminal)
 export PLUK_RUN_DIR=/tmp/pluk-run
 pluk subscribe my-agent --filter=state_change,rate_limit,error
 
-# 4. Or start rationguard for real-time detection
+# 5. Or start rationguard for real-time detection
 rationguard watch my-agent --rebuttal=send
 
-# 5. View the agent
+# 6. View the agent
 tmux attach -t my-agent
 ```
 

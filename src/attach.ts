@@ -9,7 +9,6 @@ import { plukPackageSpec } from './version.js';
 // path-safety helpers in run-dir.ts.
 export { validateSessionName } from './run-dir.js';
 
-
 export interface AttachOptions {
   session: string;
   cli?: string;
