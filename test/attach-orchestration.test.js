@@ -168,6 +168,19 @@ for (const rebuttal of ['log', 'send']) {
   });
 }
 
+test('fresh session wires pipe-pane before send-keys so start-up output is captured', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const { code } = runAttach(['order-check', `--run-dir=${makeRunDir()}`, '--no-open'], stubs);
+  assert.equal(code, 0);
+  const lines = stubs.log('tmux').split('\n');
+  const newSession = lines.findIndex(l => l.startsWith('new-session '));
+  const pipePane = lines.findIndex(l => l.startsWith('pipe-pane '));
+  const startCli = lines.findIndex(l => l.startsWith('send-keys ') && /Enter$/.test(l));
+  assert.ok(newSession >= 0 && pipePane >= 0 && startCli >= 0, `missing tmux calls: ${lines.join('\n')}`);
+  assert.ok(newSession < pipePane, 'new-session must precede pipe-pane');
+  assert.ok(pipePane < startCli, 'pipe-pane must precede the send-keys that starts the CLI');
+});
+
 // --- existing-session path ---------------------------------------------------------
 
 test('attach to an existing session skips create/send-keys and warns about --dangerous', () => {

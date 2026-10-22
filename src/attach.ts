@@ -9,7 +9,6 @@ import { plukPackageSpec } from './version.js';
 // path-safety helpers in run-dir.ts.
 export { validateSessionName } from './run-dir.js';
 
-const CLI_STARTUP_WAIT_MS = 1500;
 
 export interface AttachOptions {
   session: string;
@@ -299,6 +298,33 @@ export function attach(opts: AttachOptions): void {
   log(`Securing logs directory: ${logsDir}`);
   ensurePrivateDirectory(logsDir);
 
+  const plukBin = resolvePlukBin();
+  log(`pluk binary: ${plukBin || '(not found)'}`);
+  const logFile = join(logsDir, `${session}.jsonl`);
+  log(`log file: ${logFile}`);
+  ensurePrivateLogFile(logFile);
+
+  const wirePipePane = (): void => {
+    if (plukBin) {
+      const pipeCmd = buildPipePaneCommand({
+        runDir,
+        plukBin,
+        session,
+        cli,
+        includeRaw: !opts.noRaw,
+        logFile,
+      });
+      log(`pipe-pane command: ${pipeCmd}`);
+      console.error(`Attaching pluk pipe-pane: ${cli}`);
+      log(`execFile: tmux pipe-pane -t ${shellQuote(exactTarget(session))} ${shellQuote(pipeCmd)}`);
+      tmuxPipePane(session, pipeCmd);
+      log('pipe-pane attached successfully');
+    } else {
+      console.error('Warning: pluk binary not found, skipping pipe-pane attachment');
+      console.error('Install globally: npm install -g @hivecommons/pluk');
+    }
+  };
+
   const sessionExists = tmuxHasSession(session);
   log(`tmux session "${session}" exists: ${sessionExists}`);
 
@@ -306,6 +332,7 @@ export function attach(opts: AttachOptions): void {
     console.error(`Creating tmux session: ${session}`);
     log(`execFile: tmux new-session -d -s ${shellQuote(session)} -c ${shellQuote(workDir)}`);
     tmuxNewSession(session, workDir);
+    wirePipePane();
 
     let fullCmd = buildCliCommand(cliCmd, opts.cliArgs);
     if (opts.dangerouslySkipPermissions) {
@@ -331,31 +358,7 @@ export function attach(opts: AttachOptions): void {
         console.error(`To restart with permissions skipped: pluk send ${session} C-c && tmux send-keys -t ${shellQuote(exactTarget(session))} -- ${shellQuote(buildCliCommand(cliCmd, dangerFlag))} Enter`);
       }
     }
-  }
-
-  const plukBin = resolvePlukBin();
-  log(`pluk binary: ${plukBin || '(not found)'}`);
-  const logFile = join(logsDir, `${session}.jsonl`);
-  log(`log file: ${logFile}`);
-  ensurePrivateLogFile(logFile);
-
-  if (plukBin) {
-    const pipeCmd = buildPipePaneCommand({
-      runDir,
-      plukBin,
-      session,
-      cli,
-      includeRaw: !opts.noRaw,
-      logFile,
-    });
-    log(`pipe-pane command: ${pipeCmd}`);
-    console.error(`Attaching pluk pipe-pane: ${cli}`);
-    log(`execFile: tmux pipe-pane -t ${shellQuote(exactTarget(session))} ${shellQuote(pipeCmd)}`);
-    tmuxPipePane(session, pipeCmd);
-    log('pipe-pane attached successfully');
-  } else {
-    console.error('Warning: pluk binary not found, skipping pipe-pane attachment');
-    console.error('Install globally: npm install -g @hivecommons/pluk');
+    wirePipePane();
   }
 
   console.error(`Pluk logs: ${logFile}`);

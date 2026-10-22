@@ -25,8 +25,8 @@ pluk attach my-agent --cli=claude --rationguard --rebuttal=send
 
 This does four things:
 1. Creates a tmux session named `my-agent`
-2. Starts `claude` inside it
-3. Attaches pluk via `tmux pipe-pane` to classify all terminal output
+2. Attaches pluk via `tmux pipe-pane` to classify all terminal output, including start-up output
+3. Starts `claude` inside it
 4. Starts `rationguard watch` to detect rationalizations and send rebuttals back
 
 To just attach pluk without rationguard:
