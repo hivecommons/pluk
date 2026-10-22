@@ -22,7 +22,8 @@ A silent watcher means those consumers act on stale state.
 2. Is the log file growing? The run dir is `$PLUK_RUN_DIR` (defaults to
    `$XDG_RUNTIME_DIR/pluk` when set, else `/tmp/pluk-<uid>` where uid is the current user).
    ```sh
-   ls -l "${PLUK_RUN_DIR:-${XDG_RUNTIME_DIR:-/tmp}/pluk-$(id -u)}"/logs/
+   ls -l "${PLUK_RUN_DIR:-${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/pluk}}"/logs/   # with XDG_RUNTIME_DIR set
+   ls -l "${PLUK_RUN_DIR:-/tmp/pluk-$(id -u)}"/logs/                        # without it
    ```
 3. Is a watcher still attached to the pane?
    ```sh
