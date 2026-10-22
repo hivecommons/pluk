@@ -214,10 +214,24 @@ test('watch (stream) exits 0 on SIGINT', async () => {
     stdio: ['pipe', 'pipe', 'pipe'],
     env: { ...process.env, PATH: `${stubBin}:${process.env.PATH}` },
   });
-  // Give the process a moment to install its SIGINT handler.
-  await new Promise(r => setTimeout(r, 500));
+  let out = '';
+  child.stdout.on('data', d => { out += d; });
   const exit = new Promise(resolve => child.on('exit', (code, signal) => resolve({ code, signal })));
-  child.kill('SIGINT');
+  // cmdWatch installs its SIGINT handler synchronously after wiring the
+  // stdin watcher, so the first classified event on stdout proves the
+  // handler is live. Wait for it instead of a fixed sleep, which raced the
+  // handler on a loaded host and let the default disposition kill the
+  // child with SIGINT.
+  child.stdin.write('esc to interrupt\n');
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`no event seen; got: ${out}`)), 10000);
+    child.stdout.on('data', () => {
+      if (out.includes('"type":"state_change"')) {
+        clearTimeout(timer);
+        resolve();
+      }
+    });
+  }).finally(() => child.kill('SIGINT'));
   const { code, signal } = await exit;
   assert.equal(signal, null, 'handler must catch SIGINT, not die from it');
   assert.equal(code, 0);
