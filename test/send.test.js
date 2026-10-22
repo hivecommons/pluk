@@ -53,3 +53,15 @@ test('every send-keys target is an exact session match', () => {
     assert.strictEqual(c[c.indexOf('-t') + 1], '=agent:');
   }
 });
+
+test('trailing ; is escaped so tmux does not treat it as a separator', () => {
+  const last = (text, o = {}) => {
+    const c = buildSendCommands({ session: 's1', text, ...o })[0];
+    return c[c.length - 1];
+  };
+  assert.strictEqual(last(';'), '\\;');
+  assert.strictEqual(last('make test;', { enter: true }), 'make test\\;');
+  assert.strictEqual(last('foo\\;', { literal: true }), 'foo\\\\;');
+  assert.strictEqual(last('a; b'), 'a; b');
+  assert.strictEqual(last('trail\\'), 'trail\\');
+});

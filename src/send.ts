@@ -21,7 +21,11 @@ export function buildSendCommands(opts: SendOptions): string[][] {
   const args = ['send-keys'];
   if (literal || enter) args.push('-l');
   // `--` ends option parsing so text starting with '-' is never read as a flag.
-  args.push('-t', exactTarget(session), '--', text);
+  // tmux's argv parser treats an argument ending in ';' as a command separator
+  // and strips it (dropping the argument if it becomes empty); only a trailing
+  // '\;' survives as a literal ';'. -l and `--` do not disable this.
+  const safeText = text.endsWith(';') ? text.slice(0, -1) + '\\;' : text;
+  args.push('-t', exactTarget(session), '--', safeText);
 
   const commands = [args];
   if (enter) {

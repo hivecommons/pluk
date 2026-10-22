@@ -1,0 +1,1 @@
+- `pluk send` no longer loses a trailing `;` (tmux treats an argument ending in `;` as a command separator); the text now reaches the pane byte-for-byte (#335).
