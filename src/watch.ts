@@ -102,6 +102,7 @@ export function watch(opts: WatchOptions): WatchHandle {
     const timer = setInterval(() => {
       stats.framesPolled++;
       try {
+        // A hung tmux server makes this throw ETIMEDOUT, counted below as a capture failure.
         const frame = tmuxCapturePane(target);
         const event = classifier.classifyFrame(frame);
         if (event) emit(event);

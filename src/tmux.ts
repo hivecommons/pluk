@@ -5,12 +5,15 @@ import { execFileSync } from 'node:child_process';
  *
  * Before this module existed, attach.ts, sessions.ts, watch.ts, and send.ts
  * each called `execFileSync('tmux', ...)` directly, and each picked its own
- * stdio/encoding/timeout options independently — e.g. only the
- * `list-sessions` call site set a timeout, so a hung tmux server could block
- * the others indefinitely. Routing every call through here keeps the
- * per-command options in one place and makes the tmux dependency explicit
+ * stdio/encoding/timeout options independently. Routing every call through
+ * here keeps the per-command options in one place and makes the tmux dependency explicit
  * and swappable (e.g. for testing) rather than duplicated ad hoc.
  */
+
+// The read-only queries (list-sessions, capture-pane) are bounded so a hung
+// tmux server throws ETIMEDOUT instead of blocking the caller indefinitely.
+// Interactive and one-shot commands are deliberately left unbounded.
+const TMUX_QUERY_TIMEOUT_MS = 5000;
 
 /**
  * tmux resolves a bare `-t name` by prefix and fnmatch, and reads `a.b` as
@@ -67,7 +70,7 @@ export function tmuxListSessionNames(): string[] {
   const output = execFileSync('tmux', ['list-sessions', '-F', '#{session_name}'], {
     encoding: 'utf-8',
     stdio: ['ignore', 'pipe', 'ignore'],
-    timeout: 5000,
+    timeout: TMUX_QUERY_TIMEOUT_MS,
   });
   return output
     .split('\n')
@@ -79,5 +82,6 @@ export function tmuxCapturePane(target: string): string {
   return execFileSync('tmux', ['capture-pane', '-p', '-t', target], {
     encoding: 'utf-8',
     stdio: ['ignore', 'pipe', 'ignore'],
+    timeout: TMUX_QUERY_TIMEOUT_MS,
   });
 }
