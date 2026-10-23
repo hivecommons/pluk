@@ -107,6 +107,8 @@ tmux attach -t my-agent
 | `pluk patterns --cli=claude` | Show loaded patterns for a CLI |
 | `pluk <command> --help` / `-h` | Show usage (works after any subcommand) |
 
+Unknown or misspelled `--flags` on any command exit 2 (`unknown flag --name`) instead of being silently ignored.
+
 ### Attach Flags
 
 | Flag | What it does |
@@ -147,7 +149,6 @@ tell a healthy quiet session from one that is repeatedly failing, add
 `--diagnostics[=secs]` (default every 60 s); the value must be a positive number
 of seconds (at most 2147483, the `setInterval` limit), or omitted to use the
 default—anything else is rejected with exit 2.
-Unknown or misspelled `--flags` also exit 2 (`unknown flag --name`) instead of being ignored.
 It writes one JSON line per period, plus a final one on exit, to **stderr** —
 stdout stays pure event JSONL:
 

@@ -70,7 +70,7 @@ const BOOL_FLAGS = new Set([
 ]);
 
 const KNOWN_FLAGS = new Set([
-  'help', 'h', ...VALUE_FLAGS, ...BOOL_FLAGS, 'capture', 'diagnostics',
+  'help', ...VALUE_FLAGS, ...BOOL_FLAGS, 'capture', 'diagnostics',
 ]);
 
 function rejectUnknownFlag(name: string): void {
