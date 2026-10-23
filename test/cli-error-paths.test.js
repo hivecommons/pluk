@@ -346,3 +346,16 @@ test('bare boolean switches are still accepted', () => {
   assert.equal(r.status, 0);
   assert.doesNotMatch(r.stderr, /requires a value/);
 });
+
+test('unknown or misspelled --flags exit 2 with an unknown-flag error', () => {
+  for (const [args, flag] of [
+    [['watch', 's', '--captur=50'], 'captur'],
+    [['send', 's', '--text=hi', '--entr'], 'entr'],
+    [['watch', 's', '--'], ''],
+    [['watch', 's', '--=x'], ''],
+  ]) {
+    const r = spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8' });
+    assert.equal(r.status, 2, args.join(' '));
+    assert.match(r.stderr, new RegExp(`unknown flag --${flag}`));
+  }
+});

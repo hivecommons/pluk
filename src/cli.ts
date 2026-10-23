@@ -69,6 +69,17 @@ const BOOL_FLAGS = new Set([
   'no-open', 'dangerous', 'json', 'enter', 'literal',
 ]);
 
+const KNOWN_FLAGS = new Set([
+  'help', 'h', ...VALUE_FLAGS, ...BOOL_FLAGS, 'capture', 'diagnostics',
+]);
+
+function rejectUnknownFlag(name: string): void {
+  if (!KNOWN_FLAGS.has(name)) {
+    console.error(`${paintStderr(ANSI_RED, 'Error:')} unknown flag --${name} (see pluk --help)`);
+    process.exit(2);
+  }
+}
+
 function parseArgs(args: string[]): { positional: string[]; flags: Record<string, string> } {
   const positional: string[] = [];
   const flags: Record<string, string> = {};
@@ -79,6 +90,7 @@ function parseArgs(args: string[]): { positional: string[]; flags: Record<string
       if (eqIdx > 0) {
         const name = arg.slice(2, eqIdx);
         const value = arg.slice(eqIdx + 1);
+        rejectUnknownFlag(name);
         if (BOOL_FLAGS.has(name) && value !== 'true' && value !== 'false') {
           console.error(`${paintStderr(ANSI_RED, 'Error:')} --${name} is a boolean flag: use --${name} or --${name}=false`);
           process.exit(2);
@@ -86,6 +98,7 @@ function parseArgs(args: string[]): { positional: string[]; flags: Record<string
         flags[name] = value;
       } else {
         const name = arg.slice(2);
+        rejectUnknownFlag(name);
         if (VALUE_FLAGS.has(name)) {
           console.error(`${paintStderr(ANSI_RED, 'Error:')} --${name} requires a value: use --${name}=<value>`);
           process.exit(2);
