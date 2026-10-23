@@ -10,30 +10,41 @@ Pluk classifies, subscribes to, and reacts to JSONL event streams from AI coding
 
 ## Install
 
+Requirements:
+
+- Node.js 22 or newer
+- tmux (`attach`, `send` and `watch --capture` drive tmux sessions)
+
 ```bash
 npm install -g @hivecommons/pluk
 ```
 
+Optional: install [rationguard](https://www.npmjs.com/package/@hivecommons/rationguard) only if you want `pluk attach --rationguard`. pluk never fetches it for you; without it on `PATH` (or `--rationguard-bin`), `--rationguard` exits with an error.
+
+```bash
+npm install -g @hivecommons/rationguard
+```
 
 ## Quick Start
 
-One command to create a tmux session, start an AI CLI, attach pluk event capture, and wire up rationguard for real-time excuse detection:
+One command to create a tmux session, start an AI CLI, and attach pluk event capture:
+
+```bash
+pluk attach my-agent --cli=claude
+```
+
+This does three things:
+1. Creates a tmux session named `my-agent`
+2. Attaches pluk via `tmux pipe-pane` to classify all terminal output, including start-up output
+3. Starts `claude` inside it
+
+To also wire up rationguard for real-time excuse detection (requires rationguard to be installed; see [Install](#install)):
 
 ```bash
 pluk attach my-agent --cli=claude --rationguard --rebuttal=send
 ```
 
-This does four things:
-1. Creates a tmux session named `my-agent`
-2. Attaches pluk via `tmux pipe-pane` to classify all terminal output, including start-up output
-3. Starts `claude` inside it
-4. Starts `rationguard watch` to detect rationalizations and send rebuttals back
-
-To just attach pluk without rationguard:
-
-```bash
-pluk attach my-agent --cli=claude
-```
+This additionally starts `rationguard watch` to detect rationalizations and send rebuttals back.
 
 To attach to an existing tmux session (e.g., one already running goose):
 
