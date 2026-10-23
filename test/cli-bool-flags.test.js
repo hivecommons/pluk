@@ -39,7 +39,7 @@ test('--enter=1 is rejected with exit 2 and a boolean hint', () => {
 });
 
 test('--dangerous=on is rejected with exit 2', () => {
-  const { code, stderr } = runCli(['sessions', '--dangerous=on']);
+  const { code, stderr } = runCli(['attach', 's', '--dangerous=on']);
   assert.equal(code, 2);
   assert.match(stderr, /--dangerous is a boolean flag/);
 });

@@ -12,6 +12,7 @@ import { attach } from './attach.js';
 import { send } from './send.js';
 import { ANSI_RED, ANSI_GREEN, ANSI_CYAN, ANSI_DIM, ANSI_BOLD, ANSI_RESET, paintStderr, paintStdout } from './ansi.js';
 import { packageVersion } from './version.js';
+import { COMMAND_FLAGS, parseArgs } from './cli-args.js';
 
 /** How often a running `pluk watch` checks its log file for rotation. */
 const LOG_ROTATE_CHECK_INTERVAL_MS = 30_000;
@@ -20,11 +21,11 @@ function usage(): void {
   console.log(`${paintStdout(ANSI_BOLD, 'pluk')} — structured events from AI agent terminal output
 
 ${paintStdout(ANSI_CYAN, 'Usage:')}
-  pluk attach <session> [--cli=claude] [--rationguard] [--rationguard-bin=<cmd>] [--rebuttal=send] [--dangerous] [--verbose]
+  pluk attach <session> [--cli=claude] [--rationguard] [--rationguard-bin=<cmd>] [--rebuttal=send] [--dangerous] [--verbose] [--command=<cmd>] [--cli-args=<args>] [--run-dir=<path>] [--no-raw] [--dir=<path>] [--no-open]
   pluk sessions [--run-dir=<path>] [--json]
-  pluk subscribe <session> [--filter=type1,type2] [--from-beginning] [--verbose] [--diagnostics[=secs]]
-  pluk watch <session> [--cli=claude] [--filter=type1,type2] [--include-raw] [--capture[=ms]] [--diagnostics[=secs]]
-  pluk send <session> --text="<text>" [--enter] [--literal]
+  pluk subscribe <session> [--run-dir=<path>] [--filter=type1,type2] [--from-beginning] [--verbose] [--diagnostics[=secs]]
+  pluk watch <session> [--cli=claude] [--filter=type1,type2] [--include-raw] [--capture[=ms]] [--diagnostics[=secs]] [--patterns-dir=<dir>] [--pane=<pane>] [--run-dir=<path>]
+  pluk send <session> [--session=<session>] --text="<text>" [--enter] [--literal]
   pluk patterns [--cli=claude] [--patterns-dir=<dir>]
   pluk version
 
@@ -57,60 +58,6 @@ ${paintStdout(ANSI_CYAN, 'Examples:')}
   ${paintStdout(ANSI_DIM, '# Manual: pipe agent output through the classifier')}
   tmux pipe-pane -t my-agent -o "pluk watch my-agent --cli=claude >> \\"\\$XDG_RUNTIME_DIR/pluk/logs/my-agent.jsonl\\""
 `);
-}
-
-const VALUE_FLAGS = new Set([
-  'text', 'session', 'run-dir', 'cli', 'command', 'cli-args', 'rebuttal',
-  'dir', 'rationguard-bin', 'patterns-dir', 'pane', 'filter',
-]);
-
-const BOOL_FLAGS = new Set([
-  'from-beginning', 'verbose', 'include-raw', 'rationguard', 'no-raw',
-  'no-open', 'dangerous', 'json', 'enter', 'literal',
-]);
-
-const KNOWN_FLAGS = new Set([
-  'help', ...VALUE_FLAGS, ...BOOL_FLAGS, 'capture', 'diagnostics',
-]);
-
-function rejectUnknownFlag(name: string): void {
-  if (!KNOWN_FLAGS.has(name)) {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} unknown flag --${name} (see pluk --help)`);
-    process.exit(2);
-  }
-}
-
-function parseArgs(args: string[]): { positional: string[]; flags: Record<string, string> } {
-  const positional: string[] = [];
-  const flags: Record<string, string> = {};
-
-  for (const arg of args) {
-    if (arg.startsWith('--')) {
-      const eqIdx = arg.indexOf('=');
-      if (eqIdx > 0) {
-        const name = arg.slice(2, eqIdx);
-        const value = arg.slice(eqIdx + 1);
-        rejectUnknownFlag(name);
-        if (BOOL_FLAGS.has(name) && value !== 'true' && value !== 'false') {
-          console.error(`${paintStderr(ANSI_RED, 'Error:')} --${name} is a boolean flag: use --${name} or --${name}=false`);
-          process.exit(2);
-        }
-        flags[name] = value;
-      } else {
-        const name = arg.slice(2);
-        rejectUnknownFlag(name);
-        if (VALUE_FLAGS.has(name)) {
-          console.error(`${paintStderr(ANSI_RED, 'Error:')} --${name} requires a value: use --${name}=<value>`);
-          process.exit(2);
-        }
-        flags[name] = 'true';
-      }
-    } else {
-      positional.push(arg);
-    }
-  }
-
-  return { positional, flags };
 }
 
 function installPipePaneErrorHandlers(): void {
@@ -153,7 +100,7 @@ function parseDiagnosticsFlag(raw: string | undefined): string | undefined {
 }
 
 function cmdSubscribe(args: string[]): void {
-  const { positional, flags } = parseArgs(args);
+  const { positional, flags } = parseArgs(args, COMMAND_FLAGS['subscribe']!, 'subscribe');
   const session = positional[0];
 
   if (!session) {
@@ -200,7 +147,7 @@ function cmdSubscribe(args: string[]): void {
 function cmdWatch(args: string[]): void {
   installPipePaneErrorHandlers();
 
-  const { positional, flags } = parseArgs(args);
+  const { positional, flags } = parseArgs(args, COMMAND_FLAGS['watch']!, 'watch');
   const session = positional[0] ?? 'stdin';
   const cli = flags['cli'] ?? 'claude';
 
@@ -281,7 +228,7 @@ function cmdWatch(args: string[]): void {
 }
 
 function cmdAttach(args: string[]): void {
-  const { positional, flags } = parseArgs(args);
+  const { positional, flags } = parseArgs(args, COMMAND_FLAGS['attach']!, 'attach');
   const session = positional[0];
 
   if (!session) {
@@ -322,7 +269,7 @@ function cmdAttach(args: string[]): void {
 }
 
 function cmdSessions(args: string[]): void {
-  const { flags } = parseArgs(args);
+  const { flags } = parseArgs(args, COMMAND_FLAGS['sessions']!, 'sessions');
   const runDir = flags['run-dir'] ?? process.env['PLUK_RUN_DIR'];
   const sessions = discoverSessions(runDir);
 
@@ -364,7 +311,7 @@ function builtinCLIList(): string {
 }
 
 function cmdPatterns(args: string[]): void {
-  const { flags } = parseArgs(args);
+  const { flags } = parseArgs(args, COMMAND_FLAGS['patterns']!, 'patterns');
   const cli = flags['cli'] ?? 'claude';
 
   const patternsDir = flags['patterns-dir'];
@@ -402,7 +349,7 @@ function cmdPatterns(args: string[]): void {
 }
 
 function cmdSend(args: string[]): void {
-  const { positional, flags } = parseArgs(args);
+  const { positional, flags } = parseArgs(args, COMMAND_FLAGS['send']!, 'send');
   // The leading positional is the session only when --session was not given;
   // deciding by value would drop a text word that happens to equal the name.
   const sessionFromFlag = flags['session'] !== undefined;
@@ -498,6 +445,7 @@ function main(): void {
         cmdPatterns(rest);
         break;
       case 'version':
+        parseArgs(rest, COMMAND_FLAGS['version']!, 'version');
         console.log(`@hivecommons/pluk ${packageVersion()}`);
         break;
       case undefined:

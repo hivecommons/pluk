@@ -107,7 +107,7 @@ tmux attach -t my-agent
 | `pluk patterns --cli=claude` | Show loaded patterns for a CLI |
 | `pluk <command> --help` / `-h` | Show usage (works after any subcommand) |
 
-Unknown or misspelled `--flags` on any command exit 2 (`unknown flag --name`) instead of being silently ignored.
+Unknown, misspelled, or wrong-subcommand `--flags` exit 2 (`unknown flag --name for "pluk <cmd>" (see pluk <cmd> --help)`) instead of being silently ignored. For example, `pluk sessions --cli=claude` is rejected: `--cli` belongs to `attach`, `watch`, and `patterns`, not `sessions`. Run `pluk --help` for the per-command flag lists.
 
 ### Attach Flags
 
