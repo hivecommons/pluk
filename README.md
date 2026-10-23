@@ -105,6 +105,7 @@ tmux attach -t my-agent
 | `pluk watch <session>` | Classify stdin line-by-line |
 | `pluk send <session> --text="..." --enter` | Send text to a tmux session |
 | `pluk patterns --cli=claude` | Show loaded patterns for a CLI |
+| `pluk version` | Print the installed version |
 | `pluk <command> --help` / `-h` | Show usage (works after any subcommand) |
 
 Unknown, misspelled, or wrong-subcommand `--flags` exit 2 (`unknown flag --name for "pluk <cmd>" (see pluk <cmd> --help)`) instead of being silently ignored. For example, `pluk sessions --cli=claude` is rejected: `--cli` belongs to `attach`, `watch`, and `patterns`, not `sessions`. Run `pluk --help` for the per-command flag lists.
@@ -116,7 +117,7 @@ Unknown, misspelled, or wrong-subcommand `--flags` exit 2 (`unknown flag --name 
 | `--cli=claude` | CLI type: `claude`, `copilot`, `gemini`, `goose`, `codex`, `aider`, `omp` |
 | `--command=<cmd>` | Override the CLI command/executable to launch (instead of the default resolved from `--cli`); combines with `--cli-args` |
 | `--rationguard` | Start rationguard watcher alongside pluk (requires `rationguard` on `PATH` — `npm install -g @hivecommons/rationguard` — or `--rationguard-bin`; pluk never fetches it from the registry implicitly) |
-| `--rationguard-bin=<cmd>` | Explicit rationguard command to run instead of the one on `PATH`, e.g. `--rationguard-bin='npx --yes @hivecommons/rationguard@0.11.0'` (also `PLUK_RATIONGUARD_BIN`); the flag is ignored with a warning without `--rationguard` |
+| `--rationguard-bin=<cmd>` | Explicit rationguard command to run instead of the one on `PATH`, e.g. `--rationguard-bin='npx --yes @hivecommons/rationguard@0.13.0'` (also `PLUK_RATIONGUARD_BIN`); the flag is ignored with a warning without `--rationguard` |
 | `--rebuttal=log\|send` | Log rebuttals or auto-send them when rationguard detects excuses; other values exit with code 2 before attaching. Ignored with a warning without `--rationguard` |
 | `--dangerous` | Skip CLI permission prompts (`--dangerously-skip-permissions` for claude, `--allow-all-tools` for copilot, `--full-auto` for codex, `--non-interactive` for goose, `--approval-mode yolo` for omp) |
 | `--dir=/path` | Working directory for the agent |
@@ -138,7 +139,7 @@ Unknown, misspelled, or wrong-subcommand `--flags` exit 2 (`unknown flag --name 
 | `patterns` | `--patterns-dir=<dir>` | Show the patterns loaded from this directory (same lookup as `watch`) |
 | `subscribe` | `--from-beginning` | Replay the existing log from the start instead of only new lines |
 | `subscribe` | `--verbose` | Show debug output |
-| `sessions`, `subscribe` | `--run-dir=<path>` | Run directory to read (overrides `PLUK_RUN_DIR`) |
+| `sessions`, `subscribe`, `watch` | `--run-dir=<path>` | Run directory to use (overrides `PLUK_RUN_DIR`); `attach` accepts it too |
 | `sessions` | `--json` | Print the session list as JSON instead of a table |
 
 ### Health diagnostics (`watch`, `subscribe`)

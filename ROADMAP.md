@@ -11,22 +11,25 @@ package and its relationship with the wider Hive Commons agent-tooling stack.
 - Built-in pattern sets for Claude, Copilot, Gemini, Goose, Codex, Aider, and Oh My Pi (`omp`).
 - Rationguard integration through `pluk attach --rationguard` and stable event
   fields consumed by companion tools.
+- A versioned JSONL event envelope (`v: 1`) with documented compatibility
+  rules in the README's [Event Schema](README.md#event-schema) section.
 
 ## Near term
 
-1. **Event schema stability:** document compatibility expectations for the JSONL
-   event format so tools such as rationguard and hotshot can depend on it safely.
+1. **Event schema evolution:** keep the JSONL envelope additive within schema
+   version 1 and define the process for a version bump, so tools such as
+   rationguard can depend on it safely.
 2. **Broader CLI coverage:** add and test pattern packs for additional active
    agent CLIs as they become adoption-relevant.
 3. **Operational hardening:** continue replacing tmux/terminal edge cases with
    explicit diagnostics, non-zero exits for operator errors, and hermetic tests.
 
-## Go and TypeScript relationship
+## Implementation
 
-The TypeScript package is the npm-facing implementation for JavaScript users and
-companion tools. The Go implementation remains useful where a static binary is
-preferred. Near-term work should keep event shapes and user-facing semantics
-aligned rather than forcing a repository merge.
+Pluk is a single TypeScript package published to npm as `@hivecommons/pluk`;
+there is no separate Go binary. Hive and other consumers shell out to the npm
+CLI and read its JSONL logs, so event shapes and user-facing semantics are the
+compatibility surface.
 
 ## Non-goals for now
 
