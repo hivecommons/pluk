@@ -145,7 +145,8 @@ tmux attach -t my-agent
 input errors and malformed log lines so the pipe-pane process never dies. To
 tell a healthy quiet session from one that is repeatedly failing, add
 `--diagnostics[=secs]` (default every 60 s); the value must be a positive number
-of seconds, or omitted to use the default—anything else is rejected with exit 2.
+of seconds (at most 2147483, the `setInterval` limit), or omitted to use the
+default—anything else is rejected with exit 2.
 It writes one JSON line per period, plus a final one on exit, to **stderr** —
 stdout stays pure event JSONL:
 

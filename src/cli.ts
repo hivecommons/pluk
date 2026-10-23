@@ -121,11 +121,19 @@ function parseFilter(raw: string | undefined): PlukEventType[] | undefined {
   return types as PlukEventType[];
 }
 
+// setInterval() stores its delay as a signed 32-bit int; larger values are
+// clamped to 1 ms with a TimeoutOverflowWarning, so reject them up front.
+const MAX_DIAGNOSTICS_SECONDS = Math.floor((2 ** 31 - 1) / 1000);
+
 function parseDiagnosticsFlag(raw: string | undefined): string | undefined {
   if (raw === undefined || raw === 'true') return raw;
   const seconds = Number(raw);
   if (!Number.isFinite(seconds) || seconds <= 0) {
     console.error(`${paintStderr(ANSI_RED, 'Error:')} --diagnostics expects a positive number of seconds (or a bare --diagnostics for the 60s default)`);
+    process.exit(2);
+  }
+  if (seconds > MAX_DIAGNOSTICS_SECONDS) {
+    console.error(`${paintStderr(ANSI_RED, 'Error:')} --diagnostics must be at most ${MAX_DIAGNOSTICS_SECONDS} seconds`);
     process.exit(2);
   }
   return raw;
@@ -184,6 +192,7 @@ function cmdWatch(args: string[]): void {
   const cli = flags['cli'] ?? 'claude';
 
   const filter = parseFilter(flags['filter']);
+  const diagnosticsFlag = parseDiagnosticsFlag(flags['diagnostics']);
 
   const noPatternSet = !hasAnyPattern(getPatterns(cli, flags['patterns-dir']));
   if (noPatternSet) {
@@ -248,7 +257,7 @@ function cmdWatch(args: string[]): void {
     // rotation rather than derive a log path from it.
   }
 
-  const stopDiagnostics = startDiagnostics('watch', () => ({ ...watcher.stats() }), parseDiagnosticsFlag(flags['diagnostics']));
+  const stopDiagnostics = startDiagnostics('watch', () => ({ ...watcher.stats() }), diagnosticsFlag);
   process.on('exit', stopDiagnostics);
 
   process.on('SIGINT', () => {
