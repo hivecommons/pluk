@@ -418,3 +418,32 @@ test('splitShellWords honors backslash escapes outside single quotes', () => {
   // trailing backslash is preserved literally
   assert.deepEqual(splitShellWords('x\\'), ['x\\']);
 });
+
+for (const [flag, text] of [
+  ['--command=claude', /--command was set but session already exists; the running CLI was not restarted/],
+  ['--cli-args=--model opus', /--cli-args was set but session already exists; the running CLI was not restarted/],
+  ['--dir=/', /--dir was set but session already exists; the working directory of the existing session was not changed/],
+]) {
+  test(`attach to an existing session warns that ${flag.split('=')[0]} is ignored`, () => {
+    const stubs = makeStubs({ hasSession: true, which: ['tmux', 'pluk'] });
+    const { code, stderr } = runAttach(['agent-ign', '--cli=claude', `--run-dir=${makeRunDir()}`, '--no-open', flag], stubs);
+    assert.equal(code, 0);
+    assert.match(stderr, text);
+  });
+}
+
+test('attach to an existing session without --command/--cli-args/--dir emits no ignored-flag warning', () => {
+  const stubs = makeStubs({ hasSession: true, which: ['tmux', 'pluk'] });
+  const { stderr } = runAttach(['agent-noign', '--cli=claude', `--run-dir=${makeRunDir()}`, '--no-open'], stubs);
+  assert.doesNotMatch(stderr, /but session already exists/);
+});
+
+test('attach to a new session does not warn about --command/--cli-args/--dir', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const { code, stderr } = runAttach(
+    ['agent-newok', '--cli=claude', `--run-dir=${makeRunDir()}`, '--no-open', '--command=claude', '--cli-args=--x', '--dir=/'],
+    stubs,
+  );
+  assert.equal(code, 0);
+  assert.doesNotMatch(stderr, /but session already exists/);
+});

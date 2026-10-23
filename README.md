@@ -41,7 +41,7 @@ To attach to an existing tmux session (e.g., one already running goose):
 pluk attach my-agent --cli=goose
 ```
 
-> **Note:** When attaching to an existing session with `--dangerous`, the CLI may not have permission-skip enabled (the flag only applies when creating a new session). pluk will print a warning with the command to restart the CLI with the right flag.
+> **Note:** When attaching to an existing session with `--dangerous`, the CLI may not have permission-skip enabled (the flag only applies when creating a new session). pluk will print a warning with the command to restart the CLI with the right flag. Likewise, `--command`, `--cli-args` and `--dir` only apply when creating a new session; pluk warns when they are passed to an existing one.
 
 By default, pluk attaches to the tmux session. Without `--rationguard`, it attaches in the current terminal. With `--rationguard` on macOS (iTerm2 / Terminal.app), it opens a new terminal window; elsewhere it prints a `tmux attach -t <session>` hint, since rationguard runs in the foreground. Use `--no-open` to suppress this: without `--rationguard` the session is left detached and the attach hint is printed instead; with `--rationguard` it suppresses the new window (macOS) or the hint (elsewhere).
 

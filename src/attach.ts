@@ -357,6 +357,15 @@ export function attach(opts: AttachOptions): void {
         console.error(`To restart with permissions skipped: pluk send ${session} C-c && tmux send-keys -t ${shellQuote(exactTarget(session))} -- ${shellQuote(buildCliCommand(cliCmd, dangerFlag))} Enter`);
       }
     }
+    if (opts.cliCommand !== undefined) {
+      console.error('Warning: --command was set but session already exists; the running CLI was not restarted.');
+    }
+    if (opts.cliArgs !== undefined) {
+      console.error('Warning: --cli-args was set but session already exists; the running CLI was not restarted.');
+    }
+    if (opts.workDir !== undefined) {
+      console.error('Warning: --dir was set but session already exists; the working directory of the existing session was not changed.');
+    }
     wirePipePane();
   }
 
