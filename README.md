@@ -144,8 +144,10 @@ tmux attach -t my-agent
 `pluk watch` and `pluk subscribe` deliberately swallow capture-pane failures,
 input errors and malformed log lines so the pipe-pane process never dies. To
 tell a healthy quiet session from one that is repeatedly failing, add
-`--diagnostics[=secs]` (default every 60 s). It writes one JSON line per period,
-plus a final one on exit, to **stderr** — stdout stays pure event JSONL:
+`--diagnostics[=secs]` (default every 60 s); the value must be a positive number
+of seconds, or omitted to use the default—anything else is rejected with exit 2.
+It writes one JSON line per period, plus a final one on exit, to **stderr** —
+stdout stays pure event JSONL:
 
 ```json
 {"pluk_diagnostics":1,"command":"watch","uptime_s":120,"final":false,"linesSeen":842,"framesPolled":0,"captureFailures":0,"classifyErrors":0,"inputErrors":0,"eventsEmitted":31,"eventsFiltered":4}

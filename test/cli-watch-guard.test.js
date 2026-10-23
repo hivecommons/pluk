@@ -94,6 +94,18 @@ for (const bad of ['0', '-5', 'abc', '', '1.5']) {
   });
 }
 
+// --- watch/subscribe: invalid --diagnostics value is rejected ---------------------
+
+for (const cmd of ['watch', 'subscribe']) {
+  for (const bad of ['abc', '0', '-5', '5min', 'false']) {
+    test(`${cmd} --diagnostics=${bad} exits 2 with a usage error`, () => {
+      const { code, stderr } = run(CLI, [cmd, 'x', `--diagnostics=${bad}`]);
+      assert.equal(code, 2);
+      assert.match(stderr, /--diagnostics expects a positive number of seconds/);
+    });
+  }
+}
+
 test('watch --pane without --capture warns that --pane is ignored', () => {
   const { code, stderr } = run(CLI, ['watch', 'x', '--pane=%1'], { input: '' });
   assert.equal(code, 0);
