@@ -46,8 +46,9 @@ A silent watcher means those consumers act on stale state.
 | `eventsFiltered` ≈ `linesSeen` | `--filter` excludes everything | Review the filter set |
 | `malformedLines` rising (subscriber) | Log has non-pluk lines | Check for another writer on the log file or truncated rotation |
 
-If counters are healthy and events still do not arrive, the CLI may have no
-bundled patterns (`codex`, `aider`): pass `--patterns-dir`.
+If counters are healthy and events still do not arrive, check that a pattern
+set exists for the CLI name you passed (`pluk patterns --cli=<cli>` lists the
+bundled sets); for an unsupported CLI, pass `--patterns-dir`.
 
 ## Recover
 

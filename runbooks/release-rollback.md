@@ -1,7 +1,9 @@
 # Runbook: rolling back a bad pluk release
 
-`publish.yml` runs `npm test` against the tagged ref and then publishes to npm
-on every `v*` tag push. Tests reduce risk but cannot catch every regression
+Merging a `package.json` version bump to `main` makes `auto-release.yml`
+create the `v<version>` tag and dispatch `publish.yml` (a manual `v*` tag
+push also triggers it). `publish.yml` runs `npm test` against the tagged ref
+and then publishes to npm. Tests reduce risk but cannot catch every regression
 (for example, behavior that only breaks under a real tmux session, a
 downstream consumer's assumptions, or an environment-specific failure). This
 runbook covers what to do once a bad version has already reached the npm
@@ -54,12 +56,14 @@ packaging nit.
 
 1. Branch from `main`, fix the regression, and add a regression test per
    `CONTRIBUTING.md`.
-2. Bump the version in `package.json` and land the fix through the normal PR
-   process.
-3. Tag `vX.Y.Z` on `main` once merged; `publish.yml` runs the test suite
-   against that tag and publishes automatically.
-4. Add a `changelog.d/fixed-<slug>.md` fragment describing the regression and
+2. Add a `changelog.d/fixed-<slug>.md` fragment describing the regression and
    the fix, following the existing entries in `changelog.d/`.
+3. Bump the version in `package.json`, roll the fragments into a non-empty
+   `## X.Y.Z` section of `CHANGELOG.md`, and land the fix through the normal
+   PR process.
+4. On merge, `auto-release.yml` tags `vX.Y.Z` and dispatches `publish.yml`,
+   which runs the test suite against that tag and publishes automatically.
+   If tagging or dispatch fails, see `publish-failure.md`.
 
 ## After
 

@@ -1,7 +1,8 @@
 # Runbook: a tag push whose publish pipeline failed
 
-`publish.yml` runs three jobs on every `v*` tag push: `verify-tag`, then
-`publish` (npm), then `release` (GitHub release). Which job failed decides the
+`publish.yml` runs three jobs on every `v*` tag push (and when
+`auto-release.yml` dispatches it after a version-bump merge): `verify-tag`,
+then `publish` (npm), then `release` (GitHub release). Which job failed decides the
 recovery. For a version that already reached npm and is bad, use
 `release-rollback.md` instead.
 
