@@ -72,6 +72,15 @@ test('tool_call_started: trailing "(tool)" wins over the bullet name', () => {
   assert.equal(ev.data.input_preview, '● Bash command ls -la (bash)');
 });
 
+test('tool_call_started: a one-word lowercase Tool(arg) is not read as the "(tool)" suffix (#367)', () => {
+  for (const [line, tool] of [['● Bash(ls)', 'Bash'], ['● Skill(commit)', 'Skill']]) {
+    const ev = makeClassifier().classify(line);
+    assert.ok(ev);
+    assert.equal(ev.type, 'tool_call_started');
+    assert.equal(ev.data.tool, tool);
+  }
+});
+
 test('tool_call_started: input_preview is truncated to 120 chars', () => {
   const long = '● Read(' + 'X'.repeat(200) + ')'; // uppercase: no "(tool)" paren match
   const ev = makeClassifier().classify(long);

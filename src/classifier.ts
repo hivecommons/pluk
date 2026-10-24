@@ -48,7 +48,9 @@ function truncate(s: string, max: number): string {
   return units.length > max ? units.slice(0, max).join('') : s;
 }
 
-const TOOL_PAREN_RE = /\(([a-z]+)\)$/;
+// The kind suffix is space-separated (`● npm test (shell)`); without the
+// leading \s, Claude's `● Bash(ls)` would report the argument as the tool.
+const TOOL_PAREN_RE = /\s\(([a-z]+)\)$/;
 const TOOL_BULLET_RE = /[●✓]\s+([A-Za-z]+)/;
 
 function extractTool(line: string): string {

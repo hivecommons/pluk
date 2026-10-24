@@ -1,0 +1,1 @@
+- Classifier reports the tool name for Claude tool lines such as `● Bash(ls)` instead of mistaking the one-word argument for a `(kind)` suffix.
