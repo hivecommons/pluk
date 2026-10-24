@@ -1,0 +1,1 @@
+- Subscriber tail mode preserves a partially written event at startup and delivers it once its terminating newline is appended, instead of dropping it.

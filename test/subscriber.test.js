@@ -107,6 +107,47 @@ test('default (tail) mode skips pre-existing events', async () => {
   }
 });
 
+for (const { name, prefix, padding } of [
+  { name: 'first line', prefix: '', padding: '' },
+  { name: 'after complete lines', prefix: eventLine('rate_limit'), padding: '' },
+  { name: 'large log tail chunk', prefix: eventLine('rate_limit').repeat(200), padding: '' },
+  { name: 'partial line larger than a chunk', prefix: eventLine('rate_limit'), padding: 'x'.repeat(20000) },
+]) {
+  test(`tail mode preserves an unfinished startup record: ${name}`, async () => {
+    const dir = makeRunDir();
+    const log = join(dir, 'logs', 'partial.jsonl');
+    const message = padding + '✻ complete';
+    const line = Buffer.from(eventLine('error', { line: message }));
+    // Split inside a UTF-8 character: rewinding must use bytes, not characters.
+    const split = line.indexOf(Buffer.from('✻')) + 1;
+    writeFileSync(log, Buffer.concat([Buffer.from(prefix), line.subarray(0, split)]));
+
+    const events = [];
+    const sub = new Subscriber({ session: 'partial', runDir: dir });
+    sub.on('event', e => events.push(e));
+    // Observe startup without timing the append against an arbitrary delay.
+    let tailing = false;
+    sub.log = msg => { if (msg.startsWith('tailing from position')) tailing = true; };
+    const done = sub.start();
+    try {
+      await waitFor(() => tailing);
+      assert.equal(events.length, 0, 'complete old records must be skipped');
+      appendFileSync(log, line.subarray(split, line.length - 1));
+      await new Promise(r => setTimeout(r, 300));
+      assert.equal(events.length, 0, 'an event needs its terminating newline');
+      appendFileSync(log, '\n' + eventLine('state_change', { to: 'idle' }));
+      await waitFor(() => events.length >= 2);
+      assert.deepEqual(events.map(e => e.type), ['error', 'state_change']);
+      assert.equal(events[0].data.line, message);
+      assert.equal(sub.stats().malformedLines, 0);
+    } finally {
+      sub.stop();
+      await done;
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+}
+
 test('filter drops non-matching event types', async () => {
   const dir = makeRunDir();
   const log = join(dir, 'logs', 's3.jsonl');

@@ -123,7 +123,7 @@ export class Subscriber extends EventEmitter {
       // Holds an incomplete multi-byte sequence across read boundaries.
       let decoder = new StringDecoder('utf8');
       this.head = await readHead(fh);
-      if (!this.fromBeginning && position > 0) await this.seedResumeMarker(fh, position);
+      if (!this.fromBeginning && position > 0) position = await this.seedResumeMarker(fh, position);
       this.log(`tailing from position ${position}${this.filterSet ? ` (filter: ${[...this.filterSet].join(',')})` : ''}`);
 
       while (!this.aborted) {
@@ -223,27 +223,30 @@ export class Subscriber extends EventEmitter {
    * non-blank line in the first `size` bytes, without consuming or emitting
    * anything. Reads only the final chunk unless it holds fewer than two
    * newlines (a mid-file chunk needs one to cut the leading partial line and
-   * one to terminate a complete line).
+   * one to terminate a complete line). Returns the byte offset after the last
+   * newline, so an unfinished final line is read in full once completed.
    */
-  private async seedResumeMarker(fh: FileHandle, size: number): Promise<void> {
+  private async seedResumeMarker(fh: FileHandle, size: number): Promise<number> {
     let start = Math.max(0, size - READ_CHUNK_BYTES);
     const buf = Buffer.alloc(size - start);
     const { bytesRead } = await fh.read(buf, 0, buf.length, start);
-    let text = buf.subarray(0, bytesRead).toString('utf8');
-    if (start > 0 && text.indexOf('\n') === text.lastIndexOf('\n')) {
-      text = (await readFromStart(fh)).text.subarray(0, size).toString('utf8');
+    let tail: Buffer = buf.subarray(0, bytesRead);
+    if (start > 0 && tail.indexOf(0x0a) === tail.lastIndexOf(0x0a)) {
+      tail = (await readFromStart(fh)).text.subarray(0, size);
       start = 0;
     }
-    const lines = text.split('\n');
+    const position = start + tail.lastIndexOf(0x0a) + 1;
+    const lines = tail.toString('utf8').split('\n');
     lines.pop();
     // The first line of a mid-file chunk may be cut; only trust it when the chunk starts at byte 0.
     if (start > 0) lines.shift();
     for (let i = lines.length - 1; i >= 0; i--) {
       if (lines[i].trim()) {
         this.lastLine = lines[i];
-        return;
+        break;
       }
     }
+    return position;
   }
 
   /** True when the log's leading bytes differ from those remembered. */
