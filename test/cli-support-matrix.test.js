@@ -64,10 +64,13 @@ test('every CLI attach can launch has a non-empty idle pattern through getPatter
   }
 });
 
-test('every CLI with a --dangerous flag is also launchable via CLI_COMMANDS', () => {
+test('every CLI with a --dangerous flag or env is also launchable via CLI_COMMANDS', () => {
   const launchable = recordKeys(attachSource, 'CLI_COMMANDS');
   for (const cli of recordKeys(attachSource, 'DANGEROUS_FLAGS')) {
     assert.ok(launchable.includes(cli), `DANGEROUS_FLAGS has ${cli} but CLI_COMMANDS does not`);
+  }
+  for (const cli of recordKeys(attachSource, 'DANGEROUS_ENV')) {
+    assert.ok(launchable.includes(cli), `DANGEROUS_ENV has ${cli} but CLI_COMMANDS does not`);
   }
 });
 
