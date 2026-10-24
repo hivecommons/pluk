@@ -73,11 +73,22 @@ test('tool_call_started: trailing "(tool)" wins over the bullet name', () => {
 });
 
 test('tool_call_started: a one-word lowercase Tool(arg) is not read as the "(tool)" suffix (#367)', () => {
-  for (const [line, tool] of [['● Bash(ls)', 'Bash'], ['● Skill(commit)', 'Skill']]) {
+  // TOOL_PAREN_RE is meant for a space-separated kind suffix like
+  // "(bash)" above; with no \s before "(" it also matched Claude's
+  // "Tool(arg)" form whenever arg was a bare lowercase word, so
+  // "● Bash(ls)" reported tool "ls" instead of falling through to the
+  // ● bullet.
+  for (const [line, tool] of [
+    ['● Bash(ls)', 'Bash'],
+    ['● Bash(pwd)', 'Bash'],
+    ['● Bash(make)', 'Bash'],
+    ['● Skill(commit)', 'Skill'],
+    ['● Agent(explore)', 'Agent'],
+  ]) {
     const ev = makeClassifier().classify(line);
-    assert.ok(ev);
-    assert.equal(ev.type, 'tool_call_started');
-    assert.equal(ev.data.tool, tool);
+    assert.ok(ev, line);
+    assert.equal(ev.type, 'tool_call_started', line);
+    assert.equal(ev.data.tool, tool, line);
   }
 });
 
