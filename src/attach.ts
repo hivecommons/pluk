@@ -399,7 +399,19 @@ export function attach(opts: AttachOptions): void {
     if (pids.size > 0) {
       const list = [...pids];
       log(`killing ${list.length} existing rationguard watcher(s) for ${session}: ${list.join(', ')}`);
-      execFileSync('kill', list, { stdio: 'ignore' });
+      // Reap per PID: a watcher that exited since pgrep must not abort a half-wired attach.
+      for (const pid of list) {
+        try {
+          execFileSync('kill', [pid], { stdio: ['ignore', 'ignore', 'pipe'], encoding: 'utf-8' });
+        } catch (err) {
+          const stderrText = String((err as { stderr?: unknown }).stderr ?? '');
+          if (/no such process/i.test(stderrText)) {
+            log(`watcher ${pid} already exited; nothing to kill`);
+          } else {
+            console.error(`Warning: could not kill stale rationguard watcher ${pid}; continuing`);
+          }
+        }
+      }
     }
 
     const rgArgs = [

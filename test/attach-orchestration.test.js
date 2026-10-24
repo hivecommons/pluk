@@ -50,6 +50,7 @@ function makeStubs({
   osascriptOk = true,   // fake osascript exit status
   tmuxAttachOk = true,  // fake tmux `attach` result
   rgSleep = 0,          // seconds the fake rationguard stays alive
+  killFailPid = '',     // PID the fake kill reports as already gone (exit 1)
 } = {}) {
   const dir = mkdtempSync(join(scratch, 'stub-'));
   const logFor = name => join(dir, `${name}.log`);
@@ -76,6 +77,7 @@ ${pgrepPids ? `printf '%s\\n' '${pgrepPids}'\nexit 0` : 'exit 1'}
 `);
   writeStub(dir, 'kill', `#!/bin/sh
 printf '%s\\n' "$*" >> '${logFor('kill')}'
+${killFailPid ? `[ "$1" = '${killFailPid}' ] && { echo 'kill: (${killFailPid}) - No such process' >&2; exit 1; }` : ''}
 exit 0
 `);
   writeStub(dir, 'osascript', `#!/bin/sh
@@ -274,7 +276,7 @@ test('--rationguard kills stale watchers and spawns rationguard with rebuttal/ve
   );
   assert.equal(code, 0);
   assert.match(stderr, /killing 2 existing rationguard watcher\(s\) for agent-r/);
-  assert.equal(stubs.log('kill').trim(), '11111 22222');
+  assert.equal(stubs.log('kill').trim(), '11111\n22222');
   // The reap must only ever see the invoking user's processes (#322).
   const pgrepCalls = stubs.log('pgrep').trim().split('\n');
   assert.ok(pgrepCalls.length >= 1, 'pgrep should have run');
@@ -289,6 +291,24 @@ test('--rationguard kills stale watchers and spawns rationguard with rebuttal/ve
     stubs.log('rationguard').trim(),
     `watch agent-r --run-dir=${runDir} --cli=claude --rebuttal=log --verbose`,
   );
+});
+
+test('--rationguard keeps attaching when a stale watcher PID vanished before kill', () => {
+  const stubs = makeStubs({
+    which: ['tmux', 'pluk', 'rationguard'],
+    pgrepPids: '11111\n22222',
+    killFailPid: '11111',
+  });
+  const runDir = makeRunDir();
+  const { code, stderr } = runAttach(
+    ['agent-v', `--run-dir=${runDir}`, '--no-open', '--rationguard', '--verbose'],
+    stubs,
+  );
+  assert.equal(code, 0);
+  assert.equal(stubs.log('kill').trim(), '11111\n22222', 'remaining PIDs are still reaped');
+  assert.match(stderr, /watcher 11111 already exited/);
+  assert.match(stderr, /Starting rationguard watcher in this terminal/);
+  assert.match(stubs.log('rationguard'), /^watch agent-v /m);
 });
 
 test('--rationguard without --no-open on a non-mac terminal prints the plain attach hint', () => {
