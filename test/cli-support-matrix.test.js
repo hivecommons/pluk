@@ -134,6 +134,6 @@ test('README --dangerous row lists every DANGEROUS_FLAGS or DANGEROUS_ENV entry 
 test('every builtin and bundled CLI has a non-empty DANGEROUS_FLAGS or DANGEROUS_ENV entry', () => {
   const flags = { ...recordEntries(attachSource, 'DANGEROUS_FLAGS'), ...recordEntries(attachSource, 'DANGEROUS_ENV') };
   for (const cli of new Set([...Object.keys(BUILTIN_PATTERNS), ...bundled])) {
-    assert.ok(flags[cli], `DANGEROUS_FLAGS has no flag for ${cli}; attach --dangerous would silently no-op (#360)`);
+    assert.ok(flags[cli], `neither DANGEROUS_FLAGS nor DANGEROUS_ENV has an entry for ${cli}; attach --dangerous would silently no-op (#360)`);
   }
 });

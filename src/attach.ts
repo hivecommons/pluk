@@ -363,9 +363,13 @@ export function attach(opts: AttachOptions): void {
     console.error(`Attaching to existing tmux session: ${session}`);
     if (opts.dangerouslySkipPermissions) {
       const dangerFlag = resolveDangerousFlag(cli);
-      if (dangerFlag) {
-        console.error(`Warning: --dangerous was set but session already exists. The CLI may not have ${dangerFlag} enabled.`);
-        console.error(`To restart with permissions skipped: pluk send ${session} C-c && tmux send-keys -t ${shellQuote(exactTarget(session))} -- ${shellQuote(buildCliCommand(cliCmd, dangerFlag))} Enter`);
+      const dangerEnv = resolveDangerousEnv(cli);
+      if (dangerFlag || dangerEnv) {
+        const label = [dangerEnv, dangerFlag].filter(Boolean).join(' ');
+        let restartCmd = buildCliCommand(cliCmd, dangerFlag);
+        if (dangerEnv) restartCmd = `${dangerEnv} ${restartCmd}`;
+        console.error(`Warning: --dangerous was set but session already exists. The CLI may not have ${label} enabled.`);
+        console.error(`To restart with permissions skipped: pluk send ${session} C-c && tmux send-keys -t ${shellQuote(exactTarget(session))} -- ${shellQuote(restartCmd)} Enter`);
       }
     }
     if (opts.cliCommand !== undefined) {

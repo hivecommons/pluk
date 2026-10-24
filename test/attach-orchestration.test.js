@@ -202,6 +202,24 @@ test('attach to an existing session skips create/send-keys and warns about --dan
   assert.ok(!tmuxCalls.includes('send-keys'), `unexpected send-keys: ${tmuxCalls}`);
 });
 
+test('attach to an existing goose session with --dangerous warns and hints GOOSE_MODE=auto restart', () => {
+  const stubs = makeStubs({ hasSession: true, which: ['tmux', 'pluk'] });
+  const { code, stderr } = runAttach(
+    ['agent-g', '--cli=goose', `--run-dir=${makeRunDir()}`, '--no-open', '--dangerous'],
+    stubs,
+  );
+  assert.equal(code, 0);
+  assert.match(stderr, /--dangerous was set but session already exists\. The CLI may not have GOOSE_MODE=auto enabled/);
+  // buildCliCommand shell-quotes each argv token, so the hint body is `GOOSE_MODE=auto 'goose' 'session'`.
+  const hint = stderr.split('\n').find(l => l.startsWith('To restart with permissions skipped:'));
+  assert.ok(hint, `missing restart hint in: ${stderr}`);
+  assert.match(hint, /send-keys -t '=agent-g:' -- 'GOOSE_MODE=auto .*goose.* .*session.*' Enter$/);
+  assert.doesNotMatch(stderr, /--non-interactive/);
+  const tmuxCalls = stubs.log('tmux');
+  assert.ok(!tmuxCalls.includes('new-session'), `unexpected create: ${tmuxCalls}`);
+  assert.ok(!tmuxCalls.includes('send-keys'), `unexpected send-keys: ${tmuxCalls}`);
+});
+
 test('re-attaching to an existing session replaces the pipe instead of toggling it off with -o', () => {
   const stubs = makeStubs({ hasSession: true, which: ['tmux', 'pluk'] });
   const { code, stderr } = runAttach(
