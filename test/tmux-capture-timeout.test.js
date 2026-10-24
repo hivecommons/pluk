@@ -12,7 +12,8 @@ test('tmuxCapturePane throws ETIMEDOUT when tmux hangs', () => {
     writeFileSync(join(dir, 'tmux'), '#!/bin/sh\nexec sleep 30\n');
     chmodSync(join(dir, 'tmux'), 0o755);
     process.env.PATH = `${dir}:${savedPath}`;
-    assert.throws(() => tmuxCapturePane('=s:'), { code: 'ETIMEDOUT' });
+    // Pass a short timeout so the test does not wait out the 5 s production default.
+    assert.throws(() => tmuxCapturePane('=s:', 50), { code: 'ETIMEDOUT' });
   } finally {
     process.env.PATH = savedPath;
     rmSync(dir, { recursive: true, force: true });

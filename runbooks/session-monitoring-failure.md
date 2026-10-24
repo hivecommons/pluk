@@ -38,7 +38,7 @@ A silent watcher means those consumers act on stale state.
 
 | Counter | Meaning when it is wrong | Action |
 |---------|--------------------------|--------|
-| `captureFailures` rising with `framesPolled` | Pane gone or tmux unreachable | Confirm the session exists and `TMUX`/socket is visible to the watcher; re-run `pluk attach` |
+| `captureFailures` rising with `framesPolled` | Pane gone, tmux unreachable, or the tmux server is wedged (accepts the socket but `capture-pane` exceeds the 5 s query timeout, surfacing as `ETIMEDOUT`) | Confirm the session exists and `TMUX`/socket is visible to the watcher; time `tmux list-sessions` and restart the tmux server if it takes more than a few seconds; re-run `pluk attach` |
 | `framesPolled` = 0 in `--capture` mode | Watcher not polling | Check the `--capture` interval is valid and restart |
 | `linesSeen` = 0 in stream mode | Nothing reaches stdin | `pane_pipe` is 0: re-attach so `tmux pipe-pane` is re-established |
 | `classifyErrors` > 0 | Lines dropped by the classifier | Capture a sample, add a regression test, fix forward |

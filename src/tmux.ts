@@ -78,10 +78,10 @@ export function tmuxListSessionNames(): string[] {
     .filter(Boolean);
 }
 
-export function tmuxCapturePane(target: string): string {
+export function tmuxCapturePane(target: string, timeoutMs: number = TMUX_QUERY_TIMEOUT_MS): string {
   return execFileSync('tmux', ['capture-pane', '-p', '-t', target], {
     encoding: 'utf-8',
     stdio: ['ignore', 'pipe', 'ignore'],
-    timeout: TMUX_QUERY_TIMEOUT_MS,
+    timeout: timeoutMs,
   });
 }
