@@ -220,15 +220,28 @@ test('re-attaching to an existing session replaces the pipe instead of toggling 
   assert.ok(!/ -o /.test(pipeCall), `pipe-pane must not use the -o toggle: ${pipeCall}`);
 });
 
-test('attach --dangerous with a CLI that has no auto-flag logs the skip and sends the bare command', () => {
+test('attach --dangerous with a CLI that has no auto-flag warns without --verbose and sends the bare command', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk'] });
   const { code, stderr } = runAttach(
-    ['agent-a', '--cli=aider', `--run-dir=${makeRunDir()}`, '--no-open', '--dangerous', '--verbose'],
+    ['agent-a', '--cli=nosuchcli', `--run-dir=${makeRunDir()}`, '--no-open', '--dangerous'],
     stubs,
   );
   assert.equal(code, 0);
-  assert.match(stderr, /no dangerous\/auto flag known for cli=aider/);
-  assert.match(stubs.log('tmux'), /send-keys -t =agent-a: -- 'aider' Enter/);
+  assert.match(stderr, /Warning: --dangerous has no known auto-approve flag for cli=nosuchcli; starting without it/);
+  assert.match(stubs.log('tmux'), /send-keys -t =agent-a: -- 'nosuchcli' Enter/);
+});
+
+test('attach --dangerous passes --yolo to gemini and --yes-always to aider', () => {
+  for (const [cli, flag] of [['gemini', '--yolo'], ['aider', '--yes-always']]) {
+    const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+    const { code, stderr } = runAttach(
+      [`agent-${cli}`, `--cli=${cli}`, `--run-dir=${makeRunDir()}`, '--no-open', '--dangerous'],
+      stubs,
+    );
+    assert.equal(code, 0);
+    assert.ok(!/no known auto-approve flag/.test(stderr), stderr);
+    assert.match(stubs.log('tmux'), new RegExp(`send-keys -t =agent-${cli}: -- '${cli}' '${flag}' Enter`));
+  }
 });
 
 // --- pluk binary resolution --------------------------------------------------------

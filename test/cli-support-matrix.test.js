@@ -130,3 +130,10 @@ test('README --dangerous row lists every DANGEROUS_FLAGS entry with its exact fl
     'README --dangerous row should list exactly the CLIs DANGEROUS_FLAGS knows',
   );
 });
+
+test('every builtin and bundled CLI has a non-empty DANGEROUS_FLAGS entry', () => {
+  const flags = recordEntries(attachSource, 'DANGEROUS_FLAGS');
+  for (const cli of new Set([...Object.keys(BUILTIN_PATTERNS), ...bundled])) {
+    assert.ok(flags[cli], `DANGEROUS_FLAGS has no flag for ${cli}; attach --dangerous would silently no-op (#360)`);
+  }
+});

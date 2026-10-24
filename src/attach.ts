@@ -167,6 +167,8 @@ function resolveDangerousFlag(cli: string): string {
     codex: '--full-auto',
     goose: '--non-interactive',
     omp: '--approval-mode yolo',
+    gemini: '--yolo',
+    aider: '--yes-always',
   };
   return DANGEROUS_FLAGS[cli] ?? '';
 }
@@ -341,7 +343,7 @@ export function attach(opts: AttachOptions): void {
         // and a single shellQuote() would hand the CLI one argv entry.
         fullCmd += ` ${splitShellWords(dangerFlag).map(shellQuote).join(' ')}`;
       } else {
-        log(`no dangerous/auto flag known for cli=${cli}, skipping`);
+        console.error(`Warning: --dangerous has no known auto-approve flag for cli=${cli}; starting without it`);
       }
     }
     console.error(`Starting ${cli}: ${fullCmd}`);
