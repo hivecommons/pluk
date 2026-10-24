@@ -1,0 +1,1 @@
+- `pluk attach --dangerous` now launches goose with `GOOSE_MODE=auto` instead of the nonexistent `--non-interactive` flag, which made goose exit on an unknown argument.

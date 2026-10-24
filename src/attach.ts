@@ -165,12 +165,19 @@ function resolveDangerousFlag(cli: string): string {
     claude: '--dangerously-skip-permissions',
     copilot: '--allow-all-tools',
     codex: '--full-auto',
-    goose: '--non-interactive',
     omp: '--approval-mode yolo',
     gemini: '--yolo',
     aider: '--yes-always',
   };
   return DANGEROUS_FLAGS[cli] ?? '';
+}
+
+// Env-var prefixes for CLIs whose auto-approve switch is a setting, not a flag.
+function resolveDangerousEnv(cli: string): string {
+  const DANGEROUS_ENV: Record<string, string> = {
+    goose: 'GOOSE_MODE=auto',
+  };
+  return DANGEROUS_ENV[cli] ?? '';
 }
 
 function resolvePlukBin(): string {
@@ -338,11 +345,13 @@ export function attach(opts: AttachOptions): void {
     let fullCmd = buildCliCommand(cliCmd, opts.cliArgs);
     if (opts.dangerouslySkipPermissions) {
       const dangerFlag = resolveDangerousFlag(cli);
+      const dangerEnv = resolveDangerousEnv(cli);
+      if (dangerEnv) fullCmd = `${dangerEnv} ${fullCmd}`;
       if (dangerFlag) {
         // Word-split: some flags are two tokens (omp's `--approval-mode yolo`),
         // and a single shellQuote() would hand the CLI one argv entry.
         fullCmd += ` ${splitShellWords(dangerFlag).map(shellQuote).join(' ')}`;
-      } else {
+      } else if (!dangerEnv) {
         console.error(`Warning: --dangerous has no known auto-approve flag for cli=${cli}; starting without it`);
       }
     }

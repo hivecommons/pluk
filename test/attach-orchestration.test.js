@@ -244,6 +244,18 @@ test('attach --dangerous passes --yolo to gemini and --yes-always to aider', () 
   }
 });
 
+test('attach --dangerous launches goose with GOOSE_MODE=auto and no --non-interactive', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const { code, stderr } = runAttach(
+    ['agent-goose', '--cli=goose', `--run-dir=${makeRunDir()}`, '--no-open', '--dangerous'],
+    stubs,
+  );
+  assert.equal(code, 0);
+  assert.ok(!/no known auto-approve flag/.test(stderr), stderr);
+  assert.match(stubs.log('tmux'), /send-keys -t =agent-goose: -- GOOSE_MODE=auto 'goose' 'session' Enter/);
+  assert.ok(!/--non-interactive/.test(stubs.log('tmux')));
+});
+
 // --- pluk binary resolution --------------------------------------------------------
 
 test('when pluk is not on PATH the npx fallback is probed and used for pipe-pane', () => {
