@@ -366,7 +366,10 @@ export function attach(opts: AttachOptions): void {
       const dangerEnv = resolveDangerousEnv(cli);
       if (dangerFlag || dangerEnv) {
         const label = [dangerEnv, dangerFlag].filter(Boolean).join(' ');
-        let restartCmd = buildCliCommand(cliCmd, dangerFlag);
+        let restartCmd = buildCliCommand(cliCmd, opts.cliArgs);
+        if (dangerFlag) {
+          restartCmd += ` ${splitShellWords(dangerFlag).map(shellQuote).join(' ')}`;
+        }
         if (dangerEnv) restartCmd = `${dangerEnv} ${restartCmd}`;
         console.error(`Warning: --dangerous was set but session already exists. The CLI may not have ${label} enabled.`);
         console.error(`To restart with permissions skipped: pluk send ${session} C-c && tmux send-keys -t ${shellQuote(exactTarget(session))} -- ${shellQuote(restartCmd)} Enter`);

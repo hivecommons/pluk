@@ -220,6 +220,24 @@ test('attach to an existing goose session with --dangerous warns and hints GOOSE
   assert.ok(!tmuxCalls.includes('send-keys'), `unexpected send-keys: ${tmuxCalls}`);
 });
 
+test('attach to an existing session with --dangerous and --cli-args includes --cli-args in the restart hint', () => {
+  const stubs = makeStubs({ hasSession: true, which: ['tmux', 'pluk'] });
+  const { code, stderr } = runAttach(
+    ['agent-x', '--cli=claude', `--run-dir=${makeRunDir()}`, '--no-open', '--dangerous', '--cli-args=--model opus'],
+    stubs,
+  );
+  assert.equal(code, 0);
+  assert.match(stderr, /--dangerous was set but session already exists\. The CLI may not have --dangerously-skip-permissions enabled/);
+  const hint = stderr.split('\n').find(l => l.startsWith('To restart with permissions skipped:'));
+  assert.ok(hint, `missing restart hint in: ${stderr}`);
+  assert.match(hint, /--model/);
+  assert.match(hint, /opus/);
+  assert.match(hint, /--dangerously-skip-permissions/);
+  const tmuxCalls = stubs.log('tmux');
+  assert.ok(!tmuxCalls.includes('new-session'), `unexpected create: ${tmuxCalls}`);
+  assert.ok(!tmuxCalls.includes('send-keys'), `unexpected send-keys: ${tmuxCalls}`);
+});
+
 test('re-attaching to an existing session replaces the pipe instead of toggling it off with -o', () => {
   const stubs = makeStubs({ hasSession: true, which: ['tmux', 'pluk'] });
   const { code, stderr } = runAttach(
