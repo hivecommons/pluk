@@ -94,6 +94,7 @@ export class Classifier {
   private pane: string;
   private source: string;
   private seq = 0;
+  private commandSeq = 1000000;
   private currentState = 'unknown';
   private stateChangeTS = 0;
   // Deferred state verdict awaiting debounce-window expiry. The debounce
@@ -265,8 +266,9 @@ export class Classifier {
     return createEvent(this.session, this.pane, this.source, this.seq, 'raw_output', { line });
   }
 
+  /** Reserved event factory; pluk send does not currently emit command telemetry. */
   commandReceived(text: string, sender: string): PlukEvent {
-    this.seq = 1000001;
-    return createEvent(this.session, this.pane, this.source, this.seq, 'command_received', { text, sender });
+    this.commandSeq++;
+    return createEvent(this.session, this.pane, this.source, this.commandSeq, 'command_received', { text, sender });
   }
 }

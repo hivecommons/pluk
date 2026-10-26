@@ -237,7 +237,7 @@ const watcher = watch({
 | `error` | Error in output |
 | `model_changed` | Model was switched |
 | `session_ended` | CLI session ended |
-| `command_received` | Command sent via pluk-send |
+| `command_received` | Reserved; not currently emitted by `pluk send` / `pluk-send` |
 
 ## Event Schema
 

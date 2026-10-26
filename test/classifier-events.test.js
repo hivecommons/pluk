@@ -180,14 +180,18 @@ test('event checks run in priority order: rate_limit outranks error', () => {
   assert.equal(ev.type, 'rate_limit');
 });
 
-test('commandReceived pins seq to the 1000001 command band', () => {
+test('commandReceived uses an independent, increasing command band', () => {
   const c = makeClassifier();
-  c.classify('Goodbye'); // bump normal seq to 1 first
+  assert.equal(c.classify('Goodbye!').seq, 1);
   const ev = c.commandReceived('git status', 'operator');
   assert.equal(ev.type, 'command_received');
   assert.equal(ev.seq, 1000001);
   assert.deepEqual(ev.data, { text: 'git status', sender: 'operator' });
   assert.equal(ev.session, 'ev-test');
+  assert.equal(c.classify('quota exhausted').seq, 2);
+  assert.equal(c.commandReceived('git diff', 'operator').seq, 1000002);
+  assert.equal(c.classify('Goodbye!').seq, 3);
+  assert.equal(c.rawOutput('raw line').seq, 4);
 });
 
 test('event sequence numbers increment across mixed event types', () => {
