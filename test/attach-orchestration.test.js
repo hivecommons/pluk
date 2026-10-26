@@ -196,6 +196,20 @@ test('attach rejects unterminated quote in --cli-args before creating tmux sessi
   assert.equal(stubs.log('tmux'), '', 'validation must precede all tmux calls');
 });
 
+test('attach rejects unterminated quote in --command as a usage error before any tmux call', () => {
+  // The preflight loop in cmdAttach covers both --command and --cli-args; the
+  // test above only reaches the --cli-args arm, so dropping 'command' from the
+  // loop went unnoticed. Pin the --command arm independently.
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const { code, stderr } = runAttach([
+    'bad-cmd', `--run-dir=${makeRunDir()}`, '--no-open',
+    "--command=claude --model 'unterminated",
+  ], stubs);
+  assert.equal(code, 2);
+  assert.match(stderr, /--command: Unterminated quote/);
+  assert.equal(stubs.log('tmux'), '', 'validation must precede all tmux calls');
+});
+
 // --- existing-session path ---------------------------------------------------------
 
 test('attach to an existing session skips create/send-keys and warns about --dangerous', () => {
