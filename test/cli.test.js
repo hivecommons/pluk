@@ -204,6 +204,39 @@ test('sessions renders a table row per discovered session (ls alias)', () => {
   assert.equal(header.indexOf('EVENTS'), row.search(/\d+$/), 'EVENTS header aligns with event count');
 });
 
+test('sessions keeps columns aligned when session and CLI names exceed the minimum widths', () => {
+  const dir = makeRunDir();
+  writeFileSync(
+    join(dir, 'logs', 'agent-a.jsonl'),
+    [
+      eventLine({ ts: '2026-01-01T00:00:00.000Z', data: { cli: 'claude' } }),
+      eventLine({ ts: '2026-01-01T00:00:01.000Z', type: 'state_change', data: { to: 'idle' } }),
+    ].join('\n') + '\n',
+  );
+  writeFileSync(
+    join(dir, 'logs', 'hive-scanner-worker-01.jsonl'),
+    [
+      eventLine({ ts: '2026-01-01T00:00:00.000Z', data: { cli: 'copilot-cli' } }),
+      eventLine({ ts: '2026-01-01T00:00:01.000Z', type: 'state_change', data: { to: 'idle' } }),
+    ].join('\n') + '\n',
+  );
+  const { code, stdout } = runCli(['ls', `--run-dir=${dir}`]);
+  assert.equal(code, 0);
+
+  const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
+  const lines = stdout.split('\n').map(stripAnsi);
+  const header = lines[0];
+  for (const name of ['agent-a', 'hive-scanner-worker-01']) {
+    const row = lines.find((l) => l.startsWith(name));
+    assert.ok(row, `row for ${name} found`);
+    assert.equal(header.indexOf('CLI'), row.search(/claude|copilot-cli/), `${name}: CLI aligns`);
+    assert.equal(header.indexOf('STATE'), row.indexOf('idle'), `${name}: STATE aligns`);
+    assert.equal(header.indexOf('TMUX'), row.search(/[●○]/), `${name}: TMUX aligns`);
+    assert.equal(header.indexOf('LAST ACTIVITY'), row.search(/\d+[smhd] ago/), `${name}: LAST ACTIVITY aligns`);
+    assert.equal(header.indexOf('EVENTS'), row.search(/\d+$/), `${name}: EVENTS aligns`);
+  }
+});
+
 // --- send ----------------------------------------------------------------------
 
 test('send without a session exits 1 with guidance', () => {

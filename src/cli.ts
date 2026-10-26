@@ -294,8 +294,8 @@ function cmdSessions(args: string[]): void {
     return;
   }
 
-  const COL_SESSION = 17;
-  const COL_CLI = 10;
+  const COL_SESSION = Math.max(17, ...sessions.map((s) => s.session.length + 1));
+  const COL_CLI = Math.max(10, ...sessions.map((s) => s.cli.length + 1));
   const COL_STATE = 10;
   const COL_TMUX = 6;
   const COL_AGO = 14;
