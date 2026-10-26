@@ -337,11 +337,6 @@ export function attach(opts: AttachOptions): void {
   log(`tmux session "${session}" exists: ${sessionExists}`);
 
   if (!sessionExists) {
-    console.error(`Creating tmux session: ${session}`);
-    log(`execFile: tmux new-session -d -s ${shellQuote(session)} -c ${shellQuote(workDir)}`);
-    tmuxNewSession(session, workDir);
-    wirePipePane();
-
     let fullCmd = buildCliCommand(cliCmd, opts.cliArgs);
     if (opts.dangerouslySkipPermissions) {
       const dangerFlag = resolveDangerousFlag(cli);
@@ -355,6 +350,11 @@ export function attach(opts: AttachOptions): void {
         console.error(`Warning: --dangerous has no known auto-approve flag for cli=${cli}; starting without it`);
       }
     }
+    console.error(`Creating tmux session: ${session}`);
+    log(`execFile: tmux new-session -d -s ${shellQuote(session)} -c ${shellQuote(workDir)}`);
+    tmuxNewSession(session, workDir);
+    wirePipePane();
+
     console.error(`Starting ${cli}: ${fullCmd}`);
     const sendArgs = ['send-keys', '-t', exactTarget(session), '--', fullCmd, 'Enter'];
     log(`execFile: tmux ${sendArgs.map(shellQuote).join(' ')}`);

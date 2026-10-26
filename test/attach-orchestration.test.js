@@ -185,6 +185,17 @@ test('fresh session wires pipe-pane before send-keys so start-up output is captu
   assert.ok(pipePane < startCli, 'pipe-pane must precede the send-keys that starts the CLI');
 });
 
+test('attach rejects unterminated quote in --cli-args before creating tmux session', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const { code, stderr } = runAttach([
+    'bad-args', `--run-dir=${makeRunDir()}`, '--no-open',
+    "--cli-args=--model 'unterminated",
+  ], stubs);
+  assert.equal(code, 2);
+  assert.match(stderr, /Unterminated quote/);
+  assert.equal(stubs.log('tmux'), '', 'validation must precede all tmux calls');
+});
+
 // --- existing-session path ---------------------------------------------------------
 
 test('attach to an existing session skips create/send-keys and warns about --dangerous', () => {
