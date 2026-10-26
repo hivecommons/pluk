@@ -301,3 +301,24 @@ test('--dir sets the tmux new-session working directory', () => {
   assert.equal(code, 0);
   assert.match(stubs.log('tmux'), new RegExp(`new-session -d -s agent-wd -c ${workDir}`));
 });
+
+test('attach() builds the CLI command before new-session so a bad --cli-args leaves no tmux session (#372)', () => {
+  // cli.js pre-validates --cli-args, so the CLI-level test cannot tell whether
+  // attach() itself still orders buildCliCommand() before tmux new-session.
+  // Call attach() directly to pin that ordering: has-session is the only tmux
+  // call allowed before the throw, and no new-session/pipe-pane may follow.
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const runDir = makeRunDir();
+  const script = `import { attach } from ${JSON.stringify(ATTACH)};
+attach({ session: 'agent-badargs', runDir: ${JSON.stringify(runDir)}, noOpen: true, cliArgs: "--model 'unterminated" });`;
+  const res = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+    encoding: 'utf-8',
+    timeout: 15000,
+    env: { ...process.env, PATH: `${stubs.dir}:${process.env.PATH}` },
+  });
+  assert.notEqual(res.status, 0, 'attach() must throw on an unterminated quote');
+  assert.match(res.stderr, /Unterminated quote in command arguments/);
+  const tmuxCalls = stubs.log('tmux').trim().split('\n').filter(Boolean);
+  assert.deepEqual(tmuxCalls, ['has-session -t =agent-badargs:'],
+    'only the existence probe may run before the command is validated');
+});
