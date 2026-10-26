@@ -1,1 +1,0 @@
-- Log rotation now applies the `PLUK_LOG_MAX_BYTES` cap even when the log has fewer than `PLUK_LOG_KEEP_LINES` lines (#283).

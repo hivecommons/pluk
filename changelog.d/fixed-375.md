@@ -1,1 +1,0 @@
-- `pluk sessions` now widens the SESSION and CLI columns to fit the longest value, so rows with long session or CLI names stay aligned with the header (#375).

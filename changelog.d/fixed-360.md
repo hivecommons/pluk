@@ -1,1 +1,0 @@
-- `pluk attach --dangerous` now passes `--yolo` to gemini and `--yes-always` to aider; a CLI with no known auto-approve flag now prints a warning even without `--verbose`.

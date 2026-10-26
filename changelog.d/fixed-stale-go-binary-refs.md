@@ -1,1 +1,0 @@
-- `pluk --help` and the README no longer point to a Go pluk binary; the `subscribe` help line now names `pluk watch` as the usual publisher.

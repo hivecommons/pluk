@@ -1,1 +1,0 @@
-- `pluk patterns` now honors `--patterns-dir`, so a custom pattern set is shown (and its CLI names listed) instead of a false "no pattern set".

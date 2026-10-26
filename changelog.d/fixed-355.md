@@ -1,1 +1,0 @@
-- `pluk attach --rationguard` no longer aborts a half-wired session when a stale watcher PID has already exited before `kill`; stale watchers are reaped per PID, already-gone PIDs are ignored, and other kill failures print a warning and continue.

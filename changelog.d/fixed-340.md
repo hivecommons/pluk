@@ -1,1 +1,0 @@
-- `pluk attach` now warns on stderr when `--command`, `--cli-args` or `--dir` are passed for a tmux session that already exists, instead of silently ignoring them (#340).

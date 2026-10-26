@@ -1,1 +1,0 @@
-- `watch`/`subscribe --diagnostics=SECS`: a non-numeric, non-positive or `false` value (`abc`, `0`, `-5`, `5min`, `false`) used to silently run at the 60s default; it is now rejected with exit 2, as are values above 2147483 s that would overflow `setInterval` (#342).

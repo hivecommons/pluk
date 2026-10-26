@@ -1,1 +1,0 @@
-- Reject flags that belong to another subcommand with exit 2 and a command-specific help hint instead of silently ignoring them (including flags passed to `version`). Valid invocations are unchanged; help now lists all supported per-command flags, and a table-driven unit test checks every command against the flag union (#348).

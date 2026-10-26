@@ -1,1 +1,0 @@
-- `pluk` now rejects unknown or misspelled `--flags` (e.g. `--captur=50`, `--entr`) with an error (exit 2) instead of silently ignoring them.

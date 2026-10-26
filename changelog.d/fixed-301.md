@@ -1,1 +1,0 @@
-- `pluk send --session=<name>` / `pluk-send --session=<name>` no longer drops a positional text word that happens to equal the session name; the leading positional is treated as the session only when `--session` is absent.

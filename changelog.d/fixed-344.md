@@ -1,1 +1,0 @@
-- Cap very large finite periods passed to the `startDiagnostics` library API at Node's maximum timer delay (2147483.647 seconds) instead of overflowing into a 1 ms reporting loop; the CLI already rejects out-of-range `--diagnostics` values with exit 2 (#344).

@@ -1,1 +1,0 @@
-- `pluk sessions` no longer reports STATE/CLI as unknown when `raw_output` events (from `pluk attach` with raw capture) flood the log tail; raw lines are skipped when sizing the tail window.

@@ -1,2 +1,0 @@
-- Mark `command_received` as reserved in the event documentation: `pluk send` / `pluk-send` does not currently emit it.
-- Keep `Classifier.commandReceived()` sequence numbers in an independent, increasing command counter without changing subsequent classified or raw-output event sequence numbers.

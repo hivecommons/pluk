@@ -1,1 +1,0 @@
-- Document the real `PLUK_RUN_DIR` default (`$XDG_RUNTIME_DIR/pluk`, else `/tmp/pluk-<uid>`) in the README and the session-monitoring runbook (#333).

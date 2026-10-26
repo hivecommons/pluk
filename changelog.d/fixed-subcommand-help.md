@@ -1,2 +1,0 @@
-- `--help` / `-h` after a subcommand (for example `pluk watch --help`) now prints usage and exits 0 instead of being ignored.
-- `--help` anywhere is always treated as a help request (as it was before, via `parseArgs`), even inside `pluk send` text. A bare `-h` after the `send` session positional is passed through as text.

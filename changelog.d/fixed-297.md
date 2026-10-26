@@ -1,1 +1,0 @@
-- `pluk subscribe` without `--from-beginning` no longer replays the kept tail of the log as new events when the log is rotated before the first new line arrives; the subscriber now remembers the last line already in the file at start-up and resumes after it.

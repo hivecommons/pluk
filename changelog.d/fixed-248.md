@@ -1,1 +1,0 @@
-- Log rotation now also enforces `PLUK_LOG_MAX_BYTES`: after trimming to `PLUK_LOG_KEEP_LINES`, the oldest kept lines are dropped until the log fits under the byte cap, so it no longer stays over the cap and gets rewritten every 30s.

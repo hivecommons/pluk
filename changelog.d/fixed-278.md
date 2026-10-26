@@ -1,1 +1,0 @@
-- Bare value-taking flags (e.g. `pluk send s --text hello`, `--run-dir /tmp/x`, `--filter x`) are now rejected with exit code 2 and a `--flag=<value>` hint instead of being parsed as the string `true` (which typed `true` into the agent pane); fixes #278.

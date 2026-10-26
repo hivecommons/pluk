@@ -1,1 +1,0 @@
-- `pluk subscribe` and `pluk watch` now reject an empty `--filter=` value with an error (exit 2) instead of silently ignoring it.

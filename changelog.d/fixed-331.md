@@ -1,1 +1,0 @@
-- `pluk attach` now wires `tmux pipe-pane` before launching the CLI, so start-up output (trust dialog, login prompt, model line) is classified instead of lost (#331).

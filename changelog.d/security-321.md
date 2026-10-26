@@ -1,1 +1,0 @@
-- `SECURITY.md` now names `security@hivecommons.dev` (the organization's published `security.txt` contact) as the primary channel for reporting vulnerabilities, so the policy has a working private route whether or not GitHub private vulnerability reporting is enabled for the repository.

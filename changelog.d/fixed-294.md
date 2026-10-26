@@ -1,1 +1,0 @@
-- `tool_call_completed` events now report `duration_ms` in milliseconds (`(2.3s)` → `2300`) instead of passing the on-screen seconds figure through unchanged (#294).

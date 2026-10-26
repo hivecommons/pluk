@@ -1,1 +1,0 @@
-- Boolean flags such as `--enter`, `--literal`, `--verbose` and `--dangerous` now reject values other than `true`/`false` (e.g. `--enter=1`) with exit 2 instead of silently turning the flag off; `--flag=false` is the explicit off spelling.

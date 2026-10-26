@@ -1,1 +1,0 @@
-- `pluk patterns` and `pluk subscribe` now derive the builtin CLI fallback list from `BUILTIN_PATTERNS`, so it includes codex and aider and cannot drift.

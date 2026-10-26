@@ -1,1 +1,0 @@
-- `pluk watch` now warns on stderr when `--pane` is passed without `--capture`, and `--capture=` (empty value) is rejected with exit 2 instead of silently selecting stream mode.

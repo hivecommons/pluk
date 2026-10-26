@@ -1,1 +1,0 @@
-- `pluk watch --capture --include-raw` now emits `raw_output` events (once per changed frame) instead of silently ignoring the flag.

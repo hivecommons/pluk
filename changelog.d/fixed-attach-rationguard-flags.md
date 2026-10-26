@@ -1,1 +1,0 @@
-- `pluk attach` rejects invalid `--rebuttal` values with exit code 2 before touching tmux, and warns when `--rebuttal` or `--rationguard-bin` is ignored without `--rationguard` (#280).

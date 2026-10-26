@@ -1,1 +1,0 @@
-- `pluk watch --capture` now bounds each `tmux capture-pane` poll with a timeout so a hung tmux server is counted as a capture failure (visible in `--diagnostics`) instead of freezing the watcher silently (#353).
