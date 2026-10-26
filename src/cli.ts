@@ -8,7 +8,7 @@ import { PLUK_EVENT_TYPES, type PlukEventType } from './event.js';
 import { listAvailableCLIs, bundledPatternsDir, getPatterns, hasAnyPattern, BUILTIN_PATTERNS } from './patterns.js';
 import { discoverSessions } from './sessions.js';
 import { resolveRunDir, rotateLogFileIfNeeded, validateSessionName } from './run-dir.js';
-import { attach } from './attach.js';
+import { attach, splitShellWords } from './attach.js';
 import { send } from './send.js';
 import { ANSI_RED, ANSI_GREEN, ANSI_CYAN, ANSI_DIM, ANSI_BOLD, ANSI_RESET, paintStderr, paintStdout } from './ansi.js';
 import { packageVersion } from './version.js';
@@ -240,6 +240,17 @@ function cmdAttach(args: string[]): void {
   if (rebuttal !== undefined && rebuttal !== 'log' && rebuttal !== 'send') {
     console.error(`${paintStderr(ANSI_RED, 'Error:')} --rebuttal must be one of: log, send`);
     process.exit(2);
+  }
+
+  for (const flag of ['command', 'cli-args']) {
+    const value = flags[flag];
+    if (value === undefined) continue;
+    try {
+      splitShellWords(value);
+    } catch (err) {
+      console.error(`${paintStderr(ANSI_RED, 'Error:')} --${flag}: ${(err as Error).message}`);
+      process.exit(2);
+    }
   }
 
   if (flags['rationguard'] !== 'true') {

@@ -1,1 +1,1 @@
-- `pluk attach` now validates the CLI command and arguments before creating the tmux session, so a bad `--cli-args` no longer leaves an orphaned session with pipe-pane attached.
+- `pluk attach` now validates the CLI command and arguments before creating the tmux session, so a bad `--cli-args` (e.g. an unterminated quote) is reported as a usage error (exit 2) instead of leaving an orphaned session with pipe-pane attached.
