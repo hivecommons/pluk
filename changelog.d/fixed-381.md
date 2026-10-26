@@ -1,0 +1,1 @@
+- attach: `splitShellWords` keeps explicitly empty quoted arguments (`""` / `''`) instead of dropping them, so `--cli-args`/`--command` argv is no longer shifted (#381)

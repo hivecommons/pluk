@@ -67,12 +67,14 @@ function appleScriptString(value: string): string {
 export function splitShellWords(input: string): string[] {
   const words: string[] = [];
   let current = '';
+  let started = false;
   let quote: '"' | "'" | null = null;
   let escaping = false;
 
   for (const char of input) {
     if (escaping) {
       current += char;
+      started = true;
       escaping = false;
       continue;
     }
@@ -82,6 +84,7 @@ export function splitShellWords(input: string): string[] {
     }
     if ((char === '"' || char === "'") && quote === null) {
       quote = char;
+      started = true;
       continue;
     }
     if (char === quote) {
@@ -89,18 +92,23 @@ export function splitShellWords(input: string): string[] {
       continue;
     }
     if (/\s/.test(char) && quote === null) {
-      if (current) {
+      if (started) {
         words.push(current);
         current = '';
+        started = false;
       }
       continue;
     }
     current += char;
+    started = true;
   }
 
-  if (escaping) current += '\\';
+  if (escaping) {
+    current += '\\';
+    started = true;
+  }
   if (quote) throw new Error('Unterminated quote in command arguments');
-  if (current) words.push(current);
+  if (started) words.push(current);
   return words;
 }
 

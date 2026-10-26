@@ -112,6 +112,17 @@ test('splitShellWords returns no words for blank input', () => {
   assert.deepEqual(splitShellWords('   '), []);
 });
 
+test('splitShellWords keeps explicitly empty quoted words', () => {
+  assert.deepEqual(splitShellWords('""'), ['']);
+  assert.deepEqual(splitShellWords("''"), ['']);
+  assert.deepEqual(splitShellWords('a "" b'), ['a', '', 'b']);
+  assert.deepEqual(splitShellWords('--flag ""'), ['--flag', '']);
+});
+
+test('buildCliCommand emits an empty quoted argument', () => {
+  assert.ok(buildCliCommand('claude', '--x ""').endsWith(" ''"));
+});
+
 // --- buildCliCommand / buildPipePaneCommand throw arms -------------------------------
 
 test('buildCliCommand rejects an empty command', () => {
