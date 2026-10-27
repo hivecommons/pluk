@@ -141,7 +141,7 @@ test('watch --diagnostics writes a final watch summary to stderr only', async ()
   assert.equal(final.final, true);
   assert.equal(final.linesSeen, 2, 'watcher.stats() must be the live snapshot');
   assert.equal(final.eventsEmitted, outLines.length);
-  for (const key of ['framesPolled', 'captureFailures', 'classifyErrors', 'inputErrors', 'eventsFiltered']) {
+  for (const key of ['framesPolled', 'captureFailures', 'classifyErrors', 'emitErrors', 'inputErrors', 'eventsFiltered']) {
     assert.equal(typeof final[key], 'number', `missing watch counter ${key}`);
   }
   assert.ok(!('session' in final), 'summary must not name the session');

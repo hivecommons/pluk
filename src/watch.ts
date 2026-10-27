@@ -23,8 +23,10 @@ export interface WatchStats {
   classifyErrors: number;
   /** Stream mode: readline/input stream 'error' events swallowed. */
   inputErrors: number;
-  /** Events handed to onEvent (after filtering). */
+  /** Events handed to onEvent (after filtering), including ones the callback threw on. */
   eventsEmitted: number;
+  /** onEvent sink callbacks that threw; the event was classified but not delivered. */
+  emitErrors: number;
   /** Classified events dropped by the --filter set. */
   eventsFiltered: number;
 }
@@ -37,6 +39,7 @@ export function emptyWatchStats(): WatchStats {
     classifyErrors: 0,
     inputErrors: 0,
     eventsEmitted: 0,
+    emitErrors: 0,
     eventsFiltered: 0,
   };
 }
@@ -81,7 +84,12 @@ export function watch(opts: WatchOptions): WatchHandle {
       return;
     }
     stats.eventsEmitted++;
-    opts.onEvent(event);
+    try {
+      opts.onEvent(event);
+    } catch {
+      // A throwing consumer must not crash pipe-pane or be blamed on the classifier.
+      stats.emitErrors++;
+    }
   };
 
   if (opts.mode === 'capture') {

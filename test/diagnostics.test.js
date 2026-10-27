@@ -8,6 +8,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { watch, emptyWatchStats } from '../dist/watch.js';
+import { Classifier } from '../dist/classifier.js';
 import { Subscriber } from '../dist/subscriber.js';
 import { startDiagnostics, log } from '../dist/diagnostics.js';
 
@@ -49,8 +50,26 @@ test('watch counts swallowed input errors and classification failures instead of
   await settle();
   handle.stop();
   const s = handle.stats();
-  assert.equal(s.classifyErrors, 1, 'onEvent throwing is swallowed and counted');
+  assert.equal(s.emitErrors, 1, 'onEvent throwing is swallowed and counted as a sink failure');
+  assert.equal(s.classifyErrors, 0, 'a sink failure is not a classifier failure');
   assert.ok(s.inputErrors >= 1, 'input error is swallowed and counted');
+});
+
+test('watch still counts classifier failures as classifyErrors', async () => {
+  const original = Classifier.prototype.classify;
+  Classifier.prototype.classify = () => { throw new Error('classifier blew up'); };
+  try {
+    const input = new PassThrough();
+    const handle = watch({ session: 'dtest', cli: 'claude', input, onEvent: () => {} });
+    input.write('Error: boom\n');
+    await settle();
+    handle.stop();
+    const s = handle.stats();
+    assert.equal(s.classifyErrors, 1);
+    assert.equal(s.emitErrors, 0);
+  } finally {
+    Classifier.prototype.classify = original;
+  }
 });
 
 test('capture mode counts polls and failures when tmux is unavailable', async () => {

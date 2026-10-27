@@ -165,7 +165,7 @@ It writes one JSON line per period, plus a final one on exit, to **stderr** —
 stdout stays pure event JSONL:
 
 ```json
-{"pluk_diagnostics":1,"command":"watch","uptime_s":120,"final":false,"linesSeen":842,"framesPolled":0,"captureFailures":0,"classifyErrors":0,"inputErrors":0,"eventsEmitted":31,"eventsFiltered":4}
+{"pluk_diagnostics":1,"command":"watch","uptime_s":120,"final":false,"linesSeen":842,"framesPolled":0,"captureFailures":0,"classifyErrors":0,"inputErrors":0,"eventsEmitted":31,"emitErrors":0,"eventsFiltered":4}
 ```
 
 Only fixed counter categories are reported — never the session name, raw
