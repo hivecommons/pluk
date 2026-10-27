@@ -36,6 +36,11 @@ A silent watcher means those consumers act on stale state.
 
 ## Reading the counters
 
+Each stderr line is one JSON object: `pluk_diagnostics` (schema version), `command`
+(`watch` or `subscribe`), `uptime_s`, and `final` (`true` only on the closing summary
+written at shutdown), followed by the counters below. Counters are cumulative since
+start, so judge a rate by comparing two consecutive lines.
+
 | Counter | Meaning when it is wrong | Action |
 |---------|--------------------------|--------|
 | `captureFailures` rising with `framesPolled` | Pane gone, tmux unreachable, or the tmux server is wedged (accepts the socket but `capture-pane` exceeds the 5 s query timeout, surfacing as `ETIMEDOUT`) | Confirm the session exists and `TMUX`/socket is visible to the watcher; time `tmux list-sessions` and restart the tmux server if it takes more than a few seconds; re-run `pluk attach` |
@@ -43,6 +48,8 @@ A silent watcher means those consumers act on stale state.
 | `linesSeen` = 0 in stream mode | Nothing reaches stdin | `pane_pipe` is 0: re-attach so `tmux pipe-pane` is re-established |
 | `classifyErrors` > 0 | Lines dropped by the classifier | Capture a sample, add a regression test, fix forward |
 | `inputErrors` > 0 | Input stream errored | Re-attach; check for tmux server restarts |
+| `eventsEmitted` = 0 while `linesSeen` (stream) or `framesPolled` (capture) keeps rising | Input arrives but nothing classifies into an event, or every event is filtered | Compare with `eventsFiltered`: if that is also rising, review `--filter`; otherwise no pattern in the set matches this CLI's output (`pluk patterns --cli=<cli>`) |
+| `linesRead` = 0 (subscriber) | The log file is empty or the subscriber is reading the wrong run dir | Check the log path and `PLUK_RUN_DIR` above; confirm the watcher is writing |
 | `eventsFiltered` ≈ `linesSeen` | `--filter` excludes everything | Review the filter set |
 | `malformedLines` rising (subscriber) | Log has non-pluk lines | Check for another writer on the log file or truncated rotation |
 
