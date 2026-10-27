@@ -47,6 +47,7 @@ start, so judge a rate by comparing two consecutive lines.
 | `framesPolled` = 0 in `--capture` mode | Watcher not polling | Check the `--capture` interval is valid and restart |
 | `linesSeen` = 0 in stream mode | Nothing reaches stdin | `pane_pipe` is 0: re-attach so `tmux pipe-pane` is re-established |
 | `classifyErrors` > 0 | Lines dropped by the classifier | Capture a sample, add a regression test, fix forward |
+| `emitErrors` > 0 | The event sink (stdout/log writer/subscriber callback) threw; events were classified but not delivered | Check the consumer/log target (disk full, closed pipe, callback bug); re-attach |
 | `inputErrors` > 0 | Input stream errored | Re-attach; check for tmux server restarts |
 | `eventsEmitted` = 0 while `linesSeen` (stream) or `framesPolled` (capture) keeps rising | Input arrives but nothing classifies into an event, or every event is filtered | Compare with `eventsFiltered`: if that is also rising, review `--filter`; otherwise no pattern in the set matches this CLI's output (`pluk patterns --cli=<cli>`) |
 | `linesRead` = 0 (subscriber) | The log file is empty or the subscriber is reading the wrong run dir | Check the log path and `PLUK_RUN_DIR` above; confirm the watcher is writing |
