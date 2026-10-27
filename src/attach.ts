@@ -73,6 +73,7 @@ export function splitShellWords(input: string): string[] {
 
   for (const char of input) {
     if (escaping) {
+      if (quote === '"' && !'$`"\\\n'.includes(char)) current += '\\';
       current += char;
       started = true;
       escaping = false;

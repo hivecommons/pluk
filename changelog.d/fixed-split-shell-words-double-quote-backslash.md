@@ -1,0 +1,1 @@
+- attach: `splitShellWords` keeps a backslash before ordinary characters inside double quotes (POSIX semantics) instead of dropping it (#387)

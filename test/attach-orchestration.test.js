@@ -546,6 +546,14 @@ test('splitShellWords honors backslash escapes outside single quotes', () => {
   assert.deepEqual(splitShellWords('x\\'), ['x\\']);
 });
 
+test('splitShellWords keeps backslashes before ordinary characters inside double quotes', () => {
+  assert.deepEqual(splitShellWords('"a\\q"'), ['a\\q']);
+  assert.deepEqual(splitShellWords('"C:\\Users\\me"'), ['C:\\Users\\me']);
+  assert.deepEqual(splitShellWords('"\\d+"'), ['\\d+']);
+  assert.deepEqual(splitShellWords('"a\\\\b"'), ['a\\b']);
+  assert.deepEqual(splitShellWords('"$x\\$y"'), ['$x$y']);
+});
+
 for (const [flag, text] of [
   ['--command=claude', /--command was set but session already exists; the running CLI was not restarted/],
   ['--cli-args=--model opus', /--cli-args was set but session already exists; the running CLI was not restarted/],
