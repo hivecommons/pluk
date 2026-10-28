@@ -331,6 +331,8 @@ See `patterns/*.patterns` in this repo for complete, real-world examples.
 
 ## Works With
 
+- **[Hive](https://github.com/hivecommons/hive)** — its container image installs pluk, and every agent's tmux session is piped through `pluk watch --include-raw` into a per-session JSONL log under `/var/run/pluk/logs/`
+- **[Crux](https://github.com/hivecommons/crux)** — the agent runtime split out of Hive; when `pluk` is on `PATH`, it attaches `pluk watch` to each agent tmux session it launches
 - **[@hivecommons/rationguard](https://www.npmjs.com/package/@hivecommons/rationguard)** — real-time rationalization detection and rebuttal
 - **[@hivecommons/promptargs](https://www.npmjs.com/package/@hivecommons/promptargs)** — template variable substitution for AI prompts
 
