@@ -3,6 +3,8 @@
 Pluk turns AI-agent terminal output into structured events that downstream
 tools can consume. This roadmap describes the direction for the TypeScript
 package and its relationship with the wider Hive Commons agent-tooling stack.
+For example, a `state_change` event can report that an agent went idle.
+Logs use JSONL: one JSON record per line.
 
 ## Recently shipped
 
@@ -16,20 +18,23 @@ package and its relationship with the wider Hive Commons agent-tooling stack.
 
 ## Near term
 
-1. **Event schema evolution:** keep the JSONL envelope additive within schema
+1. **Event schema evolution:** keep the JSONL envelope (fields around each event)
+   additive within schema
    version 1 and define the process for a version bump, so tools such as
-   rationguard can depend on it safely.
+   rationguard can depend on it safely: add fields without removing or changing
+   the meaning of existing ones within version 1.
 2. **Broader CLI coverage:** add and test pattern packs for additional active
    agent CLIs as they become adoption-relevant.
 3. **Operational hardening:** continue replacing tmux/terminal edge cases with
-   explicit diagnostics, non-zero exits for operator errors, and hermetic tests.
+   explicit diagnostics, non-zero exits for operator errors, and isolated tests
+   that do not depend on a real agent or external service.
 
 ## Implementation
 
 Pluk is a single TypeScript package published to npm as `@hivecommons/pluk`;
 there is no separate Go binary. Hive and other consumers shell out to the npm
 CLI and read its JSONL logs, so event shapes and user-facing semantics are the
-compatibility surface.
+compatibility surface — the behavior other tools depend on.
 
 ## Non-goals for now
 

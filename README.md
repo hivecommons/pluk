@@ -6,14 +6,19 @@
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-Pluk classifies, subscribes to, and reacts to JSONL event streams from AI coding agent terminals.
+Pluk turns an AI coding agent's terminal output into events, such as “agent is
+idle” or “usage limit reached”. Other tools can read these events and decide
+what to do. Events are stored as **JSONL**: one JSON record per line.
 
 ## Install
 
 Requirements:
 
 - Node.js 22 or newer
-- tmux (`attach`, `send` and `watch --capture` drive tmux sessions)
+- tmux, a tool that keeps terminal sessions running (`attach`, `send` and
+  `watch --capture` drive those sessions)
+- For the live examples, an installed and authenticated coding-agent CLI
+  such as Claude Code; pluk does not install or sign in to it for you
 
 ```bash
 npm install -g @hivecommons/pluk
@@ -69,9 +74,23 @@ helper           claude    idle      ●     45s ago       892
 goose-exp        goose     idle      ○     3m ago        156
 ```
 
+## Reference: commands, integration, and event formats
+
+After your first session, use the sections below as needed:
+[commands](#cli-commands), [flags](#attach-flags),
+[health diagnostics](#health-diagnostics-watch-subscribe),
+[library API](#programmatic-api), [event schema](#event-schema), and
+[custom patterns](#pattern-file-format).
+
+<details>
+<summary>Optional: wire tmux and event capture manually</summary>
+
 ## Manual Setup
 
-If you prefer to wire things up yourself:
+**Advanced wiring; most users can stay with `attach`.** Data flows from the
+agent's tmux pane → `pipe-pane` (tmux's output pipe) → `pluk watch` → a JSONL
+log. `pluk subscribe` reads that log from another terminal.
+The run directory must be the same in both terminals.
 
 ```bash
 # 1. Create a tmux session (don't start the CLI yet)
@@ -105,6 +124,8 @@ tmux attach -t my-agent
 | `PLUK_LOG_MAX_BYTES` | `10485760` (10 MiB) | Byte cap for a session's event log: once exceeded, the log is trimmed to the newest lines that fit under it |
 | `PLUK_LOG_KEEP_LINES` | `5000` | Keep up to this many trailing lines across rotation, within the `PLUK_LOG_MAX_BYTES` cap |
 | `PLUK_RATIONGUARD_BIN` | *(unset)* | Rationguard command for `pluk attach --rationguard` when it is not on `PATH`; same as `--rationguard-bin` |
+
+</details>
 
 ## CLI Commands
 
@@ -155,6 +176,9 @@ Unknown, misspelled, or wrong-subcommand `--flags` exit 2 (`unknown flag --name 
 
 ### Health diagnostics (`watch`, `subscribe`)
 
+<details>
+<summary>Operator reference: counters and diagnostics intervals</summary>
+
 `pluk watch` and `pluk subscribe` deliberately swallow capture-pane failures,
 input errors and malformed log lines so the pipe-pane process never dies. To
 tell a healthy quiet session from one that is repeatedly failing, add
@@ -176,7 +200,15 @@ period above 2147483.647 seconds (about 24.9 days) have it capped at that value
 to stay within Node's timer limit; the CLI rejects out-of-range values as
 described above.
 
+</details>
+
 ## Programmatic API
+
+This example enables automatic messages and skips the launched CLI's permission
+prompts. Both are optional: omit `rebuttal: 'send'` and
+`dangerouslySkipPermissions: true` for a detection-only setup with normal
+permission checks. Only bypass prompts in an environment you have deliberately
+isolated and authorized.
 
 ```typescript
 import { Classifier, getPatterns, subscribe, watch, discoverSessions, attach, send } from '@hivecommons/pluk';
