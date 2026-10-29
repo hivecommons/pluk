@@ -1,7 +1,9 @@
 # Runbook: pluk refuses to use its run directory or a session log
 
-Use this when `pluk attach`, `subscribe`, `watch` or `sessions` fails with a
-message starting `Refusing to use ...` or `Unsafe session name ...`. These are
+Use this when `pluk attach` fails with a message starting `Refusing to use ...`,
+or when `pluk attach` or `pluk subscribe` fails with `Unsafe session name ...`.
+(`watch` catches the session-name error and `sessions` never raises either
+message, so neither shows these symptoms.) These are
 deliberate guards: the run directory holds session logs, which can contain
 agent output, so pluk will not write into a path another user could control.
 
