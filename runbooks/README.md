@@ -8,5 +8,6 @@ Start here when something is wrong with a pluk release or a monitored session.
 | A published version is broken and must be withdrawn or superseded | [release-rollback.md](release-rollback.md) |
 | `pluk subscribe` / `pluk watch` goes quiet for a session that should be active | [session-monitoring-failure.md](session-monitoring-failure.md) |
 | `pluk attach` fails, or the session is not captured / the rationguard watcher is missing | [attach-failure.md](attach-failure.md) |
+| pluk reports `Refusing to use ...` (run dir or log ownership/symlink) or `Unsafe session name` | [run-dir-refused.md](run-dir-refused.md) |
 | `pluk send` fails, or injected text / rebuttals never reach the agent | [send-failure.md](send-failure.md) |
 | After any incident that reached users | [postmortem-template.md](postmortem-template.md) |
