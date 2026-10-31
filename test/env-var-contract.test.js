@@ -3,15 +3,17 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 
 const SRC = new URL('../src/', import.meta.url);
-// TERM_PROGRAM and XDG_RUNTIME_DIR are implementation details, not user-facing knobs.
-const IGNORED = new Set(['TERM_PROGRAM', 'XDG_RUNTIME_DIR']);
 
+// Only PLUK_* and NO_COLOR are user-facing knobs (TERM_PROGRAM and
+// XDG_RUNTIME_DIR are implementation details). Match quoted names as well as
+// `process.env.X`: run-dir.ts reads PLUK_LOG_* through envPositiveInt(name) and
+// attach.ts reads PLUK_RATIONGUARD_BIN through an injected `env` parameter.
 const read = new Set();
 for (const file of readdirSync(SRC).filter(f => f.endsWith('.ts'))) {
   const text = readFileSync(new URL(file, SRC), 'utf8');
-  for (const [, a, b] of text.matchAll(/process\.env(?:\.(\w+)|\[\s*['"](\w+)['"]\s*\])/g)) {
+  for (const [, a, b] of text.matchAll(/process\.env\.(\w+)|['"](PLUK_[A-Z0-9_]+|NO_COLOR)['"]/g)) {
     const name = a ?? b;
-    if (!IGNORED.has(name) && /^(PLUK_|NO_COLOR$)/.test(name)) read.add(name);
+    if (/^(PLUK_|NO_COLOR$)/.test(name)) read.add(name);
   }
 }
 
