@@ -14,7 +14,12 @@ to an idle agent, so rate limits, errors and stalls go unnoticed.
    ```sh
    ls -l "<run-dir>/logs/<session>.jsonl"; tail -n 3 "<run-dir>/logs/<session>.jsonl"
    ```
-   The run directory is `--run-dir`, else `PLUK_RUN_DIR`, else pluk's default.
+   The run directory is `--run-dir`, else `PLUK_RUN_DIR`, else
+   `$XDG_RUNTIME_DIR/pluk` when set, else `/tmp/pluk-<uid>` (current user's uid):
+   ```sh
+   ls -l "${PLUK_RUN_DIR:-${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/pluk}}"/logs/   # with XDG_RUNTIME_DIR set
+   ls -l "${PLUK_RUN_DIR:-/tmp/pluk-$(id -u)}"/logs/                        # without it
+   ```
    Subscribers must use the same run directory as the publisher.
 2. Did `pluk subscribe` exit with `Timeout waiting for <path>`? The log did not
    appear within 60 s: the session was never attached, the name differs, or the
@@ -24,12 +29,15 @@ to an idle agent, so rate limits, errors and stalls go unnoticed.
    names or output): `--diagnostics` or `--diagnostics=<secs>`.
    | Counter | Meaning if high |
    | --- | --- |
-   | `captureFailures` (watch `--capture`) | tmux pane gone, wrong `--pane`, or tmux unreachable |
+   | `captureFailures` rising with `framesPolled` (watch `--capture`) | Pane gone, wrong `--pane`, tmux unreachable, or tmux server wedged (accepts the socket but `capture-pane` exceeds the 5 s query timeout, surfacing as `ETIMEDOUT`); time `tmux list-sessions` and restart the tmux server if it takes more than a few seconds |
+   | `framesPolled` = 0 (watch `--capture`) | Watcher not polling | Check the `--capture` interval and restart |
+   | `eventsEmitted` = 0 while `linesSeen` / `framesPolled` rises | Input arrives but nothing classifies, or all events are filtered | If `eventsFiltered` also rises, review `--filter`; else no pattern matches this CLI (`pluk patterns --cli=<cli>`) |
    | `classifyErrors`, `inputErrors` (watch) | Malformed input or a broken input stream |
    | `emitErrors` (watch) | The event sink threw; events were classified but not delivered |
    | `eventsFiltered` | `--filter` is dropping the types you expect |
    | `malformedLines` (subscribe) | The log contains lines that are not pluk events |
-   | `linesSeen` / `linesRead` stuck at 0 | Nothing is reaching the watcher or log |
+   | `linesSeen` stuck at 0 (watch, stream mode) | Nothing reaches stdin; re-attach so `pipe-pane` is re-established |
+   | `linesRead` = 0 (subscribe) | Log is empty or the subscriber reads the wrong run dir |
 5. Does `pluk sessions` show the session with the expected CLI and state?
 
 ## Common causes
