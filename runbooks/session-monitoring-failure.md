@@ -30,8 +30,8 @@ to an idle agent, so rate limits, errors and stalls go unnoticed.
    | Counter | Meaning if high |
    | --- | --- |
    | `captureFailures` rising with `framesPolled` (watch `--capture`) | Pane gone, wrong `--pane`, tmux unreachable, or tmux server wedged (accepts the socket but `capture-pane` exceeds the 5 s query timeout, surfacing as `ETIMEDOUT`); time `tmux list-sessions` and restart the tmux server if it takes more than a few seconds |
-   | `framesPolled` = 0 (watch `--capture`) | Watcher not polling | Check the `--capture` interval and restart |
-   | `eventsEmitted` = 0 while `linesSeen` / `framesPolled` rises | Input arrives but nothing classifies, or all events are filtered | If `eventsFiltered` also rises, review `--filter`; else no pattern matches this CLI (`pluk patterns --cli=<cli>`) |
+   | `framesPolled` = 0 (watch `--capture`) | Watcher not polling; check the `--capture` interval and restart |
+   | `eventsEmitted` = 0 while `linesSeen` / `framesPolled` rises | Input arrives but nothing classifies, or all events are filtered; if `eventsFiltered` also rises, review `--filter`, else no pattern matches this CLI (`pluk patterns --cli=<cli>`) |
    | `classifyErrors`, `inputErrors` (watch) | Malformed input or a broken input stream |
    | `emitErrors` (watch) | The event sink threw; events were classified but not delivered |
    | `eventsFiltered` | `--filter` is dropping the types you expect |

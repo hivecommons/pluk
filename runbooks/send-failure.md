@@ -34,7 +34,7 @@ without the rebuttal or command it was meant to receive; pluk does not retry.
 | Symptom | Likely cause | Action |
 | --- | --- | --- |
 | `can't find session` / `no server running` | Session ended, wrong name, or wrong tmux server | Check step 2 and 3; re-run `pluk attach` if the session was recreated |
-| `tmux: command not found` | tmux is not on `PATH` for the caller | Install tmux or fix `PATH` for the calling process |
+| `spawn tmux ENOENT` | tmux is not on `PATH` for the caller | Install tmux or fix `PATH` for the calling process |
 | Text typed but not submitted | `--enter` was not passed | Re-send with `--enter` |
 | Key name typed as a key (for example `C-c`) | Bare form sends via tmux key lookup | Pass `--literal` to type the characters |
 | Rebuttals never arrive | Attach was started without `--rebuttal=send`, or the rationguard watcher died | See [attach-failure.md](attach-failure.md) |
