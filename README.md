@@ -124,6 +124,7 @@ tmux attach -t my-agent
 | `PLUK_LOG_MAX_BYTES` | `10485760` (10 MiB) | Byte cap for a session's event log: once exceeded, the log is trimmed to the newest lines that fit under it |
 | `PLUK_LOG_KEEP_LINES` | `5000` | Keep up to this many trailing lines across rotation, within the `PLUK_LOG_MAX_BYTES` cap |
 | `PLUK_RATIONGUARD_BIN` | *(unset)* | Rationguard command for `pluk attach --rationguard` when it is not on `PATH`; same as `--rationguard-bin` |
+| `NO_COLOR` | *(unset)* | When set, `pluk --help`, `pluk sessions`, `pluk patterns` and all stderr diagnostics are written without ANSI colour codes even on a TTY (colour is already off when the stream is not a TTY) |
 
 </details>
 
