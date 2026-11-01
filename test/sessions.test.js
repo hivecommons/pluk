@@ -134,6 +134,51 @@ test('discoverSessions keeps state and cli when raw_output floods after the last
   }
 });
 
+test('discoverSessions stays fast on a rotation-sized log with no state_change (scan past the window must not be quadratic)', () => {
+  const dir = makeRunDir();
+  try {
+    // A PLUK_LOG_MAX_BYTES-sized log of tool events and no state_change: the marker scan
+    // walks the whole file. Collecting every event on the way made this take seconds.
+    const line = eventLine({ ts: '2026-01-01T00:10:00.000Z', type: 'tool_call', data: { tool: 'bash' } }) + '\n';
+    const chunk = line.repeat(1000);
+    let content = '';
+    while (content.length < 16 * 1024 * 1024) content += chunk;
+    writeFileSync(join(dir, 'logs', 'flood.jsonl'), content);
+
+    const started = Date.now();
+    const s = discoverSessions(dir)[0];
+    const elapsed = Date.now() - started;
+    assert.equal(s.state, 'unknown');
+    assert.equal(s.cli, 'unknown');
+    assert.equal(s.lastActivity, '2026-01-01T00:10:00.000Z');
+    assert.ok(elapsed < 2000, `discoverSessions took ${elapsed}ms on a 16 MB log without state_change`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('discoverSessions keeps only the newest state_change and cli found past the tail window', () => {
+  const dir = makeRunDir();
+  try {
+    const lines = [
+      eventLine({ ts: '2026-01-01T00:00:00.000Z', type: 'state_change', data: { to: 'idle', cli: 'codex' } }),
+      eventLine({ ts: '2026-01-01T00:00:01.000Z', type: 'state_change', data: { to: 'working' } }),
+      eventLine({ ts: '2026-01-01T00:00:02.000Z', type: 'rate_limit', data: { cli: 'claude' } }),
+    ];
+    for (let i = 0; i < 200; i++) {
+      lines.push(eventLine({ ts: `2026-01-01T00:10:${String(i % 60).padStart(2, '0')}.000Z`, type: 'tool_call', data: { tool: 'bash' } }));
+    }
+    writeFileSync(join(dir, 'logs', 'busy.jsonl'), lines.join('\n') + '\n');
+
+    const s = discoverSessions(dir)[0];
+    assert.equal(s.state, 'working');
+    assert.equal(s.cli, 'claude');
+    assert.equal(s.eventCount, 203);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('discoverSessions strips terminal control characters from log-sourced fields', () => {
   const dir = makeRunDir();
   try {

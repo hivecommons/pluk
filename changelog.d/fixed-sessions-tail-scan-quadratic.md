@@ -1,0 +1,1 @@
+- `pluk sessions` no longer slows to seconds per session on a rotation-sized log whose last state change has scrolled out of the tail window; the marker scan past the window keeps only the markers it is looking for (#403).

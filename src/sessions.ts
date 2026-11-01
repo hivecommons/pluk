@@ -36,7 +36,9 @@ function readLastEvents(filePath: string, maxEvents: number): PlukEvent[] {
     // raw_output lines (attach --include-raw) carry no state or cli, so they must not
     // push state_change events out of the window; only the newest one is kept for lastActivity.
     // The scan continues past maxEvents until a state_change and a cli marker are found, so a
-    // flood of tool events cannot hide them (the file is rotation-bounded)
+    // flood of tool events cannot hide them. Past the window only those two markers are kept:
+    // collecting everything made the scan quadratic over a rotation-sized log with no
+    // state_change (seconds per session instead of milliseconds).
     for (let i = lines.length - 1; i >= 0 && (events.length < maxEvents || !sawState || !sawCli); i--) {
       const event = parseEvent(lines[i]);
       if (!event) continue;
@@ -44,14 +46,18 @@ function readLastEvents(filePath: string, maxEvents: number): PlukEvent[] {
         if (sawRaw) continue;
         sawRaw = true;
       }
-      if (event.type === 'state_change') sawState = true;
-      if (event.data['cli'] && event.data['cli'] !== 'unknown') sawCli = true;
-      events.unshift(event);
+      const isState = event.type === 'state_change';
+      const hasCli = Boolean(event.data['cli'] && event.data['cli'] !== 'unknown');
+      if (events.length >= maxEvents && !(isState && !sawState) && !(hasCli && !sawCli)) continue;
+      if (isState) sawState = true;
+      if (hasCli) sawCli = true;
+      events.push(event);
     }
   } catch {
     // file unreadable
   }
-  return events;
+  // Scanned newest-first; callers expect chronological order.
+  return events.reverse();
 }
 
 function formatAgo(isoTimestamp: string): string {
