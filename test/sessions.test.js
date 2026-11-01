@@ -114,6 +114,51 @@ test('discoverSessions keeps state and cli when more than 50 events follow the l
   }
 });
 
+test('discoverSessions keeps scanning for the cli marker after the last state_change is found', () => {
+  const dir = makeRunDir();
+  try {
+    // cli lives on the oldest event, the state_change is newer, and both sit beyond the
+    // 50-event window; the scan must not stop at the state_change
+    const lines = [
+      eventLine({ ts: '2026-01-01T00:00:00.000Z', type: 'session_start', data: { cli: 'claude' } }),
+      eventLine({ ts: '2026-01-01T00:00:01.000Z', type: 'state_change', data: { from: 'idle', to: 'working' } }),
+    ];
+    for (let i = 0; i < 60; i++) {
+      lines.push(eventLine({ ts: `2026-01-01T00:10:${String(i % 60).padStart(2, '0')}.000Z`, type: 'rate_limit' }));
+    }
+    writeFileSync(join(dir, 'logs', 'cli-first.jsonl'), lines.join('\n') + '\n');
+
+    const s = discoverSessions(dir)[0];
+    assert.equal(s.state, 'working');
+    assert.equal(s.cli, 'claude');
+    assert.equal(s.eventCount, 62);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('discoverSessions keeps scanning for the last state_change after the cli marker is found', () => {
+  const dir = makeRunDir();
+  try {
+    // mirror ordering: the state_change is the oldest event and the cli marker is newer
+    const lines = [
+      eventLine({ ts: '2026-01-01T00:00:00.000Z', type: 'state_change', data: { from: 'idle', to: 'working' } }),
+      eventLine({ ts: '2026-01-01T00:00:01.000Z', type: 'session_start', data: { cli: 'claude' } }),
+    ];
+    for (let i = 0; i < 60; i++) {
+      lines.push(eventLine({ ts: `2026-01-01T00:10:${String(i % 60).padStart(2, '0')}.000Z`, type: 'rate_limit' }));
+    }
+    writeFileSync(join(dir, 'logs', 'state-first.jsonl'), lines.join('\n') + '\n');
+
+    const s = discoverSessions(dir)[0];
+    assert.equal(s.state, 'working');
+    assert.equal(s.cli, 'claude');
+    assert.equal(s.eventCount, 62);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('discoverSessions keeps state and cli when raw_output floods after the last state_change', () => {
   const dir = makeRunDir();
   try {
