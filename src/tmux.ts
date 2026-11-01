@@ -59,10 +59,14 @@ export function tmuxRunInherited(args: string[]): void {
  * so callers can supply ordinary shell commands with literal data.
  */
 export function tmuxPipePane(session: string, pipeCmd: string): void {
-  // ## is not sufficient: tmux preserves runs of hashes before '[' as
-  // style syntax. Emit '#' through its character format instead; expansion
-  // results are not recursively interpreted. %% survives strftime as '%'.
-  const literalCmd = pipeCmd.replace(/#/g, '#{a:35}').replace(/%/g, '%%');
+  // '##' is the default '#' escape because every tmux version understands
+  // it. It is not enough before '[', where tmux keeps runs of hashes as style
+  // syntax, so only there emit '#' via '#{a:35}'. That format needs tmux >=
+  // 3.2; older releases expand it to nothing, so it must not be used for
+  // every '#'. Expansion results are not recursively interpreted. %% survives
+  // strftime as '%'.
+  const literalCmd = pipeCmd.replace(/[#%]/g, (ch, i, src) =>
+    ch === '%' ? '%%' : src[i + 1] === '[' ? '#{a:35}' : '##');
   execFileSync('tmux', ['pipe-pane', '-t', exactTarget(session), literalCmd], { stdio: 'inherit' });
 }
 

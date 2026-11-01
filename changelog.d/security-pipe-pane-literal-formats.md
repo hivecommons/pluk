@@ -1,1 +1,2 @@
 - Preserve literal tmux formats in attach watcher commands, paths, and forwarded log rotation settings instead of expanding them before shell execution.
+- Keep `##` as the default `#` escape in pipe-pane commands so run dirs with `#` stay intact on tmux < 3.2; `#{a:35}` is used only before `[`.

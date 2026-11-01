@@ -208,3 +208,28 @@ test('pipe-pane preserves literal formats in watcher argv, environment, and path
   });
   assert.equal(existsSync(jobMarker), false, 'tmux must not execute a format job');
 });
+
+test('pipe-pane keeps a hash before a non-bracket literal (#408)', { skip }, async () => {
+  const jobMarker = join(scratch, 'unexpected-hash-job');
+  const literal = `proj#1 #{session_name} #(touch ${jobMarker}) #[fg=red] ##[bold] #{a:35} #`;
+  const watcher = join(scratch, 'hash-watcher.cjs');
+  const logFile = join(scratch, 'hash-log.jsonl');
+  writeFileSync(watcher, 'console.log(JSON.stringify({ args: process.argv.slice(2) }));');
+  tmuxPipePane(SHORT, buildPipePaneCommand({
+    runDir: literal,
+    plukBin: `${shellQuote(process.execPath)} ${shellQuote(watcher)}`,
+    session: literal,
+    cli: literal,
+    includeRaw: false,
+    logFile,
+  }));
+  const received = await waitFor(() => {
+    try {
+      return JSON.parse(readFileSync(logFile, 'utf-8'));
+    } catch {
+      return false;
+    }
+  }, 'literal hash watcher output');
+  assert.deepEqual(received.args, ['watch', literal, `--cli=${literal}`]);
+  assert.equal(existsSync(jobMarker), false, 'tmux must not execute a format job');
+});
