@@ -30,16 +30,22 @@ function readLastEvents(filePath: string, maxEvents: number): PlukEvent[] {
     const content = readFileSync(filePath, 'utf-8');
     const lines = content.split('\n').filter(l => l.trim());
     let sawRaw = false;
+    let sawState = false;
+    let sawCli = false;
 
     // raw_output lines (attach --include-raw) carry no state or cli, so they must not
-    // push state_change events out of the window; only the newest one is kept for lastActivity
-    for (let i = lines.length - 1; i >= 0 && events.length < maxEvents; i--) {
+    // push state_change events out of the window; only the newest one is kept for lastActivity.
+    // The scan continues past maxEvents until a state_change and a cli marker are found, so a
+    // flood of tool events cannot hide them (the file is rotation-bounded)
+    for (let i = lines.length - 1; i >= 0 && (events.length < maxEvents || !sawState || !sawCli); i--) {
       const event = parseEvent(lines[i]);
       if (!event) continue;
       if (event.type === 'raw_output') {
         if (sawRaw) continue;
         sawRaw = true;
       }
+      if (event.type === 'state_change') sawState = true;
+      if (event.data['cli'] && event.data['cli'] !== 'unknown') sawCli = true;
       events.unshift(event);
     }
   } catch {

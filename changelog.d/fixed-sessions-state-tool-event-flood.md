@@ -1,0 +1,1 @@
+- `pluk sessions` no longer reports `STATE`/`CLI` as `unknown` for a working session when 50 or more tool or error events follow the last state change.

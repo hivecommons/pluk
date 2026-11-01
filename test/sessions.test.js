@@ -94,7 +94,7 @@ test('discoverSessions sorts sessions by most recent activity first', () => {
   }
 });
 
-test('discoverSessions only inspects the last 50 non-raw events for state', () => {
+test('discoverSessions keeps state and cli when more than 50 events follow the last state_change', () => {
   const dir = makeRunDir();
   try {
     const lines = [
@@ -106,9 +106,8 @@ test('discoverSessions only inspects the last 50 non-raw events for state', () =
     writeFileSync(join(dir, 'logs', 'long.jsonl'), lines.join('\n') + '\n');
 
     const s = discoverSessions(dir)[0];
-    // early state_change and cli marker fell outside the 50-event tail window
-    assert.equal(s.state, 'unknown');
-    assert.equal(s.cli, 'unknown');
+    assert.equal(s.state, 'working');
+    assert.equal(s.cli, 'claude');
     assert.equal(s.eventCount, 61);
   } finally {
     rmSync(dir, { recursive: true, force: true });
