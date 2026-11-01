@@ -12,7 +12,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -25,6 +25,7 @@ import {
   tmuxPipePane,
 } from '../dist/tmux.js';
 import { send } from '../dist/send.js';
+import { buildPipePaneCommand, shellQuote } from '../dist/attach.js';
 
 function hasTmux() {
   try {
@@ -168,4 +169,42 @@ test('a repeat tmuxPipePane keeps piping instead of toggling the pipe off (#105)
       return false;
     }
   }, 'pane output in the second pipe');
+});
+
+test('pipe-pane preserves literal formats in watcher argv, environment, and paths (#408)', { skip }, async () => {
+  const jobMarker = join(scratch, 'unexpected-format-job');
+  const literal = `#{session_name} #S #W #(touch ${jobMarker}) ## ### #### #[fg=red] %Y %% ' $(id)`;
+  const watcher = join(scratch, "watcher #{session_name} #S %Y 'quote.cjs");
+  const logFile = join(scratch, "log #{session_name} #S %Y 'quote.jsonl");
+  writeFileSync(watcher, `
+    console.log(JSON.stringify({
+      args: process.argv.slice(2),
+      runDir: process.env.PLUK_RUN_DIR,
+      maxBytes: process.env.PLUK_LOG_MAX_BYTES,
+      keepLines: process.env.PLUK_LOG_KEEP_LINES,
+    }));
+  `);
+  tmuxPipePane(SHORT, buildPipePaneCommand({
+    runDir: literal,
+    plukBin: `${shellQuote(process.execPath)} ${shellQuote(watcher)}`,
+    session: literal,
+    cli: literal,
+    includeRaw: true,
+    logFile,
+    env: { PLUK_LOG_MAX_BYTES: literal, PLUK_LOG_KEEP_LINES: literal },
+  }));
+  const received = await waitFor(() => {
+    try {
+      return JSON.parse(readFileSync(logFile, 'utf-8'));
+    } catch {
+      return false;
+    }
+  }, 'literal watcher output');
+  assert.deepEqual(received, {
+    args: ['watch', literal, `--cli=${literal}`, '--include-raw'],
+    runDir: literal,
+    maxBytes: literal,
+    keepLines: literal,
+  });
+  assert.equal(existsSync(jobMarker), false, 'tmux must not execute a format job');
 });

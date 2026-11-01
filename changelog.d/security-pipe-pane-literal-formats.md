@@ -1,0 +1,1 @@
+- Preserve literal tmux formats in attach watcher commands, paths, and forwarded log rotation settings instead of expanding them before shell execution.
