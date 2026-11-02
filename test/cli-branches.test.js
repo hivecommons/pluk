@@ -238,6 +238,7 @@ test('watch --capture polls the pane named by --pane, not the session', async ()
   assert.ok(!calls.includes('-t cap-sess'), `pane target must win: ${calls}`);
   const ev = JSON.parse(out.trim().split('\n')[0]);
   assert.equal(ev.session, 'cap-sess');
+  assert.equal(ev.pane, '%7');
   assert.equal(ev.data.to, 'working');
 });
 
