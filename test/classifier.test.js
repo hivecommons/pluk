@@ -165,16 +165,23 @@ test('dead spinner glyphs and unreachable ● patterns are gone; tool events sti
   assert.equal(ev.type, 'tool_call_started');
 });
 
+// A working line that matches only WORKING_PATTERNS: WORKING_FOOTER also
+// matches BYPASS_PATTERN, so classify() returns a bypass_permissions event and
+// only parks the working verdict as pending until the next line resolves it.
+const WORKING_LINE = '● Working…';
+
 test('issue #418: flush() emits working->idle once the window elapses after a suppressed idle repaint', () => {
   let t = 1000;
   const c = makeClassifier(() => t);
-  assert.deepEqual(stateChanges([c.classify(WORKING_FOOTER)]), ['unknown->working']);
+  assert.deepEqual(stateChanges([c.classify(WORKING_LINE)]), ['unknown->working']);
   t = 1001;
+  // End-of-turn repaint: ❯ is suppressed by fresh working evidence, the idle
+  // footer only yields a bypass_permissions event — no state change.
   const events = [c.classify(INPUT_BOX), c.classify(IDLE_FOOTER)];
   assert.deepEqual(stateChanges(events), []);
   assert.equal(c.state, 'working');
-  assert.equal(c.flush(1002), null);
-  const ev = c.flush(1003);
+  assert.equal(c.flush(1001), null);
+  const ev = c.flush(1002);
   assert.deepEqual(stateChanges([ev]), ['working->idle']);
   assert.equal(c.state, 'idle');
 });
@@ -182,11 +189,11 @@ test('issue #418: flush() emits working->idle once the window elapses after a su
 test('issue #418: flush() keeps working while working evidence is fresh', () => {
   let t = 1000;
   const c = makeClassifier(() => t);
-  c.classify(WORKING_FOOTER);
+  c.classify(WORKING_LINE);
   t = 1001;
   c.classify(INPUT_BOX);
   t = 1002;
-  c.classify(WORKING_FOOTER);
+  c.classify(WORKING_LINE);
   assert.equal(c.flush(1003), null);
   assert.equal(c.state, 'working');
 });
@@ -195,7 +202,7 @@ test('issue #418: flush() with nothing pending emits nothing and never duplicate
   let t = 1000;
   const c = makeClassifier(() => t);
   assert.equal(c.flush(1010), null);
-  c.classify(WORKING_FOOTER);
+  c.classify(WORKING_LINE);
   t = 1001;
   c.classify(INPUT_BOX);
   assert.deepEqual(stateChanges([c.flush(1004)]), ['working->idle']);
