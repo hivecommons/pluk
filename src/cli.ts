@@ -197,8 +197,11 @@ function cmdWatch(args: string[]): void {
   // session; the JSONL log itself is appended by the shell's `>>`
   // redirection, so this is the only place that can bound its growth for a
   // long-running session. Guard the session name the same way `attach`
-  // does before deriving a log path from it.
+  // does before deriving a log path from it. Without a session positional
+  // the "stdin" label is only a placeholder: this watch is not writing to
+  // any <run-dir>/logs file, so it must not rotate one.
   try {
+    if (positional[0] === undefined) throw new Error('no session');
     validateSessionName(session);
     const logFile = join(resolveRunDir(flags['run-dir']), 'logs', `${session}.jsonl`);
     const rotateInterval = setInterval(() => {
@@ -212,8 +215,8 @@ function cmdWatch(args: string[]): void {
 
     process.on('exit', () => clearInterval(rotateInterval));
   } catch {
-    // Unsafe/placeholder session name (e.g. the default "stdin") — skip
-    // rotation rather than derive a log path from it.
+    // No explicit session (placeholder label) or an unsafe session name —
+    // skip rotation rather than derive a log path from it.
   }
 
   const stopDiagnostics = startDiagnostics('watch', () => ({ ...watcher.stats() }), diagnosticsFlag);
