@@ -6,9 +6,11 @@ import { join } from 'node:path';
 
 import {
   COVERAGE_FLAGS,
+  NO_COVERAGE_FLAG,
   coverageArgs,
   listTestFiles,
   buildArgv,
+  parseArgs,
 } from '../scripts/run-tests.mjs';
 
 test('coverageArgs adds threshold flags only on Node >= 22', () => {
@@ -71,6 +73,20 @@ test('buildArgv is a plain --test run on Node 20 and gated on Node 22', () => {
     ...COVERAGE_FLAGS,
     ...files,
   ]);
+});
+
+test('--no-coverage drops the threshold gate on every Node major', () => {
+  assert.deepEqual(parseArgs([]), { coverage: true });
+  assert.deepEqual(parseArgs([NO_COVERAGE_FLAG]), { coverage: false });
+  assert.deepEqual(coverageArgs(22, { coverage: false }), []);
+  assert.deepEqual(coverageArgs(26, { coverage: false }), []);
+  assert.deepEqual(buildArgv(26, ['test/a.test.js'], { coverage: false }), ['--test', 'test/a.test.js']);
+});
+
+test('stryker commandRunner disables the coverage gate so only assertions kill mutants', () => {
+  const { commandRunner, checkers } = JSON.parse(readFileSync(join(process.cwd(), 'stryker.config.json'), 'utf-8'));
+  assert.match(commandRunner.command, /node scripts\/run-tests\.mjs --no-coverage$/);
+  assert.deepEqual(checkers, ['typescript']);
 });
 
 test('importing the runner as a module does not spawn the suite', () => {
