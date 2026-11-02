@@ -43,6 +43,9 @@ export function tmuxRunInherited(args: string[]): void {
   execFileSync('tmux', args, { stdio: 'inherit' });
 }
 
+/** Size of tmux's strftime buffer in format_expand1 (format.c `expanded[8192]`), 3.0 through 3.5a. */
+export const TMUX_FORMAT_BUFFER_BYTES = 8192;
+
 /**
  * Replaces any pipe already open on the pane with `pipeCmd`.
  *
@@ -57,6 +60,12 @@ export function tmuxRunInherited(args: string[]): void {
  * Shell quoting alone cannot protect literal formats such as #{...}, #(...),
  * #S, or strftime directives. Escape that outer layer here, exactly once,
  * so callers can supply ordinary shell commands with literal data.
+ *
+ * format_expand_time runs strftime into a fixed 8192-byte buffer and
+ * expands a command that does not fit to "", which pipe-pane treats as
+ * "close the pipe": event logging would stop without any error. tmux 3.2+
+ * skips strftime when the command has no '%', but 3.0/3.1 always run it,
+ * so the limit applies to every command. Throw instead of piping nothing.
  */
 export function tmuxPipePane(session: string, pipeCmd: string): void {
   // ## escapes hashes except before '[', where tmux preserves hash runs as
@@ -66,6 +75,16 @@ export function tmuxPipePane(session: string, pipeCmd: string): void {
   // strftime as '%'.
   const literalCmd = pipeCmd.replace(/#\[|#|%/g, token =>
     token === '#[' ? '#{l:#[}' : token === '#' ? '##' : '%%');
+  // strftime output: every '%' in literalCmd is part of a '%%' pair.
+  const strftimeBytes = Buffer.byteLength(literalCmd.replaceAll('%%', '%'));
+  if (strftimeBytes >= TMUX_FORMAT_BUFFER_BYTES) {
+    throw new Error(
+      `pipe-pane command is ${strftimeBytes} bytes after tmux format escaping; `
+      + `tmux drops commands of ${TMUX_FORMAT_BUFFER_BYTES} bytes or more and would `
+      + 'silently turn event logging off. Shorten the run directory, session name, '
+      + 'CLI name or log path.',
+    );
+  }
   execFileSync('tmux', ['pipe-pane', '-t', exactTarget(session), literalCmd], { stdio: 'inherit' });
 }
 

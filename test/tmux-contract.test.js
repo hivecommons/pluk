@@ -18,6 +18,7 @@ import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import {
   exactTarget,
+  TMUX_FORMAT_BUFFER_BYTES,
   tmuxCapturePane,
   tmuxHasSession,
   tmuxListSessionNames,
@@ -207,4 +208,25 @@ test('pipe-pane preserves literal formats in watcher argv, environment, and path
     keepLines: literal,
   });
   assert.equal(existsSync(jobMarker), false, 'tmux must not execute a format job');
+});
+
+test('pipe-pane runs the longest command tmux strftime accepts and refuses one byte more (#410)', { skip }, async () => {
+  // tmux strftimes the escaped command into an 8192-byte buffer and pipes ""
+  // when it does not fit. '#' escapes to '##' and survives strftime, '%%'
+  // collapses to '%': size the command by that output, not by pipeCmd.
+  const commandOfStrftimeBytes = (marker, bytes) => {
+    const head = `: '#[x] #1 100%'; touch '${marker}'; : `;
+    const strftimeHead = `: '#{l:#[}x] ##1 100%'; touch '${marker}'; : `;
+    return head + 'x'.repeat(bytes - Buffer.byteLength(strftimeHead));
+  };
+  const fits = join(scratch, 'strftime-fits');
+  tmuxPipePane(SHORT, commandOfStrftimeBytes(fits, TMUX_FORMAT_BUFFER_BYTES - 1));
+  await waitFor(() => existsSync(fits), 'the longest accepted pipe-pane command to run');
+
+  const tooLong = join(scratch, 'strftime-too-long');
+  assert.throws(
+    () => tmuxPipePane(SHORT, commandOfStrftimeBytes(tooLong, TMUX_FORMAT_BUFFER_BYTES)),
+    /pipe-pane command is 8192 bytes after tmux format escaping/,
+  );
+  assert.equal(existsSync(tooLong), false);
 });
