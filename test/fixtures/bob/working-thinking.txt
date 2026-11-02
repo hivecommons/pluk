@@ -1,0 +1,38 @@
+                                                  Sandbox mode Disabled
+
+                                             ~/hive-work/bob-capture-sandbox
+
+                           Users should independently verify accuracy of AI-generated content.
+
+Instance and team selected successfully.
+
+
+ say hello
+
+
+⊙
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                                      │
+│ 🔧  Task Completion Successfully completed | Cost: 0.02                                                              │
+│                                                                                                                      │
+│ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
+│                                                                                                                      │
+│ Hello! Olá! Bonjour! Hola!                                                                                           │
+│ I'm Bob, an AI assistant designed to help with coding tasks.                                                         │
+│ I'm here to help you be more productive with your coding work.                                                       │
+│ What can I assist you with today?                                                                                    │
+│                                                                                                                      │
+│ You can ask follow up questions or use the /clear command to start a new task                                        │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+ what is 2+2
+
+
+⊙ I'm working on it... (esc to cancel, 0s)
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ >   Enter your prompt, / for commands, @ for files, ! for Shell mode                                                 │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+  Auto-approve: Off                Tokens left: 96% | 💰 0.02/100 (99%) | Current 💬: 0.02               Mode: 💻 Code

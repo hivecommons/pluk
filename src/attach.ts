@@ -184,6 +184,7 @@ function resolveCliCommand(cli: string): string {
     codex: 'codex',
     aider: 'aider',
     omp: 'omp',
+    bob: 'bob',
   };
   return CLI_COMMANDS[cli] ?? cli;
 }
@@ -194,6 +195,7 @@ function resolveDangerousFlag(cli: string): string {
     copilot: '--allow-all-tools',
     codex: '--full-auto',
     omp: '--approval-mode yolo',
+    bob: '--approval-mode yolo',
     gemini: '--yolo',
     aider: '--yes-always',
   };

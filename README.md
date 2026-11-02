@@ -149,12 +149,12 @@ Unknown, misspelled, or wrong-subcommand `--flags` exit 2 (`unknown flag --name 
 
 | Flag | What it does |
 |------|-------------|
-| `--cli=claude` | CLI type: `claude`, `copilot`, `gemini`, `goose`, `codex`, `aider`, `omp` |
+| `--cli=claude` | CLI type: `claude`, `copilot`, `gemini`, `goose`, `codex`, `aider`, `omp`, `bob` |
 | `--command=<cmd>` | Override the CLI command/executable to launch (instead of the default resolved from `--cli`); combines with `--cli-args` |
 | `--rationguard` | Start rationguard watcher alongside pluk (requires `rationguard` on `PATH` — `npm install -g @hivecommons/rationguard` — or `--rationguard-bin`; pluk never fetches it from the registry implicitly) |
 | `--rationguard-bin=<cmd>` | Explicit rationguard command to run instead of the one on `PATH`, e.g. `--rationguard-bin='npx --yes @hivecommons/rationguard@0.13.0'` (also `PLUK_RATIONGUARD_BIN`); the flag is ignored with a warning without `--rationguard` |
 | `--rebuttal=log\|send` | Log rebuttals or auto-send them when rationguard detects excuses; other values exit with code 2 before attaching. Ignored with a warning without `--rationguard` |
-| `--dangerous` | Skip CLI permission prompts (`--dangerously-skip-permissions` for claude, `--allow-all-tools` for copilot, `--full-auto` for codex, `GOOSE_MODE=auto` for goose, `--approval-mode yolo` for omp, `--yolo` for gemini, `--yes-always` for aider) |
+| `--dangerous` | Skip CLI permission prompts (`--dangerously-skip-permissions` for claude, `--allow-all-tools` for copilot, `--full-auto` for codex, `GOOSE_MODE=auto` for goose, `--approval-mode yolo` for omp, `--approval-mode yolo` for bob, `--yolo` for gemini, `--yes-always` for aider) |
 | `--dir=/path` | Working directory for the agent |
 | `--cli-args="..."` | Extra arguments to pass to the CLI |
 | `--no-open` | Don't attach: without `--rationguard`, leave the session detached and print the attach hint; with `--rationguard`, don't open a new window (macOS) or print the hint (elsewhere) |
@@ -323,7 +323,7 @@ In addition to the `pluk <command>` subcommand form, three standalone binaries a
 
 ## Supported CLIs
 
-Built-in event-classification pattern files exist for: **Claude Code**, **GitHub Copilot CLI**, **Gemini CLI**, **Goose CLI**, **OpenAI Codex CLI**, **Aider**, **Oh My Pi (`omp`)**.
+Built-in event-classification pattern files exist for: **Claude Code**, **GitHub Copilot CLI**, **Gemini CLI**, **Goose CLI**, **OpenAI Codex CLI**, **Aider**, **Oh My Pi (`omp`)**, **IBM Bob Shell (`bob`)**.
 
 Custom patterns can be loaded from a directory with `--patterns-dir` or `getPatterns(cli, patternsDir)`.
 

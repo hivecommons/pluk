@@ -1,0 +1,38 @@
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                                      │
+│ 🔧  Task Completion Successfully completed | Cost: 0.02                                                              │
+│                                                                                                                      │
+│ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
+│                                                                                                                      │
+│ 4                                                                                                                    │
+│                                                                                                                      │
+│ You can ask follow up questions or use the /clear command to start a new task                                        │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+ run the shell command ls -la to list files in this directory
+
+
+⊙ <thinking>Execute ls -la command
+  User wants to run a shell command to list files in the current directory with detailed information. I'll use
+  execute_command with a short timeout since ls is a quick, predictable command.
+  </thinking>
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                                      │
+│ Shell ls -la [current working directory /home/user/hive-work/bob-capture-sandbox] (5s)                           │
+│                                                                                                                      │
+│  ls -la                                                                                                              │
+│                                                                                                                      │
+│  Confirm Shell Command                                                                                               │
+│  Allow execution of: 'ls'?                                                                                           │
+│                                                                                                                      │
+│  > 1. Yes, allow once                                                                                                │
+│    2. Yes, allow always ...                                                                                          │
+│    3. No, suggest changes (esc)                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+◡ Waiting for user confirmation...
+
+  Auto-approve: Off                Tokens left: 95% | 💰 0.06/100 (99%) | Current 💬: 0.06               Mode: 💻 Code

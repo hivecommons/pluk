@@ -1,0 +1,39 @@
+                                   ▀▀▀▀     ▀▀▀▀▀   ▀▀▀▀        ▀▀▀▀     ▀▀▀▀     ▀▀▀▀▀
+                                 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                                 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀▀▀▀▀▀     ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+                                 ░░░░░░░░░█▀▀▀░░░░█░░█░░░░█▀▀▀░░░░█░░░░░░░█░░░░░░░░░░░░
+                                 ░░░░░░░░░▀▀▀█░░░░█▀▀█░░░░█▀▀▀░░░░█░░░░░░░█░░░░░░░░░░░░
+                                 ░░░░░░░░░▀▀▀▀░░░░▀░░▀░░░░▀▀▀▀░░░░▀▀▀▀░░░░▀▀▀▀░░░░░░░░░
+
+                                  ─────────────────── Version 1.0.6 ───────────────────
+
+
+                                     Here are some helpful commands to get started:
+
+                        /help               For help on bob-shell
+                        /tools              List available Bob Shell tools. Usage: /tools [desc]
+                        down                Move down within dialog options.
+                        escape              Dismiss dialogs or cancel the current focus.
+                        return              Insert the selected reverse-search match.
+
+                                                  Sandbox mode Disabled
+
+                                             ~/hive-work/bob-capture-sandbox
+
+                           Users should independently verify accuracy of AI-generated content.
+
+
+ what is 3+3
+
+
+
+ 🛑 Cannot read properties of undefined (reading 'maxTokens')
+
+
+
+Press Ctrl+C again to exit.
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ >   Enter your prompt, / for commands, @ for files, ! for Shell mode                                                 │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+  Auto-approve: Off               Tokens left: 100% | 💰 0.08/100 (99%) | Current 💬: 0.00               Mode: 💻 Code

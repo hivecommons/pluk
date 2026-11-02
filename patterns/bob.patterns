@@ -1,0 +1,39 @@
+# bob.patterns — IBM Bob Shell (bob) 1.0.6 TUI
+#
+# Every regex below is derived from captured output of a real `bob` session
+# running under tmux (fixtures in test/fixtures/bob/, ANSI stripped) or from a
+# string literal in the installed bundle (bobshell/bundle/bob.js, line cited).
+# Patterns with no capture and no source literal are left empty on purpose.
+#
+# IDLE: the input box placeholder, test/fixtures/bob/startup-idle.txt:36,
+#   response-complete-idle.txt:37, yolo-idle.txt:34. Bob keeps drawing this box
+#   while working, so WORKING evidence outranks it inside the debounce window.
+IDLE_PATTERN='^│ >\s+Enter your prompt, / for commands'
+# WORKING: the status row drawn for every non-idle streaming state,
+#   "<spinner> <phrase> (esc to cancel, Ns)" — working-thinking.txt:33,
+#   working-tool-exec.txt:34; template at bob.js:4505.
+WORKING_PATTERNS='\(esc to cancel, '
+# RATE_LIMIT: source-derived only (no live 429 was triggered). Literal user-
+#   facing messages: "You have exhausted your daily quota on this model."
+#   (bob.js:1632, TerminalQuotaError), "Usage limit reached for <model>."
+#   (bob.js:4529), "Rate limit exceeded. Try again later." (bob.js:4626).
+RATE_LIMIT_PATTERN='You have exhausted your daily quota|Usage limit reached for|Rate limit exceeded'
+# LOGIN: source-derived only (credentials were cached, so the dialog was not
+#   reachable live). Auth dialog heading at bob.js:4501, auth failure at
+#   bob.js:4497 ("Failed to login. Message: ..."), timeout at bob.js:4493.
+LOGIN_PATTERN='How would you like to authenticate for this project\?|Failed to login\. Message:|Authentication timed out'
+# TRUST_DIALOG: folder trust prompt, trust-folder-dialog.txt:27; tool approval
+#   modal, tool-confirm.txt:29 and :36 (status row while the modal is open).
+TRUST_DIALOG_PATTERN='Do you trust this folder\?|Allow execution of|Waiting for user confirmation\.\.\.'
+# BYPASS: status row under --yolo / --approval-mode yolo, yolo-idle.txt:36.
+BYPASS_PATTERN='Auto-approve: Full'
+TOOL_START_PATTERN=''
+TOOL_END_PATTERN=''
+# ERROR: every error history item is rendered as "🛑 <message>" (component at
+#   bob.js:3979), error-unknown-command.txt:25, error-bad-model.txt:32.
+ERROR_PATTERN='^\s*🛑 '
+MODEL_PATTERN=''
+# SESSION_END: final line after /quit, Ctrl+C×2 and Ctrl+D×2 —
+#   session-end-quit.txt:37, session-end-ctrl-c.txt:37, session-end-ctrl-d.txt:37;
+#   literal at bob.js:3983.
+SESSION_END_PATTERN='Bob goes to sleep'
