@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "testRunner": "command",
-  "commandRunner": { "command": "npm run build && node scripts/run-tests.mjs --no-coverage" },
+  "commandRunner": { "command": "npm run build:nocheck && node scripts/run-tests.mjs --no-coverage" },
   "checkers": ["typescript"],
   "tsconfigFile": "tsconfig.json",
   "coverageAnalysis": "off",

@@ -22,6 +22,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "build:nocheck": "tsc --noCheck",
     "test": "npm run build && node scripts/run-tests.mjs",
     "test:coverage": "npm run build && node scripts/run-tests.mjs",
     "test:mutation": "stryker run",

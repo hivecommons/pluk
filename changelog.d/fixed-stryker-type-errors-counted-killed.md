@@ -1,0 +1,1 @@
+- Stryker now type-checks mutants with `@stryker-mutator/typescript-checker` and runs tests against a `tsc --noCheck` build, so type-error mutants are reported as compile errors instead of killed (#421).
