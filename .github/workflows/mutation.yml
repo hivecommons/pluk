@@ -60,14 +60,14 @@ jobs:
         continue-on-error: true
         env:
           FILES: ${{ steps.files.outputs.files }}
-        run: npx stryker run --mutate "$FILES" --incremental false
+        run: npx stryker run --mutate "$FILES" --force
 
       - name: Stryker (nightly, full tree, fresh measurement)
         if: github.event_name != 'pull_request'
         id: nightly
         timeout-minutes: 230
         continue-on-error: true
-        run: npx stryker run --incremental false
+        run: npx stryker run --force
 
       - name: Summary
         if: always()
