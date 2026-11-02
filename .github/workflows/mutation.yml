@@ -1,0 +1,105 @@
+# Advisory mutation-testing report (#405, #420). Report-only: stryker
+# thresholds.break is null, the job is continue-on-error and is not a
+# required check. Pull requests mutate only the changed src files; the
+# nightly run mutates everything from scratch (no incremental restore, so a
+# result is always a fresh measurement). A ratchet is a separate decision.
+name: Mutation (advisory)
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install tmux for test/tmux-contract.test.js
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends tmux
+
+      - run: npm ci
+
+      - name: Select files to mutate
+        id: files
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            files=$(git diff --name-only "origin/$BASE_REF...HEAD" -- 'src/*.ts' 'src/**/*.ts' | { grep -v '\.test\.ts$' || true; } | sort -u | paste -sd, -)
+          else
+            files="src/**/*.ts"
+          fi
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+          [ -n "$files" ] || echo "No changed src files; skipping mutation run."
+
+      - name: Stryker (pull request, changed files, 20 min budget)
+        if: github.event_name == 'pull_request' && steps.files.outputs.files != ''
+        id: pr
+        timeout-minutes: 20
+        continue-on-error: true
+        env:
+          FILES: ${{ steps.files.outputs.files }}
+        run: npx stryker run --mutate "$FILES" --incremental false
+
+      - name: Stryker (nightly, full tree, fresh measurement)
+        if: github.event_name != 'pull_request'
+        id: nightly
+        timeout-minutes: 230
+        continue-on-error: true
+        run: npx stryker run --incremental false
+
+      - name: Summary
+        if: always()
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FILES: ${{ steps.files.outputs.files }}
+          PR_OUTCOME: ${{ steps.pr.outcome }}
+          NIGHTLY_OUTCOME: ${{ steps.nightly.outcome }}
+        run: |
+          {
+            echo "## Mutation report (advisory)"
+            if [ "$EVENT_NAME" = "pull_request" ]; then
+              case "$PR_OUTCOME" in
+                skipped) echo "Skipped: no changed src files." ;;
+                success) echo "Measured: changed files \`$FILES\`." ;;
+                *) echo "Not measured: Stryker exited \`$PR_OUTCOME\` (timed out or failed); no score is reported." ;;
+              esac
+            else
+              case "$NIGHTLY_OUTCOME" in
+                success) echo "Measured: full tree." ;;
+                *) echo "Not measured: Stryker exited \`$NIGHTLY_OUTCOME\` (timed out or failed); no score is reported." ;;
+              esac
+            fi
+            if [ -f reports/mutation/mutation.json ]; then
+              node -e 'const r=require("./reports/mutation/mutation.json");let k=0,s=0,t=0;for(const f of Object.values(r.files))for(const m of f.mutants){t++;if(m.status==="Killed"||m.status==="Timeout")k++;if(m.status==="Survived"||m.status==="NoCoverage")s++;}console.log(`\n${t} mutants: ${k} killed, ${s} survived/uncovered`)'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: mutation-report-${{ github.run_id }}
+          path: reports/
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,1 @@
+- Added an advisory `Mutation (advisory)` workflow that runs `stryker.config.json`: pull requests mutate only changed `src/` files, the nightly run mutates the full tree from scratch; report-only and not a required check (#405, #423).
