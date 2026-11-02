@@ -112,6 +112,48 @@ test('watch rotates an oversized session log on its periodic check', async t => 
   }
 });
 
+test('session-less watch does not rotate the placeholder logs/stdin.jsonl', async t => {
+  const dir = makeRunDir('pluk-watch-no-session-');
+  const logFile = join(dir, 'logs', 'stdin.jsonl');
+  const traceFile = join(dir, 'timer-trace.log');
+  try {
+    const original = [0, 1, 2].map(sampleLine).join('\n') + '\n';
+    writeFileSync(logFile, original);
+
+    const child = spawnFast(['watch', '--cli=claude', `--run-dir=${dir}`], {
+      PLUK_LOG_MAX_BYTES: '1',
+      PLUK_LOG_KEEP_LINES: '1',
+      PLUK_TEST_TIMER_TRACE: traceFile,
+    });
+    reapOnFailure(t, child);
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', d => { stdout += d; });
+    child.stderr.on('data', d => { stderr += d; });
+
+    child.stdin.write('esc to interrupt\n');
+    await waitFor(() => stdout.includes('"type":"state_change"'), { label: 'state_change event' });
+    // Clamped ticks fire every ~20 ms; a rotation interval would have
+    // recorded its 30 s delay in the trace well within this window.
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const exit = onExit(child);
+    child.kill('SIGINT');
+    const { code, signal } = await exit;
+    assert.equal(signal, null);
+    assert.equal(code, 0);
+    assert.equal(stderr, '');
+    let trace = '';
+    try {
+      trace = readFileSync(traceFile, 'utf-8');
+    } catch {}
+    assert.ok(!trace.split('\n').includes('30000'), 'no rotation interval is armed without a session');
+    assert.equal(readFileSync(logFile, 'utf-8'), original, 'the placeholder log is left untouched');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('watch keeps classifying when the rotation check throws', async t => {
   if (typeof process.getuid === 'function' && process.getuid() === 0) {
     t.skip('read-only file does not block writes for root');
