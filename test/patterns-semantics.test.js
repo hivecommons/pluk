@@ -8,6 +8,9 @@
 // real-looking lines and pin the resulting event types and data.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Classifier, getPatterns } from '../dist/index.js';
 
 // Mutable clock so tests can step past the 2s state debounce deterministically.
@@ -286,4 +289,91 @@ test('omp: login, rate-limit, trust, error and session-end lines', () => {
   assert.equal(classifyType('omp', 'Resume this session with'), 'session_ended');
   assert.equal(classifyType('omp', 'Allow tool: bash'), 'trust_dialog');
   assert.equal(classifyType('omp', ' Error: provider exploded'), 'error');
+});
+
+// --- bob -------------------------------------------------------------------
+// Every line below is read from test/fixtures/bob/*.txt: ANSI-stripped
+// tmux capture-pane frames of IBM Bob Shell 1.0.6 (see patterns/bob.patterns
+// for which fixture line each regex came from). The rate-limit and login
+// lines are the literal strings in Bob's bundle, which no capture reached.
+
+const bobFixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'bob');
+const bobFrame = (name) => readFileSync(join(bobFixtures, `${name}.txt`), 'utf-8').trimEnd();
+const bobLines = (name) => bobFrame(name).split('\n');
+const bobLine = (name, needle) => {
+  const line = bobLines(name).find((l) => l.includes(needle));
+  assert.ok(line, `${name}.txt should contain "${needle}"`);
+  return line;
+};
+
+test('bob: captured frames drive idle → working → idle through classifyFrame', () => {
+  const { c, clock } = makeClassifier('bob');
+  let ev = c.classifyFrame(bobFrame('startup-idle'));
+  assert.deepEqual({ from: ev.data.from, to: ev.data.to }, { from: 'unknown', to: 'idle' });
+
+  // Bob keeps drawing the "│ >   Enter your prompt" box while it works; the
+  // "(esc to cancel, Ns)" status row must outrank it.
+  clock.now = 1010;
+  ev = c.classifyFrame(bobFrame('working-thinking'));
+  assert.deepEqual({ from: ev.data.from, to: ev.data.to }, { from: 'idle', to: 'working' });
+  clock.now = 1012;
+  assert.equal(c.classifyFrame(bobFrame('working-tool-exec')), null, 'still working');
+
+  // Tool approval modal: blocked, no idle/working verdict.
+  clock.now = 1020;
+  assert.equal(c.classifyFrame(bobFrame('tool-confirm')), null);
+  assert.equal(c.state, 'working');
+
+  clock.now = 1030;
+  ev = c.classifyFrame(bobFrame('response-complete-idle'));
+  assert.deepEqual({ from: ev.data.from, to: ev.data.to }, { from: 'working', to: 'idle' });
+
+  // Folder-trust dialog on a fresh workspace is a blocked modal too.
+  const fresh = makeClassifier('bob').c;
+  assert.equal(fresh.classifyFrame(bobFrame('trust-folder-dialog')), null);
+  assert.equal(fresh.state, 'unknown');
+});
+
+test('bob: idle prompt is the exact placeholder line, not any "│ >" box', () => {
+  const idle = bobLine('startup-idle', 'Enter your prompt');
+  assert.match(idle, /^│ >   Enter your prompt, \/ for commands, @ for files, ! for Shell mode/);
+  assert.equal(classifyType('bob', idle), 'state_change');
+  assert.equal(classifyType('bob', bobLine('yolo-idle', 'Enter your prompt')), 'state_change');
+  assert.equal(classifyType('bob', '│ > say hello'), null, 'typed text replaces the placeholder');
+  assert.equal(classifyType('bob', '  > 1. Yes, allow once'), null);
+});
+
+test('bob: captured working, trust, bypass, error and session-end lines classify', () => {
+  const working = bobLine('working-thinking', 'esc to cancel');
+  assert.match(working, /^⊙ I'm working on it\.\.\. \(esc to cancel, \d+s\)$/);
+  assert.equal(classifyType('bob', working), 'state_change');
+  assert.equal(classifyType('bob', bobLine('working-tool-exec', 'esc to cancel')), 'state_change');
+
+  assert.equal(classifyType('bob', bobLine('tool-confirm', 'Allow execution of')), 'trust_dialog');
+  assert.equal(classifyType('bob', bobLine('tool-confirm', 'Waiting for user confirmation')), 'trust_dialog');
+  assert.equal(classifyType('bob', bobLine('trust-folder-dialog', 'Do you trust this folder?')), 'trust_dialog');
+
+  assert.equal(classifyType('bob', bobLine('yolo-idle', 'Auto-approve: Full')), 'bypass_permissions');
+  assert.equal(classifyType('bob', bobLine('startup-idle', 'Auto-approve: Off')), null);
+
+  const unknown = bobLine('error-unknown-command', '🛑');
+  assert.equal(unknown.trim(), '🛑 Unknown command: /nonexistentcmd');
+  assert.equal(classifyType('bob', unknown), 'error');
+  assert.equal(classifyType('bob', bobLine('error-bad-model', '🛑')), 'error');
+  assert.equal(classifyType('bob', bobLine('ctrl-c-once', 'Press Ctrl+C again')), null, 'first Ctrl+C is not an exit');
+
+  for (const name of ['session-end-quit', 'session-end-ctrl-c', 'session-end-ctrl-d']) {
+    assert.equal(classifyType('bob', bobLine(name, 'Bob goes to sleep')), 'session_ended', name);
+  }
+});
+
+test('bob: source-derived rate-limit and login literals classify (bob.js:1632/4529/4626, 4501/4497)', () => {
+  assert.equal(classifyType('bob', '🛑 You have exhausted your daily quota on this model.'), 'rate_limit');
+  assert.equal(classifyType('bob', 'Usage limit reached for premium.'), 'rate_limit');
+  assert.equal(classifyType('bob', 'Rate limit exceeded. Try again later.'), 'rate_limit');
+  assert.equal(classifyType('bob', 'How would you like to authenticate for this project?'), 'login_required');
+  assert.equal(classifyType('bob', 'Failed to login. Message: boom'), 'login_required');
+  assert.equal(classifyType('bob', '∙∙∙ Authentication timed out. Please try again.'), 'login_required');
+  assert.equal(classifyType('bob', bobLine('startup-authenticating', 'Authentication in progress')), null,
+    'in-progress SSO is not a login prompt');
 });

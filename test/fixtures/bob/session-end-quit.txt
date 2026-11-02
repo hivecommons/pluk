@@ -1,0 +1,40 @@
+│ -rw-r--r--    1 user  staff      4 Nov  2 10:18 notes.txt                                                         │
+│ -rw-r--r--    1 user  staff      6 Nov  2 10:18 README.md                                                         │
+│                                                                                                                      │
+│ The directory contains:                                                                                              │
+│  - A git repository (.git/)                                                                                          │
+│  - notes.txt (4 bytes)                                                                                               │
+│  - README.md (6 bytes)                                                                                               │
+│                                                                                                                      │
+│ You can ask follow up questions or use the /clear command to start a new task                                        │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ 🛑 Unknown command: /nonexistentcmd
+
+
+
+  Session Overview
+
+   Tools:                  4
+     ▻ Success:            4
+     ▻ Error:              0
+   Success Rate:           100.0%
+   User Agreement:         100.0% (4 reviewed)
+   ────────────────────────────────────────────────────────────────
+   Duration (wall time):   11m 49s
+   Agent:                  35.5s
+     ▻ API:                13.2s (37.2%)
+     ▻ Tools:              22.3s (62.8%)
+   ────────────────────────────────────────────────────────────────
+   Session ID:             00000000-0000-0000-0000-000000000000
+
+
+  Model Usage                  Reqs   Input Tokens  Output Tokens
+  ─────────────────────────────────────────────────────────────────
+  premium                         4         38,988            560
+
+  Bob goes to sleep 💤
+
+
+ user@host  ~/hive-work/bob-capture-sandbox   master ? 

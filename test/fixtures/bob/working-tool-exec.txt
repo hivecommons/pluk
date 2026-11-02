@@ -1,0 +1,39 @@
+│ 🔧  Task Completion Successfully completed | Cost: 0.02                                                              │
+│                                                                                                                      │
+│ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
+│                                                                                                                      │
+│ 4                                                                                                                    │
+│                                                                                                                      │
+│ You can ask follow up questions or use the /clear command to start a new task                                        │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+ run the shell command ls -la to list files in this directory
+
+
+⊙ <thinking>Execute ls -la command
+  User wants to run a shell command to list files in the current directory with detailed information. I'll use
+  execute_command with a short timeout since ls is a quick, predictable command.
+  </thinking>
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                                      │
+│ Shell ls -la [current working directory /home/user/hive-work/bob-capture-sandbox] (5s)                           │
+│                                                                                                                      │
+│ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
+│                                                                                                                      │
+│ total 16                                                                                                             │
+│ drwxr-xr-x    5 user  staff    160 Nov  2 10:18 .                                                                 │
+│ drwxr-xr-x  643 user  staff  20576 Nov  2 10:22 ..                                                                │
+│ drwxr-xr-x   12 user  staff    384 Nov  2 10:19 .git                                                              │
+│ -rw-r--r--    1 user  staff      4 Nov  2 10:18 notes.txt                                                         │
+│ -rw-r--r--    1 user  staff      6 Nov  2 10:18 README.md                                                         │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+◠ Execute ls -la command (esc to cancel, 3s)
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ >   Enter your prompt, / for commands, @ for files, ! for Shell mode                                                 │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+  Auto-approve: Off                Tokens left: 95% | 💰 0.06/100 (99%) | Current 💬: 0.06               Mode: 💻 Code

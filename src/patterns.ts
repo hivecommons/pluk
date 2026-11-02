@@ -201,6 +201,20 @@ MODEL_PATTERN=''
 SESSION_END_PATTERN='Resume this session with'
 `;
 
+const BOB_PATTERNS = `
+IDLE_PATTERN='^│ >\\s+Enter your prompt, / for commands'
+WORKING_PATTERNS='\\(esc to cancel, '
+RATE_LIMIT_PATTERN='You have exhausted your daily quota|Usage limit reached for|Rate limit exceeded'
+LOGIN_PATTERN='How would you like to authenticate for this project\\?|Failed to login\\. Message:|Authentication timed out'
+TRUST_DIALOG_PATTERN='Do you trust this folder\\?|Allow execution of|Waiting for user confirmation\\.\\.\\.'
+BYPASS_PATTERN='Auto-approve: Full'
+TOOL_START_PATTERN=''
+TOOL_END_PATTERN=''
+ERROR_PATTERN='^\\s*🛑 '
+MODEL_PATTERN=''
+SESSION_END_PATTERN='Bob goes to sleep'
+`;
+
 export const BUILTIN_PATTERNS: Record<string, string> = {
   claude: CLAUDE_PATTERNS,
   copilot: COPILOT_PATTERNS,
@@ -209,6 +223,7 @@ export const BUILTIN_PATTERNS: Record<string, string> = {
   codex: CODEX_PATTERNS,
   aider: AIDER_PATTERNS,
   omp: OMP_PATTERNS,
+  bob: BOB_PATTERNS,
 };
 
 export function hasAnyPattern(p: PatternSet): boolean {

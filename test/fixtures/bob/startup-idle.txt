@@ -1,0 +1,38 @@
+                                 ───────────────────── Welcome to ─────────────────────
+
+                                 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀       ▀▀▀▀▀▀▀▀▀▀▀▀     ▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                                 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                                   ▀▀▀▀     ▀▀▀▀▀   ▀▀▀▀        ▀▀▀▀     ▀▀▀▀     ▀▀▀▀▀
+                                   ▀▀▀▀▀▀▀▀▀▀▀▀▘    ▀▀▀▀        ▀▀▀▀     ▀▀▀▀▀▀▀▀▀▀▀▀▘
+                                   ▀▀▀▀▀▀▀▀▀▀▀▀▘    ▀▀▀▀        ▀▀▀▀     ▀▀▀▀▀▀▀▀▀▀▀▀▘
+                                   ▀▀▀▀     ▀▀▀▀▀   ▀▀▀▀        ▀▀▀▀     ▀▀▀▀     ▀▀▀▀▀
+                                 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                                 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀▀▀▀▀▀     ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+                                 ░░░░░░░░░█▀▀▀░░░░█░░█░░░░█▀▀▀░░░░█░░░░░░░█░░░░░░░░░░░░
+                                 ░░░░░░░░░▀▀▀█░░░░█▀▀█░░░░█▀▀▀░░░░█░░░░░░░█░░░░░░░░░░░░
+                                 ░░░░░░░░░▀▀▀▀░░░░▀░░▀░░░░▀▀▀▀░░░░▀▀▀▀░░░░▀▀▀▀░░░░░░░░░
+
+                                  ─────────────────── Version 1.0.6 ───────────────────
+
+
+                                     Here are some helpful commands to get started:
+
+                                /mode               change mode
+                                /editor             Set external editor preference
+                                /memory             Commands for interacting with memory
+                                up                  Move up within dialog options.
+                                /quit               Exit the cli
+
+                                                  Sandbox mode Disabled
+
+                                             ~/hive-work/bob-capture-sandbox
+
+                           Users should independently verify accuracy of AI-generated content.
+
+Instance and team selected successfully.
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ >   Enter your prompt, / for commands, @ for files, ! for Shell mode                                                 │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+  Auto-approve: Off                Tokens left: 100% | 💰 0/100 (100%) | Current 💬: 0.00                Mode: 💻 Code

@@ -1,0 +1,37 @@
+                                 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀▀▀▀▀▀     ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+                                 ░░░░░░░░░█▀▀▀░░░░█░░█░░░░█▀▀▀░░░░█░░░░░░░█░░░░░░░░░░░░
+                                 ░░░░░░░░░▀▀▀█░░░░█▀▀█░░░░█▀▀▀░░░░█░░░░░░░█░░░░░░░░░░░░
+                                 ░░░░░░░░░▀▀▀▀░░░░▀░░▀░░░░▀▀▀▀░░░░▀▀▀▀░░░░▀▀▀▀░░░░░░░░░
+
+                                  ─────────────────── Version 1.0.6 ───────────────────
+
+
+                                      Here are some helpful commands to get started:
+
+                              /secrets-manager    Manage environment secrets
+                              /theme              Change the theme
+                              Ctrl+a              Move the cursor to the start of the line.
+                              down                Move down within dialog options.
+                              tab                 Accept the inline suggestion.
+
+                                                  Sandbox mode Disabled
+
+                                      /home/user/hive-work/bob-capture-sandbox
+
+                           Users should independently verify accuracy of AI-generated content.
+
+Instance and team selected successfully.
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                                    │
+ │ Do you trust this folder?                                                                                          │
+ │ Trusting a folder allows Bob-Shell to execute commands it suggests. This is a security feature to prevent          │
+ │ accidental execution in untrusted directories.                                                                     │
+ │                                                                                                                    │
+ │ > 1. Trust folder (bob-capture-sandbox)                                                                            │
+ │   2. Trust parent folder (hive-work)                                                                               │
+ │   3. Don't trust                                                                                                   │
+ │                                                                                                                    │
+ │ (Press ESC or CTRL+C to cancel)                                                                                    │
+ │                                                                                                                    │
+ └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
