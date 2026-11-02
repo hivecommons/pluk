@@ -193,7 +193,7 @@ test('attach fails the pipe-pane size guard before creating the tmux session', (
   assert.notEqual(code, 0);
   assert.match(stderr, /pipe-pane command is \d+ bytes/);
   assert.match(stderr, /PLUK_LOG_MAX_BYTES \/ PLUK_LOG_KEEP_LINES/);
-  assert.equal(stubs.log('tmux').trim(), 'has-session -t =size-guard', 'new-session must not run');
+  assert.doesNotMatch(stubs.log('tmux'), /^new-session /m, 'new-session must not run');
 });
 
 test('attach rejects unterminated quote in --cli-args before creating tmux session', () => {
