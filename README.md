@@ -169,7 +169,7 @@ Unknown, misspelled, or wrong-subcommand `--flags` exit 2 (`unknown flag --name 
 | `watch` | `--filter=type1,type2` | Emit only the listed event types (also accepted by `subscribe`); unknown or empty entries exit 2 |
 | `watch` | `--include-raw` | Also emit `raw_output` events |
 | `watch` | `--capture[=ms]` | Instead of reading stdin, poll `tmux capture-pane` and classify each whole rendered frame; useful for TUIs whose pipe-pane stream has no line feeds. Interval in milliseconds (positive integer), default `1000`. With `--include-raw`, `raw_output` `data.line` is a whole ANSI-stripped screen |
-| `watch` | `--pane=<target>` | tmux pane to poll in `--capture` mode (defaults to the session name) |
+| `watch` | `--pane=<target>` | tmux pane to poll in `--capture` mode (defaults to the session name); emitted events carry it in their `pane` field |
 | `watch` | `--patterns-dir=<dir>` | Load pattern files from this directory |
 | `patterns` | `--patterns-dir=<dir>` | Show the patterns loaded from this directory (same lookup as `watch`) |
 | `subscribe` | `--from-beginning` | Replay the existing log from the start instead of only new lines |

@@ -95,6 +95,7 @@ export function watch(opts: WatchOptions): WatchHandle {
   if (opts.mode === 'capture') {
     const classifier = new Classifier({
       session: opts.session,
+      pane: opts.pane,
       patterns,
       source: 'capture-pane',
     });
