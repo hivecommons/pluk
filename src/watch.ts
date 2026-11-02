@@ -1,4 +1,4 @@
-import { Classifier, stripANSI } from './classifier.js';
+import { Classifier, STATE_DEBOUNCE_SECONDS, stripANSI } from './classifier.js';
 import { type PatternSet, getPatterns } from './patterns.js';
 import { type PlukEvent, type PlukEventType } from './event.js';
 import { createInterface } from 'node:readline';
@@ -153,6 +153,23 @@ export function watch(opts: WatchOptions): WatchHandle {
 
   const rl = createInterface({ input, crlfDelay: Infinity });
 
+  // Stream mode has no later input to resolve a debounced verdict, so flush
+  // the classifier once the window has elapsed after the last line.
+  let flushTimer: NodeJS.Timeout | undefined;
+  const armFlush = (): void => {
+    if (flushTimer) clearTimeout(flushTimer);
+    flushTimer = setTimeout(() => {
+      flushTimer = undefined;
+      try {
+        const flushed = classifier.flush();
+        if (flushed) emit(flushed);
+      } catch {
+        stats.classifyErrors++;
+      }
+    }, STATE_DEBOUNCE_SECONDS * 1000 + 1000);
+    flushTimer.unref();
+  };
+
   rl.on('line', (raw: string) => {
     stats.linesSeen++;
     try {
@@ -167,6 +184,7 @@ export function watch(opts: WatchOptions): WatchHandle {
       // Never crash on malformed input — pipe-pane dies if we exit
       stats.classifyErrors++;
     }
+    armFlush();
   });
 
   rl.on('error', () => {
@@ -185,6 +203,7 @@ export function watch(opts: WatchOptions): WatchHandle {
     stop() {
       if (stopped) return;
       stopped = true;
+      if (flushTimer) clearTimeout(flushTimer);
       rl.close();
       input.off('error', onInputError);
     },

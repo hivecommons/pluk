@@ -164,3 +164,41 @@ test('dead spinner glyphs and unreachable ● patterns are gone; tool events sti
   assert.ok(ev);
   assert.equal(ev.type, 'tool_call_started');
 });
+
+test('issue #418: flush() emits working->idle once the window elapses after a suppressed idle repaint', () => {
+  let t = 1000;
+  const c = makeClassifier(() => t);
+  assert.deepEqual(stateChanges([c.classify(WORKING_FOOTER)]), ['unknown->working']);
+  t = 1001;
+  const events = [c.classify(INPUT_BOX), c.classify(IDLE_FOOTER)];
+  assert.deepEqual(stateChanges(events), []);
+  assert.equal(c.state, 'working');
+  assert.equal(c.flush(1002), null);
+  const ev = c.flush(1003);
+  assert.deepEqual(stateChanges([ev]), ['working->idle']);
+  assert.equal(c.state, 'idle');
+});
+
+test('issue #418: flush() keeps working while working evidence is fresh', () => {
+  let t = 1000;
+  const c = makeClassifier(() => t);
+  c.classify(WORKING_FOOTER);
+  t = 1001;
+  c.classify(INPUT_BOX);
+  t = 1002;
+  c.classify(WORKING_FOOTER);
+  assert.equal(c.flush(1003), null);
+  assert.equal(c.state, 'working');
+});
+
+test('issue #418: flush() with nothing pending emits nothing and never duplicates idle', () => {
+  let t = 1000;
+  const c = makeClassifier(() => t);
+  assert.equal(c.flush(1010), null);
+  c.classify(WORKING_FOOTER);
+  t = 1001;
+  c.classify(INPUT_BOX);
+  assert.deepEqual(stateChanges([c.flush(1004)]), ['working->idle']);
+  assert.equal(c.flush(1010), null);
+  assert.equal(c.state, 'idle');
+});
