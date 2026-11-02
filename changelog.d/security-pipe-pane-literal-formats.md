@@ -1,1 +1,2 @@
 - Preserve literal tmux formats in attach watcher commands, paths, and forwarded log rotation settings instead of expanding them before shell execution.
+- Keep hash and style-like literals intact on tmux 3.0/3.1 by using the older literal modifier instead of the tmux 3.2-only character modifier.

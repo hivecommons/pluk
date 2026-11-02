@@ -173,9 +173,9 @@ test('a repeat tmuxPipePane keeps piping instead of toggling the pipe off (#105)
 
 test('pipe-pane preserves literal formats in watcher argv, environment, and paths (#408)', { skip }, async () => {
   const jobMarker = join(scratch, 'unexpected-format-job');
-  const literal = `#{session_name} #S #W #(touch ${jobMarker}) ## ### #### #[fg=red] %Y %% ' $(id)`;
-  const watcher = join(scratch, "watcher #{session_name} #S %Y 'quote.cjs");
-  const logFile = join(scratch, "log #{session_name} #S %Y 'quote.jsonl");
+  const literal = `proj#1 #{session_name} #S #W #(touch ${jobMarker}) ## ### #### #[fg=red] ##[bold] ###[fg=blue] ####[default] #[ #{a:35} #{l:#[} %Y %% ' $(id) #`;
+  const watcher = join(scratch, "watcher proj#1 #{session_name} #[bold] #S %Y 'quote.cjs");
+  const logFile = join(scratch, "log proj#1 #{session_name} #[bold] #S %Y 'quote.jsonl");
   writeFileSync(watcher, `
     console.log(JSON.stringify({
       args: process.argv.slice(2),

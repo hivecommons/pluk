@@ -59,10 +59,13 @@ export function tmuxRunInherited(args: string[]): void {
  * so callers can supply ordinary shell commands with literal data.
  */
 export function tmuxPipePane(session: string, pipeCmd: string): void {
-  // ## is not sufficient: tmux preserves runs of hashes before '[' as
-  // style syntax. Emit '#' through its character format instead; expansion
-  // results are not recursively interpreted. %% survives strftime as '%'.
-  const literalCmd = pipeCmd.replace(/#/g, '#{a:35}').replace(/%/g, '%%');
+  // ## escapes hashes except before '[', where tmux preserves hash runs as
+  // style syntax. Emit that pair through the literal modifier, available on
+  // tmux 3.0/3.1 too (unlike a:). Results are not recursively expanded.
+  // Match source tokens once so generated formats stay intact; %% survives
+  // strftime as '%'.
+  const literalCmd = pipeCmd.replace(/#\[|#|%/g, token =>
+    token === '#[' ? '#{l:#[}' : token === '#' ? '##' : '%%');
   execFileSync('tmux', ['pipe-pane', '-t', exactTarget(session), literalCmd], { stdio: 'inherit' });
 }
 
