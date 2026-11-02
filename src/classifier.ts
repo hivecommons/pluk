@@ -1,7 +1,7 @@
 import { type PlukEvent, type PlukEventType, createEvent } from './event.js';
 import { type PatternSet } from './patterns.js';
 
-const STATE_DEBOUNCE_SECONDS = 2;
+export const STATE_DEBOUNCE_SECONDS = 2;
 const TRUNCATE_MAX_RUNES = 120;
 
 // ECMA-48 / xterm control sequences, most specific first:
@@ -105,6 +105,9 @@ export class Classifier {
   // input box (`❯`) continuously, including mid-turn, so `❯` alone is not
   // evidence of idleness while working evidence is fresh (issue #17).
   private lastWorkingEvidenceTS = Number.NEGATIVE_INFINITY;
+  // Newest idle evidence, kept even when the working-evidence gate suppresses
+  // it, so flush() can resolve it once the window has elapsed (issue #418).
+  private lastIdleEvidenceTS = Number.NEGATIVE_INFINITY;
   private clock: () => number;
 
   constructor(opts: ClassifierOptions) {
@@ -118,6 +121,18 @@ export class Classifier {
   /** Current debounced state ('unknown' | 'idle' | 'working'). */
   get state(): string {
     return this.currentState;
+  }
+
+  /**
+   * Re-run state resolution without a new line. Stream mode has no later
+   * input to re-trigger resolution after the end-of-turn repaint, so the
+   * caller invokes this once the debounce window has elapsed to emit an idle
+   * verdict that was suppressed (or a deferred pending state) (issue #418).
+   */
+  flush(now: number = this.clock()): PlukEvent | null {
+    const idleWins = this.lastIdleEvidenceTS > this.lastWorkingEvidenceTS
+      && now - this.lastWorkingEvidenceTS >= STATE_DEBOUNCE_SECONDS;
+    return this.resolveState(idleWins ? 'idle' : '', now);
   }
 
   /**
@@ -213,6 +228,7 @@ export class Classifier {
       proposedState = 'working';
       this.lastWorkingEvidenceTS = now;
     } else if (this.patterns.idle?.test(line)) {
+      this.lastIdleEvidenceTS = now;
       if (now - this.lastWorkingEvidenceTS >= STATE_DEBOUNCE_SECONDS) {
         proposedState = 'idle';
       }
