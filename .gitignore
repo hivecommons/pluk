@@ -8,3 +8,5 @@ dist/
 *.env
 *.pem
 *.key
+reports/
+.stryker-tmp/
