@@ -1,0 +1,40 @@
+                        escape              Dismiss dialogs or cancel the current focus.
+                        return              Insert the selected reverse-search match.
+
+                                                  Sandbox mode Disabled
+
+                                             ~/hive-work/bob-capture-sandbox
+
+                           Users should independently verify accuracy of AI-generated content.
+
+
+ what is 3+3
+
+
+
+ 🛑 Cannot read properties of undefined (reading 'maxTokens')
+
+
+
+  Session Overview
+
+   Tools:                  0
+     ▻ Success:            0
+     ▻ Error:              0
+   Success Rate:           0.0%
+   ────────────────────────────────────────────────────────────────
+   Duration (wall time):   1m 10s
+   Agent:                  565ms
+     ▻ API:                565ms (100.0%)
+     ▻ Tools:              0s (0.0%)
+   ────────────────────────────────────────────────────────────────
+   Session ID:             00000000-0000-0000-0000-000000000000
+
+
+  Model Usage                  Reqs   Input Tokens  Output Tokens
+  ─────────────────────────────────────────────────────────────────
+
+  Bob goes to sleep 💤
+
+
+ user@host  ~/hive-work/bob-capture-sandbox   master ? 

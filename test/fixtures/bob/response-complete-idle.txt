@@ -1,0 +1,39 @@
+  directory listing showing:
+   - . (current directory)
+   - .. (parent directory)
+   - .git/ (git repository folder)
+   - notes.txt (4 bytes)
+   - README.md (6 bytes)
+
+  The task is complete - I successfully ran the shell command and got the output. I should now use attempt_completion to
+  present the results.
+  </thinking>
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                                      │
+│ 🔧  Task Completion Successfully completed | Cost: 0.04                                                              │
+│                                                                                                                      │
+│ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
+│                                                                                                                      │
+│ Directory listing completed successfully:                                                                            │
+│                                                                                                                      │
+│ total 16                                                                                                             │
+│ drwxr-xr-x    5 user  staff    160 Nov  2 10:18 .                                                                 │
+│ drwxr-xr-x  643 user  staff  20576 Nov  2 10:22 ..                                                                │
+│ drwxr-xr-x   12 user  staff    384 Nov  2 10:19 .git                                                              │
+│ -rw-r--r--    1 user  staff      4 Nov  2 10:18 notes.txt                                                         │
+│ -rw-r--r--    1 user  staff      6 Nov  2 10:18 README.md                                                         │
+│                                                                                                                      │
+│ The directory contains:                                                                                              │
+│  - A git repository (.git/)                                                                                          │
+│  - notes.txt (4 bytes)                                                                                               │
+│  - README.md (6 bytes)                                                                                               │
+│                                                                                                                      │
+│ You can ask follow up questions or use the /clear command to start a new task                                        │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ >   Enter your prompt, / for commands, @ for files, ! for Shell mode                                                 │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+  Auto-approve: Off                Tokens left: 95% | 💰 0.08/100 (99%) | Current 💬: 0.08               Mode: 💻 Code

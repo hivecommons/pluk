@@ -1,0 +1,36 @@
+                                 ───────────────────── Welcome to ─────────────────────
+
+                                 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀       ▀▀▀▀▀▀▀▀▀▀▀▀     ▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                                 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                                   ▀▀▀▀     ▀▀▀▀▀   ▀▀▀▀        ▀▀▀▀     ▀▀▀▀     ▀▀▀▀▀
+                                   ▀▀▀▀▀▀▀▀▀▀▀▀▘    ▀▀▀▀        ▀▀▀▀     ▀▀▀▀▀▀▀▀▀▀▀▀▘
+                                   ▀▀▀▀▀▀▀▀▀▀▀▀▘    ▀▀▀▀        ▀▀▀▀     ▀▀▀▀▀▀▀▀▀▀▀▀▘
+                                   ▀▀▀▀     ▀▀▀▀▀   ▀▀▀▀        ▀▀▀▀     ▀▀▀▀     ▀▀▀▀▀
+                                 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                                 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀▀▀▀▀▀     ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+                                 ░░░░░░░░░█▀▀▀░░░░█░░█░░░░█▀▀▀░░░░█░░░░░░░█░░░░░░░░░░░░
+                                 ░░░░░░░░░▀▀▀█░░░░█▀▀█░░░░█▀▀▀░░░░█░░░░░░░█░░░░░░░░░░░░
+                                 ░░░░░░░░░▀▀▀▀░░░░▀░░▀░░░░▀▀▀▀░░░░▀▀▀▀░░░░▀▀▀▀░░░░░░░░░
+
+                                  ─────────────────── Version 1.0.6 ───────────────────
+
+
+                                     Here are some helpful commands to get started:
+
+          /memory             Commands for interacting with memory
+          /compress           Compresses the context by replacing it with a summary
+          /directory          Manage workspace directories
+          /restore            Restore a tool call. This will reset the conversation and file history to the s…
+          tab                 Accept the inline suggestion.
+
+                                                  Sandbox mode Disabled
+
+                                             ~/hive-work/bob-capture-sandbox
+
+                           Users should independently verify accuracy of AI-generated content.
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ >   Enter your prompt, / for commands, @ for files, ! for Shell mode                                                 │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+  Auto-approve: Full (alt + f to toggle)     Tokens left: 100% | 💰 0.08/100 (99%) | Current 💬: 0.00    Mode: 💻 Code

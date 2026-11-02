@@ -1,0 +1,40 @@
+                                 ░░░░░░░░░█▀▀▀░░░░█░░█░░░░█▀▀▀░░░░█░░░░░░░█░░░░░░░░░░░░
+                                 ░░░░░░░░░▀▀▀█░░░░█▀▀█░░░░█▀▀▀░░░░█░░░░░░░█░░░░░░░░░░░░
+                                 ░░░░░░░░░▀▀▀▀░░░░▀░░▀░░░░▀▀▀▀░░░░▀▀▀▀░░░░▀▀▀▀░░░░░░░░░
+
+                                  ─────────────────── Version 1.0.6 ───────────────────
+
+
+                                     Here are some helpful commands to get started:
+
+          /memory             Commands for interacting with memory
+          /compress           Compresses the context by replacing it with a summary
+          /directory          Manage workspace directories
+          /restore            Restore a tool call. This will reset the conversation and file history to the s…
+          tab                 Accept the inline suggestion.
+
+                                                  Sandbox mode Disabled
+
+                                             ~/hive-work/bob-capture-sandbox
+
+                           Users should independently verify accuracy of AI-generated content.
+
+  Session Overview
+
+   Tools:                  0
+     ▻ Success:            0
+     ▻ Error:              0
+   Success Rate:           0.0%
+   ────────────────────────────────────────────────────────────────
+   Duration (wall time):   40.3s
+   Agent:                  0s
+     ▻ API:                0s (0.0%)
+     ▻ Tools:              0s (0.0%)
+   ────────────────────────────────────────────────────────────────
+   Session ID:             00000000-0000-0000-0000-000000000000
+
+
+  Bob goes to sleep 💤
+
+
+ user@host  ~/hive-work/bob-capture-sandbox   master ? 
