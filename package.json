@@ -24,6 +24,7 @@
     "build": "tsc",
     "test": "npm run build && node scripts/run-tests.mjs",
     "test:coverage": "npm run build && node scripts/run-tests.mjs",
+    "test:mutation": "stryker run",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -51,6 +52,8 @@
     "url": "https://github.com/hivecommons/pluk"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "10.1.1",
+    "@stryker-mutator/typescript-checker": "10.1.1",
     "@types/node": "^26.1.0",
     "typescript": "^5.8.0"
   }

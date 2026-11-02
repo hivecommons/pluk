@@ -10,6 +10,10 @@
 // test/** is excluded explicitly: Node 24+ drops test files from the report
 // by default but Node 22 does not, so without the exclude the matrix legs
 // gate different aggregates and a threshold that holds on 26 can fail on 22.
+//
+// `--no-coverage` disables the threshold gate entirely. Stryker's command
+// runner uses it so a mutant is only "killed" by a failing assertion, not by
+// the line-coverage drop that dead-coding a branch causes.
 import { readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
@@ -22,10 +26,13 @@ export const COVERAGE_FLAGS = [
   '--test-coverage-functions=98',
 ];
 
+export const NO_COVERAGE_FLAG = '--no-coverage';
+
 // Coverage-threshold flags for the given Node major version; empty on
-// majors that predate --test-coverage-* (added in Node 22).
-export function coverageArgs(major) {
-  return major >= 22 ? [...COVERAGE_FLAGS] : [];
+// majors that predate --test-coverage-* (added in Node 22) or when the
+// gate is explicitly disabled.
+export function coverageArgs(major, { coverage = true } = {}) {
+  return coverage && major >= 22 ? [...COVERAGE_FLAGS] : [];
 }
 
 export function listTestFiles(dir = 'test') {
@@ -35,18 +42,23 @@ export function listTestFiles(dir = 'test') {
     .map((f) => `${dir}/${f}`);
 }
 
-export function buildArgv(major, files) {
-  return ['--test', ...coverageArgs(major), ...files];
+export function buildArgv(major, files, opts = {}) {
+  return ['--test', ...coverageArgs(major, opts), ...files];
+}
+
+export function parseArgs(argv) {
+  return { coverage: !argv.includes(NO_COVERAGE_FLAG) };
 }
 
 function main() {
   const major = Number(process.versions.node.split('.')[0]);
+  const opts = parseArgs(process.argv.slice(2));
   const files = listTestFiles();
   if (files.length === 0) {
     console.error('run-tests: no test/*.test.js files found');
     process.exit(1);
   }
-  const result = spawnSync(process.execPath, buildArgv(major, files), {
+  const result = spawnSync(process.execPath, buildArgv(major, files, opts), {
     stdio: 'inherit',
   });
   process.exit(result.status ?? 1);
