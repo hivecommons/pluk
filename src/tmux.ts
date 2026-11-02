@@ -67,7 +67,7 @@ export const TMUX_FORMAT_BUFFER_BYTES = 8192;
  * skips strftime when the command has no '%', but 3.0/3.1 always run it,
  * so the limit applies to every command. Throw instead of piping nothing.
  */
-export function tmuxPipePane(session: string, pipeCmd: string): void {
+export function assertPipePaneCommandFits(pipeCmd: string): string {
   // ## escapes hashes except before '[', where tmux preserves hash runs as
   // style syntax. Emit that pair through the literal modifier, available on
   // tmux 3.0/3.1 too (unlike a:). Results are not recursively expanded.
@@ -81,10 +81,16 @@ export function tmuxPipePane(session: string, pipeCmd: string): void {
     throw new Error(
       `pipe-pane command is ${strftimeBytes} bytes after tmux format escaping; `
       + `tmux drops commands of ${TMUX_FORMAT_BUFFER_BYTES} bytes or more and would `
-      + 'silently turn event logging off. Shorten the run directory, session name, '
+      + 'silently turn event logging off. Shorten PLUK_LOG_MAX_BYTES / PLUK_LOG_KEEP_LINES '
+      + '(the inputs most likely to overflow it), the run directory, session name, '
       + 'CLI name or log path.',
     );
   }
+  return literalCmd;
+}
+
+export function tmuxPipePane(session: string, pipeCmd: string): void {
+  const literalCmd = assertPipePaneCommandFits(pipeCmd);
   execFileSync('tmux', ['pipe-pane', '-t', exactTarget(session), literalCmd], { stdio: 'inherit' });
 }
 

@@ -2,7 +2,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { ensurePrivateDirectory, ensurePrivateLogFile, resolveRunDir, validateSessionName } from './run-dir.js';
 import { ANSI_DIM, paintStderr } from './ansi.js';
-import { exactTarget, tmuxAttach, tmuxHasSession, tmuxNewSession, tmuxPipePane, tmuxRunInherited } from './tmux.js';
+import { assertPipePaneCommandFits, exactTarget, tmuxAttach, tmuxHasSession, tmuxNewSession, tmuxPipePane, tmuxRunInherited } from './tmux.js';
 import { plukPackageSpec } from './version.js';
 
 // Re-exported for existing consumers; the validator lives with the other
@@ -340,17 +340,23 @@ export function attach(opts: AttachOptions): void {
   log(`log file: ${logFile}`);
   ensurePrivateLogFile(logFile);
 
+  // Build and size-check before any tmux side effect so an oversized command
+  // fails the attach instead of orphaning a freshly created session.
+  const pipeCmd = plukBin
+    ? buildPipePaneCommand({
+      runDir,
+      plukBin,
+      session,
+      cli,
+      includeRaw: !opts.noRaw,
+      logFile,
+      env: process.env,
+    })
+    : '';
+  if (pipeCmd) assertPipePaneCommandFits(pipeCmd);
+
   const wirePipePane = (): void => {
-    if (plukBin) {
-      const pipeCmd = buildPipePaneCommand({
-        runDir,
-        plukBin,
-        session,
-        cli,
-        includeRaw: !opts.noRaw,
-        logFile,
-        env: process.env,
-      });
+    if (pipeCmd) {
       log(`pipe-pane command: ${pipeCmd}`);
       console.error(`Attaching pluk pipe-pane: ${cli}`);
       log(`pipe-pane target: ${exactTarget(session)}`);
