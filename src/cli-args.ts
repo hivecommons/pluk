@@ -1,9 +1,14 @@
 import { ANSI_RED, paintStderr } from './ansi.js';
 
-const VALUE_FLAGS = new Set([
+export const VALUE_FLAGS: ReadonlySet<string> = new Set([
   'text', 'session', 'run-dir', 'cli', 'command', 'cli-args', 'rebuttal',
   'dir', 'rationguard-bin', 'patterns-dir', 'pane', 'filter',
 ]);
+
+// Value flags where an empty `--name=` means "use the default" instead of an
+// error, so scripts passing `--run-dir="$PLUK_RUN_DIR"` with the variable unset
+// keep working (#427). Every other value flag rejects an empty value.
+export const EMPTY_VALUE_MEANS_DEFAULT: ReadonlySet<string> = new Set(['run-dir']);
 
 const BOOL_FLAGS = new Set([
   'from-beginning', 'verbose', 'include-raw', 'rationguard', 'no-raw',
@@ -43,6 +48,10 @@ export function parseArgs(args: string[], allowed: ReadonlySet<string>, command:
         rejectUnknownFlag(name, allowed, command);
         if (BOOL_FLAGS.has(name) && value !== 'true' && value !== 'false') {
           console.error(`${paintStderr(ANSI_RED, 'Error:')} --${name} is a boolean flag: use --${name} or --${name}=false`);
+          process.exit(2);
+        }
+        if (VALUE_FLAGS.has(name) && value === '' && !EMPTY_VALUE_MEANS_DEFAULT.has(name)) {
+          console.error(`${paintStderr(ANSI_RED, 'Error:')} --${name} requires a non-empty value`);
           process.exit(2);
         }
         flags[name] = value;
