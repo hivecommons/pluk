@@ -321,6 +321,7 @@ export function attach(opts: AttachOptions): void {
   // --dir up front; resolve() pins a relative path to pluk's cwd, not tmux's.
   let workDir = process.cwd();
   if (opts.workDir !== undefined) {
+    if (opts.workDir === '') throw new Error('--dir requires a non-empty path');
     workDir = resolve(opts.workDir);
     let isDir = false;
     try {

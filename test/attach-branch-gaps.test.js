@@ -324,6 +324,17 @@ test('--dir rejects a missing path before any tmux new-session', () => {
   assert.doesNotMatch(stubs.log('tmux'), /new-session/);
 });
 
+test('--dir= (empty) is rejected instead of silently using cwd (#433)', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const { code, stderr } = runAttach(
+    ['agent-emptydir', '--cli=claude', `--run-dir=${makeRunDir()}`, '--no-open', '--dir='],
+    stubs,
+  );
+  assert.equal(code, 1);
+  assert.match(stderr, /--dir requires a non-empty path/);
+  assert.doesNotMatch(stubs.log('tmux'), /new-session/);
+});
+
 test('--dir rejects a regular file before any tmux new-session', () => {
   const stubs = makeStubs({ which: ['tmux', 'pluk'] });
   const file = join(scratch, 'not-a-dir.txt');
