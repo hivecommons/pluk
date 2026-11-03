@@ -313,6 +313,30 @@ test('--dir sets the tmux new-session working directory', () => {
   assert.match(stubs.log('tmux'), new RegExp(`new-session -d -s agent-wd -c ${workDir}`));
 });
 
+test('--dir rejects a missing path before any tmux new-session', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const { code, stderr } = runAttach(
+    ['agent-nodir', '--cli=claude', `--run-dir=${makeRunDir()}`, '--no-open', `--dir=${join(scratch, 'does-not-exist')}`],
+    stubs,
+  );
+  assert.equal(code, 1);
+  assert.match(stderr, /--dir is not a directory/);
+  assert.doesNotMatch(stubs.log('tmux'), /new-session/);
+});
+
+test('--dir rejects a regular file before any tmux new-session', () => {
+  const stubs = makeStubs({ which: ['tmux', 'pluk'] });
+  const file = join(scratch, 'not-a-dir.txt');
+  writeFileSync(file, 'x');
+  const { code, stderr } = runAttach(
+    ['agent-filedir', '--cli=claude', `--run-dir=${makeRunDir()}`, '--no-open', `--dir=${file}`],
+    stubs,
+  );
+  assert.equal(code, 1);
+  assert.match(stderr, /--dir is not a directory/);
+  assert.doesNotMatch(stubs.log('tmux'), /new-session/);
+});
+
 test('attach() builds the CLI command before new-session so a bad --cli-args leaves no tmux session (#372)', () => {
   // cli.js pre-validates --cli-args, so the CLI-level test cannot tell whether
   // attach() itself still orders buildCliCommand() before tmux new-session.
