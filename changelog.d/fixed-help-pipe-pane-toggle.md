@@ -1,0 +1,1 @@
+- `pluk --help`'s manual `tmux pipe-pane` example no longer uses the `-o` toggle (which closes an existing pipe and opens nothing) and now prefixes `PLUK_RUN_DIR=` like the README example.
