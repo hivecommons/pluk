@@ -293,7 +293,7 @@ function cmdSessions(args: string[]): void {
 
   if (sessions.length === 0) {
     console.log(paintStdout(ANSI_DIM, 'No active pluk sessions found.'));
-    console.log(paintStdout(ANSI_DIM, `Run dir: ${runDir ?? resolveRunDir()}`));
+    console.log(paintStdout(ANSI_DIM, `Run dir: ${runDir || resolveRunDir()}`));
     return;
   }
 

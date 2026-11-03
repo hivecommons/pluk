@@ -47,7 +47,8 @@ export function defaultRunDir(): string {
 }
 
 export function resolveRunDir(runDir?: string): string {
-  return runDir ?? process.env['PLUK_RUN_DIR'] ?? defaultRunDir();
+  // An empty value counts as unset: join('', 'logs') would resolve against the cwd.
+  return runDir || process.env['PLUK_RUN_DIR'] || defaultRunDir();
 }
 
 export function ensurePrivateDirectory(dir: string): void {

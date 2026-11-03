@@ -1,0 +1,1 @@
+- run dir: an empty `--run-dir=` or `PLUK_RUN_DIR` is treated as unset instead of resolving logs relative to the current directory
