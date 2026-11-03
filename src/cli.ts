@@ -56,7 +56,7 @@ ${paintStdout(ANSI_CYAN, 'Examples:')}
   pluk subscribe my-agent --filter=rate_limit,error,state_change
 
   ${paintStdout(ANSI_DIM, '# Manual: pipe agent output through the classifier')}
-  tmux pipe-pane -t my-agent "PLUK_RUN_DIR=\\$PLUK_RUN_DIR pluk watch my-agent --cli=claude >> \\$PLUK_RUN_DIR/logs/my-agent.jsonl"
+  tmux pipe-pane -t my-agent "PLUK_RUN_DIR=\$PLUK_RUN_DIR pluk watch my-agent --cli=claude >> \$PLUK_RUN_DIR/logs/my-agent.jsonl"
 `);
 }
 
