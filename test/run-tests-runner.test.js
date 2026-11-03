@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -87,6 +88,39 @@ test('stryker commandRunner disables the coverage gate so only assertions kill m
   const { commandRunner, checkers } = JSON.parse(readFileSync(join(process.cwd(), 'stryker.config.json'), 'utf-8'));
   assert.match(commandRunner.command, /node scripts\/run-tests\.mjs --no-coverage$/);
   assert.deepEqual(checkers, ['typescript']);
+});
+
+// Stryker instruments src/ in its sandbox, so a test that regex-parses source
+// text fails the dry run and the whole mutation run reports nothing. The
+// command marks itself with PLUK_UNDER_STRYKER=1 and those tests skip on it.
+test('stryker commandRunner marks the run so source-text guards can skip', () => {
+  const { commandRunner } = JSON.parse(readFileSync(join(process.cwd(), 'stryker.config.json'), 'utf-8'));
+  assert.match(commandRunner.command, /(^|&& )PLUK_UNDER_STRYKER=1 node scripts\/run-tests\.mjs/);
+});
+
+// This spawns the guard without the marker, so it cannot itself hold inside
+// the Stryker sandbox; skip it there like the guards it checks.
+test('cli-support-matrix skips its src/attach.ts text guards under PLUK_UNDER_STRYKER', {
+  skip: process.env.PLUK_UNDER_STRYKER === '1' && 'spawns the attach.ts text guard against instrumented source',
+}, () => {
+  const run = (env) => {
+    const childEnv = { ...process.env, ...env };
+    // node:test refuses to run files from inside another --test process.
+    delete childEnv.NODE_TEST_CONTEXT;
+    return spawnSync(process.execPath, ['--test', '--test-reporter=tap', 'test/cli-support-matrix.test.js'], {
+      env: childEnv,
+      encoding: 'utf-8',
+      timeout: 60_000,
+    });
+  };
+  const plain = run({ PLUK_UNDER_STRYKER: '' });
+  assert.equal(plain.status, 0, plain.stdout + plain.stderr);
+  assert.match(plain.stdout, /^# skipped 0$/m, 'guards must run in a normal npm test');
+
+  const sandboxed = run({ PLUK_UNDER_STRYKER: '1' });
+  assert.equal(sandboxed.status, 0, sandboxed.stdout + sandboxed.stderr);
+  assert.match(sandboxed.stdout, /^# skipped 6$/m, 'the six attach.ts text guards should skip');
+  assert.match(sandboxed.stdout, /^# pass [1-9]/m, 'the README/bundled-patterns tests still run');
 });
 
 test('importing the runner as a module does not spawn the suite', () => {
