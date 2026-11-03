@@ -109,6 +109,8 @@ test('--help and -h print usage and exit 0', () => {
     const { code, stdout } = runCli([flag]);
     assert.equal(code, 0);
     assert.match(stdout, /Usage:/);
+    assert.doesNotMatch(stdout, /pipe-pane[^\n]* -o /);
+    assert.match(stdout, /pipe-pane[^\n]*PLUK_RUN_DIR=/);
   }
 });
 
