@@ -9,6 +9,13 @@
 // src/attach.ts, so this test extracts their keys from the source text the
 // same way the BUILTIN_PATTERNS drift guard compares inline constants to the
 // bundled files.
+//
+// Inside Stryker's sandbox src/attach.ts is instrumented, so those literals
+// no longer match and the dry run aborts before any mutant is tested
+// (#425). stryker.config.json sets PLUK_UNDER_STRYKER=1 for its test
+// command; the tests that read the source text are skipped there. A text
+// guard never executes attach.ts, so it could not kill a mutant anyway, and
+// `npm test` on every push and PR still runs it.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -19,6 +26,10 @@ import { listAvailableCLIs, bundledPatternsDir, getPatterns, BUILTIN_PATTERNS } 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const attachSource = readFileSync(join(repoRoot, 'src', 'attach.ts'), 'utf-8');
 const readme = readFileSync(join(repoRoot, 'README.md'), 'utf-8');
+
+const sourceText = {
+  skip: process.env.PLUK_UNDER_STRYKER === '1' && 'reads src/attach.ts, which Stryker instruments in its sandbox',
+};
 
 // Keys of a `const NAME: Record<string, string> = { key: 'value', ... }`
 // literal in attach.ts.
@@ -43,7 +54,7 @@ function readmeCliNames(text) {
 
 const bundled = listAvailableCLIs(bundledPatternsDir()).sort();
 
-test('every CLI attach can launch (CLI_COMMANDS) has a bundled patterns file', () => {
+test('every CLI attach can launch (CLI_COMMANDS) has a bundled patterns file', sourceText, () => {
   const launchable = recordKeys(attachSource, 'CLI_COMMANDS');
   for (const cli of launchable) {
     assert.ok(
@@ -54,7 +65,7 @@ test('every CLI attach can launch (CLI_COMMANDS) has a bundled patterns file', (
   }
 });
 
-test('every CLI attach can launch has a non-empty idle pattern through getPatterns', () => {
+test('every CLI attach can launch has a non-empty idle pattern through getPatterns', sourceText, () => {
   // The bundled file existing is not enough — it must actually resolve to a
   // usable PatternSet, since an empty or comment-only file also yields nulls.
   for (const cli of recordKeys(attachSource, 'CLI_COMMANDS')) {
@@ -64,7 +75,7 @@ test('every CLI attach can launch has a non-empty idle pattern through getPatter
   }
 });
 
-test('every CLI with a --dangerous flag or env is also launchable via CLI_COMMANDS', () => {
+test('every CLI with a --dangerous flag or env is also launchable via CLI_COMMANDS', sourceText, () => {
   const launchable = recordKeys(attachSource, 'CLI_COMMANDS');
   for (const cli of recordKeys(attachSource, 'DANGEROUS_FLAGS')) {
     assert.ok(launchable.includes(cli), `DANGEROUS_FLAGS has ${cli} but CLI_COMMANDS does not`);
@@ -80,7 +91,7 @@ test('every CLI the README advertises for --cli has a bundled patterns file', ()
   }
 });
 
-test('README --cli row, CLI_COMMANDS, and bundled patterns agree on the supported set', () => {
+test('README --cli row, CLI_COMMANDS, and bundled patterns agree on the supported set', sourceText, () => {
   const launchable = recordKeys(attachSource, 'CLI_COMMANDS').sort();
   assert.deepEqual(readmeCliNames(readme).sort(), launchable, 'README --cli row should list exactly the CLIs attach can launch');
   assert.deepEqual(bundled, launchable, 'patterns/ should bundle exactly the CLIs attach can launch');
@@ -116,7 +127,7 @@ function readmeDangerousFlags(text) {
   return pairs;
 }
 
-test('README --dangerous row lists every DANGEROUS_FLAGS or DANGEROUS_ENV entry with its exact flag', () => {
+test('README --dangerous row lists every DANGEROUS_FLAGS or DANGEROUS_ENV entry with its exact flag', sourceText, () => {
   const flags = { ...recordEntries(attachSource, 'DANGEROUS_FLAGS'), ...recordEntries(attachSource, 'DANGEROUS_ENV') };
   const documented = readmeDangerousFlags(readme);
   for (const [cli, flag] of Object.entries(flags)) {
@@ -134,7 +145,7 @@ test('README --dangerous row lists every DANGEROUS_FLAGS or DANGEROUS_ENV entry 
   );
 });
 
-test('every builtin and bundled CLI has a non-empty DANGEROUS_FLAGS or DANGEROUS_ENV entry', () => {
+test('every builtin and bundled CLI has a non-empty DANGEROUS_FLAGS or DANGEROUS_ENV entry', sourceText, () => {
   const flags = { ...recordEntries(attachSource, 'DANGEROUS_FLAGS'), ...recordEntries(attachSource, 'DANGEROUS_ENV') };
   for (const cli of new Set([...Object.keys(BUILTIN_PATTERNS), ...bundled])) {
     assert.ok(flags[cli], `neither DANGEROUS_FLAGS nor DANGEROUS_ENV has an entry for ${cli}; attach --dangerous would silently no-op (#360)`);
