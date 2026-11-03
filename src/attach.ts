@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { join } from 'node:path';
+import { statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { ensurePrivateDirectory, ensurePrivateLogFile, resolveRunDir, validateSessionName } from './run-dir.js';
 import { ANSI_DIM, paintStderr } from './ansi.js';
 import { assertPipePaneCommandFits, exactTarget, tmuxAttach, tmuxHasSession, tmuxNewSession, tmuxPipePane, tmuxRunInherited } from './tmux.js';
@@ -316,7 +317,19 @@ export function attach(opts: AttachOptions): void {
   const cli = opts.cli ?? 'claude';
   const cliCmd = opts.cliCommand ?? resolveCliCommand(cli);
   const runDir = resolveRunDir(opts.runDir);
-  const workDir = opts.workDir ?? process.cwd();
+  // tmux silently falls back to $HOME when chdir fails, so check an explicit
+  // --dir up front; resolve() pins a relative path to pluk's cwd, not tmux's.
+  let workDir = process.cwd();
+  if (opts.workDir !== undefined) {
+    workDir = resolve(opts.workDir);
+    let isDir = false;
+    try {
+      isDir = statSync(workDir).isDirectory();
+    } catch {
+      // missing or unreadable: reported below
+    }
+    if (!isDir) throw new Error(`--dir is not a directory: ${opts.workDir}`);
+  }
   const verbose = opts.verbose ?? false;
 
   const log = verbose
