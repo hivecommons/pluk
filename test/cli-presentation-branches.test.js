@@ -8,8 +8,8 @@
 //                the contract across all three layers rather than the cli.ts
 //                lines alone;
 //   cmdSessions — the empty-table "Run dir:" fallback to resolveRunDir() when
-//                neither --run-dir nor PLUK_RUN_DIR is given, and the cyan
-//                coloring of an `idle` row;
+//                neither --run-dir nor PLUK_RUN_DIR is given (or either is
+//                given empty, #427), and the cyan coloring of an `idle` row;
 //   cmdPatterns — the default `--cli=claude` and the "(none)" placeholder for
 //                a CLI that defines no patterns at all.
 //
@@ -95,6 +95,33 @@ test('sessions with an explicit empty --run-dir echoes that dir, not the default
   assert.equal(code, 0);
   assert.match(stdout, /No active pluk sessions found\./);
   assert.ok(stdout.includes(`Run dir: ${dir}`), `expected ${dir}, got: ${stdout}`);
+});
+
+// An empty --run-dir= or PLUK_RUN_DIR= counts as unset (#427). resolveRunDir()
+// already falls through to the default, so the only visible symptom of a
+// regression here is the "Run dir:" line printing nothing after the colon.
+test('sessions with an empty --run-dir= reports the resolved default, not a blank', () => {
+  const xdg = mkdtempSync(join(scratch, 'xdg-'));
+  const { code, stdout } = runCli(['sessions', '--run-dir='], { env: { XDG_RUNTIME_DIR: xdg } });
+  assert.equal(code, 0);
+  assert.match(stdout, /No active pluk sessions found\./);
+  assert.doesNotMatch(stdout, /Run dir: *\n/, `blank run dir printed: ${stdout}`);
+  assert.ok(
+    stdout.includes(`Run dir: ${join(xdg, 'pluk')}`),
+    `expected the XDG-derived default run dir, got: ${stdout}`,
+  );
+});
+
+test('sessions with an empty PLUK_RUN_DIR reports the resolved default, not a blank', () => {
+  const xdg = mkdtempSync(join(scratch, 'xdg-'));
+  const { code, stdout } = runCli(['sessions'], { env: { XDG_RUNTIME_DIR: xdg, PLUK_RUN_DIR: '' } });
+  assert.equal(code, 0);
+  assert.match(stdout, /No active pluk sessions found\./);
+  assert.doesNotMatch(stdout, /Run dir: *\n/, `blank run dir printed: ${stdout}`);
+  assert.ok(
+    stdout.includes(`Run dir: ${join(xdg, 'pluk')}`),
+    `expected the XDG-derived default run dir, got: ${stdout}`,
+  );
 });
 
 // --- sessions: idle row is cyan, unknown row is dim -----------------------------
