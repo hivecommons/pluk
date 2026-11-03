@@ -1,0 +1,1 @@
+- watch: an empty `--pane=` is now rejected with `--pane requires a non-empty tmux target` instead of letting tmux resolve the empty target to the most recently active session

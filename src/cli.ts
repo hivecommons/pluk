@@ -167,6 +167,10 @@ function cmdWatch(args: string[]): void {
   if (flags['pane'] !== undefined && !capture) {
     console.error('Warning: --pane is ignored without --capture');
   }
+  if (capture && flags['pane'] === '') {
+    console.error(`${paintStderr(ANSI_RED, 'Error:')} --pane requires a non-empty tmux target`);
+    process.exit(2);
+  }
   if (capture !== undefined && capture !== 'true') {
     captureIntervalMs = Number(capture);
     if (!Number.isInteger(captureIntervalMs) || captureIntervalMs <= 0) {
