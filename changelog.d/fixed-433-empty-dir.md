@@ -1,0 +1,1 @@
+- attach: an empty `--dir=` is now rejected with `--dir requires a non-empty path` instead of silently resolving to the current directory
