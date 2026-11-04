@@ -32,22 +32,29 @@ const PATTERN_KEYS: Record<string, keyof Omit<PatternSet, 'cli'>> = {
   SESSION_END_PATTERN: 'sessionEnd',
 };
 
-function compileOptional(pattern: string | undefined): RegExp | null {
+export type PatternWarning = (msg: string) => void;
+
+function compileOptional(pattern: string | undefined, name: string, origin: string, warn?: PatternWarning): RegExp | null {
   if (!pattern) return null;
   try {
     return new RegExp(pattern);
-  } catch {
+  } catch (err) {
+    warn?.(`${name} in ${origin} is not a valid regular expression (${(err as Error).message}); detector disabled`);
     return null;
   }
 }
 
-export function loadPatterns(patternsDir: string, cli: string): PatternSet {
+export function loadPatterns(patternsDir: string, cli: string, warn?: PatternWarning): PatternSet {
   const filePath = join(patternsDir, `${cli}.patterns`);
   const content = readFileSync(filePath, 'utf-8');
-  return parsePatternsContent(content, cli);
+  return parsePatternsContent(content, cli, warn);
 }
 
-export function parsePatternsContent(content: string, cli: string): PatternSet {
+export function parsePatternsContent(content: string, cli: string, warn?: PatternWarning): PatternSet {
+  return parsePatternsFrom(content, cli, `${cli}.patterns`, warn);
+}
+
+function parsePatternsFrom(content: string, cli: string, origin: string, warn?: PatternWarning): PatternSet {
   const vars: Record<string, string> = {};
 
   for (const line of content.split('\n')) {
@@ -80,7 +87,7 @@ export function parsePatternsContent(content: string, cli: string): PatternSet {
   };
 
   for (const [varName, field] of Object.entries(PATTERN_KEYS)) {
-    (result[field] as RegExp | null) = compileOptional(vars[varName]);
+    (result[field] as RegExp | null) = compileOptional(vars[varName], varName, origin, warn);
   }
 
   return result;
@@ -230,26 +237,31 @@ export function hasAnyPattern(p: PatternSet): boolean {
   return Object.values(p).some((v) => v instanceof RegExp);
 }
 
-export function getPatterns(cli: string, patternsDir?: string): PatternSet {
+export function getPatterns(cli: string, patternsDir?: string, warn?: PatternWarning): PatternSet {
   if (patternsDir) {
     try {
-      return loadPatterns(patternsDir, cli);
+      return loadPatterns(patternsDir, cli, warn);
     } catch {
-      // fall through to builtin
+      // fall through to bundled/builtin, reported below
     }
   }
 
   const bundled = bundledPatternsDir();
+  let result: PatternSet;
+  let source: string;
   try {
-    return loadPatterns(bundled, cli);
+    result = loadPatterns(bundled, cli, warn);
+    source = 'using bundled patterns';
   } catch {
-    // fall through to inline
+    const inline = BUILTIN_PATTERNS[cli];
+    if (inline) {
+      result = parsePatternsFrom(inline, cli, `builtin patterns for ${cli}`, warn);
+      source = 'using builtin patterns';
+    } else {
+      // Nothing to fall back to: callers report the empty set themselves, so stay quiet here.
+      return { cli, idle: null, working: null, rateLimit: null, login: null, trustDialog: null, bypass: null, toolStart: null, toolEnd: null, error: null, model: null, sessionEnd: null };
+    }
   }
-
-  const inline = BUILTIN_PATTERNS[cli];
-  if (inline) {
-    return parsePatternsContent(inline, cli);
-  }
-
-  return { cli, idle: null, working: null, rateLimit: null, login: null, trustDialog: null, bypass: null, toolStart: null, toolEnd: null, error: null, model: null, sessionEnd: null };
+  if (patternsDir) warn?.(`patterns-dir ${patternsDir} has no readable ${cli}.patterns; ${source}`);
+  return result;
 }
