@@ -149,7 +149,7 @@ function cmdWatch(args: string[]): void {
   const filter = parseFilter(flags['filter']);
   const diagnosticsFlag = parseDiagnosticsFlag(flags['diagnostics']);
 
-  const noPatternSet = !hasAnyPattern(getPatterns(cli, flags['patterns-dir']));
+  const noPatternSet = !hasAnyPattern(getPatterns(cli, flags['patterns-dir'], msg => log('info', msg)));
   if (noPatternSet) {
     log('info', `no pattern set for --cli=${cli} (bundled: ${listAvailableCLIs(bundledPatternsDir()).join(', ') || builtinCLIList()}); only raw_output will be emitted`);
   }
@@ -328,7 +328,7 @@ function cmdPatterns(args: string[]): void {
   const cli = flags['cli'] ?? 'claude';
 
   const patternsDir = flags['patterns-dir'];
-  const patterns = getPatterns(cli, patternsDir);
+  const patterns = getPatterns(cli, patternsDir, msg => log('info', msg));
   const names = [
     ...(patternsDir ? listAvailableCLIs(patternsDir) : []),
     ...listAvailableCLIs(bundledPatternsDir()),

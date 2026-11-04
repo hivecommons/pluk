@@ -172,8 +172,8 @@ Value flags reject empty or whitespace-only values with exit 2 (`--<flag> requir
 | `watch` | `--include-raw` | Also emit `raw_output` events |
 | `watch` | `--capture[=ms]` | Instead of reading stdin, poll `tmux capture-pane` and classify each whole rendered frame; useful for TUIs whose pipe-pane stream has no line feeds. Interval in milliseconds (positive integer), default `1000`. With `--include-raw`, `raw_output` `data.line` is a whole ANSI-stripped screen |
 | `watch` | `--pane=<target>` | tmux pane to poll in `--capture` mode (defaults to the session name); emitted events carry it in their `pane` field |
-| `watch` | `--patterns-dir=<dir>` | Load pattern files from this directory |
-| `patterns` | `--patterns-dir=<dir>` | Show the patterns loaded from this directory (same lookup as `watch`) |
+| `watch` | `--patterns-dir=<dir>` | Load pattern files from this directory; a missing or unreadable `<cli>.patterns` is reported on stderr and the bundled set is used |
+| `patterns` | `--patterns-dir=<dir>` | Show the patterns loaded from this directory (same lookup and stderr warning as `watch`) |
 | `subscribe` | `--from-beginning` | Replay the existing log from the start instead of only new lines |
 | `subscribe` | `--verbose` | Show debug output |
 | `sessions`, `subscribe`, `watch` | `--run-dir=<path>` | Run directory to use (overrides `PLUK_RUN_DIR`); `attach` accepts it too |
@@ -337,7 +337,7 @@ the directory passed to `--patterns-dir`. Each non-blank, non-comment line is
 comment, and blank lines are ignored. Every value is compiled as a JavaScript
 `RegExp` source string, so use `|` for alternation (as in the bundled files
 below). A key that is omitted, empty, or fails to compile is simply disabled
-(treated as `null`) rather than raising an error.
+(treated as `null`) rather than raising an error; an invalid regex is reported on stderr and its detector is disabled.
 
 Recognized keys:
 

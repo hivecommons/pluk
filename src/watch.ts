@@ -49,6 +49,8 @@ export interface WatchOptions {
   session: string;
   cli?: string;
   patternsDir?: string;
+  /** Called with a human-readable warning when a pattern set falls back or a pattern is invalid. */
+  onWarn?: (msg: string) => void;
   input?: Readable;
   filter?: PlukEventType[];
   includeRaw?: boolean;
@@ -75,7 +77,7 @@ export interface WatchHandle {
 
 export function watch(opts: WatchOptions): WatchHandle {
   const cli = opts.cli ?? 'claude';
-  const patterns: PatternSet = getPatterns(cli, opts.patternsDir);
+  const patterns: PatternSet = getPatterns(cli, opts.patternsDir, opts.onWarn);
   const filterSet = opts.filter ? new Set(opts.filter) : null;
   const stats = emptyWatchStats();
   const snapshot = (): WatchStats => ({ ...stats });
