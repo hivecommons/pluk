@@ -145,7 +145,7 @@ tmux attach -t my-agent
 
 Unknown, misspelled, or wrong-subcommand `--flags` exit 2 (`unknown flag --name for "pluk <cmd>" (see pluk <cmd> --help)`) instead of being silently ignored. For example, `pluk sessions --cli=claude` is rejected: `--cli` belongs to `attach`, `watch`, and `patterns`, not `sessions`. Run `pluk --help` for the per-command flag lists.
 
-Value flags reject empty or whitespace-only values with exit 2 (`--<flag> requires a non-empty value`) instead of silently reinterpreting them. For example, `--pane=" "` and `--rationguard-bin=" "` are rejected. The one exception is `--run-dir=`, where empty means "use the default run dir" (so `--run-dir="$PLUK_RUN_DIR"` works with the variable unset).
+Value flags reject empty or whitespace-only values with exit 2 (`--<flag> requires a non-empty value`) instead of silently reinterpreting them. For example, `--pane=" "` and `--rationguard-bin=" "` are rejected. The one exception is `--run-dir=`, where empty or whitespace-only means "use the default run dir" (so `--run-dir="$PLUK_RUN_DIR"` works with the variable unset).
 
 ### Attach Flags
 
