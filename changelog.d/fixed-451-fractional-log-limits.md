@@ -1,1 +1,1 @@
-- scanner: `PLUK_LOG_KEEP_LINES` and `PLUK_LOG_MAX_BYTES` now reject fractional values and fall back to defaults, preventing silent loss of retention caps (#451)
+- `PLUK_LOG_MAX_BYTES` and `PLUK_LOG_KEEP_LINES` now require a positive integer; a fractional value such as `0.5` falls back to the default instead of silently keeping every line (#451).
