@@ -51,7 +51,8 @@ export function resolveRunDir(runDir?: string): string {
   // would resolve against the cwd, and a whitespace-only value would be
   // passed to join as-is.
   const trimmed = runDir?.trim();
-  return trimmed || process.env['PLUK_RUN_DIR'] || defaultRunDir();
+  const envDir = process.env['PLUK_RUN_DIR']?.trim();
+  return trimmed || envDir || defaultRunDir();
 }
 
 export function ensurePrivateDirectory(dir: string): void {

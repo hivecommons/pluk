@@ -80,6 +80,13 @@ test('resolveRunDir treats whitespace-only arg as unset', () => {
   });
 });
 
+test('resolveRunDir treats a whitespace-only PLUK_RUN_DIR as unset', () => {
+  withEnv({ PLUK_RUN_DIR: '   ', XDG_RUNTIME_DIR: '/run/user/1' }, () => {
+    assert.strictEqual(resolveRunDir(), join('/run/user/1', 'pluk'));
+    assert.strictEqual(resolveRunDir(' '), join('/run/user/1', 'pluk'));
+  });
+});
+
 test('ensurePrivateDirectory creates a fresh dir with 0700', () => {
   const base = tempBase();
   try {
