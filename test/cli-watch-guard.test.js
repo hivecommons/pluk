@@ -147,7 +147,7 @@ for (const cmd of ['watch', 'subscribe']) {
   test(`${cmd} --filter= (empty value) exits 2 asking for an event type`, () => {
     const { code, stderr } = run(CLI, [cmd, 'x', '--filter=']);
     assert.equal(code, 2);
-    assert.match(stderr, /--filter requires at least one event type \(valid: raw_output, /);
+    assert.match(stderr, /--filter requires a non-empty value/);
   });
 }
 

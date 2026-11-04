@@ -67,10 +67,6 @@ function installPipePaneErrorHandlers(): void {
 
 function parseFilter(raw: string | undefined): PlukEventType[] | undefined {
   if (raw === undefined) return undefined;
-  if (raw === '') {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} --filter requires at least one event type (valid: ${PLUK_EVENT_TYPES.join(', ')})`);
-    process.exit(2);
-  }
   const types = raw.split(',').map(t => t.trim());
   for (const t of types) {
     if (!(PLUK_EVENT_TYPES as readonly string[]).includes(t)) {
