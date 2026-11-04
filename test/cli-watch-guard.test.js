@@ -94,6 +94,13 @@ for (const bad of ['0', '-5', 'abc', '', '1.5']) {
   });
 }
 
+test('watch --capture=2147483648 exits 2 with a usage error', () => {
+  const { code, stderr } = run(CLI, ['watch', 'x', '--capture=2147483648']);
+  assert.equal(code, 2);
+  assert.match(stderr, /--capture must be at most 2147483647 milliseconds/);
+  assert.doesNotMatch(stderr, /TimeoutOverflowWarning/);
+});
+
 // --- watch/subscribe: invalid --diagnostics value is rejected ---------------------
 
 for (const cmd of ['watch', 'subscribe']) {

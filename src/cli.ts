@@ -169,6 +169,10 @@ function cmdWatch(args: string[]): void {
       console.error(`${paintStderr(ANSI_RED, 'Error:')} --capture expects a positive integer number of milliseconds`);
       process.exit(2);
     }
+    if (captureIntervalMs > MAX_INTERVAL_MS) {
+      console.error(`${paintStderr(ANSI_RED, 'Error:')} --capture must be at most ${MAX_INTERVAL_MS} milliseconds`);
+      process.exit(2);
+    }
   }
 
   const watcher = watch({

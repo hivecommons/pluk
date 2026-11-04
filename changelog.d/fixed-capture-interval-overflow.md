@@ -1,0 +1,1 @@
+- watch: `--capture` above 2147483647 ms is now rejected with exit 2 (and capped for library callers) instead of overflowing Node's timer limit into a 1 ms `tmux capture-pane` hot loop (#449)
