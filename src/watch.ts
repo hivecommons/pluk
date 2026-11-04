@@ -153,6 +153,7 @@ export function watch(opts: WatchOptions): WatchHandle {
   const includeRaw = opts.includeRaw ?? false;
 
   const rl = createInterface({ input, crlfDelay: Infinity });
+  let stopped = false;
 
   // Stream mode has no later input to resolve a debounced verdict, so flush
   // the classifier once the window has elapsed after the last line.
@@ -188,6 +189,13 @@ export function watch(opts: WatchOptions): WatchHandle {
     armFlush();
   });
 
+  // EOF drains the loop and the flush timer is unref()'d, so a verdict still
+  // deferred by the debounce would be lost (#453). Keep the process alive for
+  // the bounded remainder of the window; stop() clears the timer first.
+  rl.on('close', () => {
+    if (!stopped) flushTimer?.ref();
+  });
+
   rl.on('error', () => {
     // Silently handle readline errors to keep pipe-pane alive
     stats.inputErrors++;
@@ -199,7 +207,6 @@ export function watch(opts: WatchOptions): WatchHandle {
   };
   input.on('error', onInputError);
 
-  let stopped = false;
   return {
     stop() {
       if (stopped) return;
