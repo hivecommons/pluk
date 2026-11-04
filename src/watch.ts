@@ -1,5 +1,5 @@
 import { Classifier, STATE_DEBOUNCE_SECONDS, stripANSI } from './classifier.js';
-import { type PatternSet, getPatterns } from './patterns.js';
+import { type PatternSet, type PatternWarning, getPatterns } from './patterns.js';
 import { type PlukEvent, type PlukEventType } from './event.js';
 import { createInterface } from 'node:readline';
 import { type Readable } from 'node:stream';
@@ -50,7 +50,7 @@ export interface WatchOptions {
   cli?: string;
   patternsDir?: string;
   /** Called with a human-readable warning when a pattern set falls back or a pattern is invalid. */
-  onWarn?: (msg: string) => void;
+  onWarn?: PatternWarning;
   input?: Readable;
   filter?: PlukEventType[];
   includeRaw?: boolean;

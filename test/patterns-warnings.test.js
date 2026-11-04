@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
-import { parsePatternsContent, getPatterns, bundledPatternsDir } from '../dist/patterns.js';
+import { parsePatternsContent, getPatterns, hasAnyPattern, bundledPatternsDir } from '../dist/patterns.js';
 import { watch } from '../dist/watch.js';
 
 const cliPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist', 'cli.js');
@@ -37,12 +37,21 @@ test('getPatterns warns once when patterns-dir lacks the file and falls back', t
   assert.deepEqual(p, getPatterns('claude'));
 });
 
-test('getPatterns reports when no pattern set exists at all', t => {
+test('getPatterns stays silent when no pattern set exists at all (the CLI reports that itself)', t => {
   const dir = emptyDir(t);
   const msgs = [];
-  getPatterns('no-such-cli', dir, m => msgs.push(m));
-  assert.equal(msgs.length, 1);
-  assert.match(msgs[0], /no pattern set found/);
+  const p = getPatterns('no-such-cli', dir, m => msgs.push(m));
+  assert.equal(msgs.length, 0);
+  assert.equal(hasAnyPattern(p), false);
+});
+
+test('pluk watch --patterns-dir with an unknown --cli warns exactly once on stderr', t => {
+  const dir = emptyDir(t);
+  const r = spawnSync(process.execPath, [cliPath, 'watch', 'w', '--cli=no-such-cli', `--patterns-dir=${dir}`], { encoding: 'utf-8', input: '' });
+  assert.equal(r.status, 0);
+  const lines = r.stderr.split('\n').filter(l => l.includes('pattern'));
+  assert.equal(lines.length, 1, r.stderr);
+  assert.match(lines[0], /no pattern set for --cli=no-such-cli/);
 });
 
 test('getPatterns without a callback does not throw and is unchanged', t => {

@@ -172,7 +172,7 @@ Value flags reject empty or whitespace-only values with exit 2 (`--<flag> requir
 | `watch` | `--include-raw` | Also emit `raw_output` events |
 | `watch` | `--capture[=ms]` | Instead of reading stdin, poll `tmux capture-pane` and classify each whole rendered frame; useful for TUIs whose pipe-pane stream has no line feeds. Interval in milliseconds (positive integer), default `1000`. With `--include-raw`, `raw_output` `data.line` is a whole ANSI-stripped screen |
 | `watch` | `--pane=<target>` | tmux pane to poll in `--capture` mode (defaults to the session name); emitted events carry it in their `pane` field |
-| `watch` | `--patterns-dir=<dir>` | Load pattern files from this directory; a missing or unreadable `<cli>.patterns` is reported on stderr and the bundled set is used |
+| `watch` | `--patterns-dir=<dir>` | Load pattern files from this directory; a missing or unreadable `<cli>.patterns` is reported once on stderr and the bundled set is used |
 | `patterns` | `--patterns-dir=<dir>` | Show the patterns loaded from this directory (same lookup and stderr warning as `watch`) |
 | `subscribe` | `--from-beginning` | Replay the existing log from the start instead of only new lines |
 | `subscribe` | `--verbose` | Show debug output |
@@ -238,6 +238,9 @@ for (const s of sessions) {
 
 // Classify individual lines
 const patterns = getPatterns('claude');
+// Optional third argument: called when a --patterns-dir file is missing and
+// pluk falls back, or when a custom regex fails to compile (silent if omitted)
+const custom = getPatterns('claude', './my-patterns', (msg) => console.warn(msg));
 const classifier = new Classifier({ session: 'my-agent', patterns });
 const event = classifier.classify('● Read main.go');
 // → { type: 'tool_call_started', data: { tool: 'Read', ... } }
@@ -251,6 +254,8 @@ const sub = subscribe('my-agent', (event) => {
 const watcher = watch({
   session: 'my-agent',
   cli: 'claude',
+  patternsDir: './my-patterns',   // optional
+  onWarn: (msg) => console.warn(msg), // optional: same warnings as getPatterns's callback
   onEvent(event) {
     if (event.type === 'rate_limit') {
       console.warn('Rate limited!', event.data.message);
@@ -327,7 +332,10 @@ In addition to the `pluk <command>` subcommand form, three standalone binaries a
 
 Built-in event-classification pattern files exist for: **Claude Code**, **GitHub Copilot CLI**, **Gemini CLI**, **Goose CLI**, **OpenAI Codex CLI**, **Aider**, **Oh My Pi (`omp`)**, **IBM Bob Shell (`bob`)**.
 
-Custom patterns can be loaded from a directory with `--patterns-dir` or `getPatterns(cli, patternsDir)`.
+Custom patterns can be loaded from a directory with `--patterns-dir` or `getPatterns(cli, patternsDir, warn?)`
+(the `watch()` equivalent is `patternsDir` plus `onWarn`). The optional `warn`/`onWarn` callback (`PatternWarning`)
+receives a message when `<cli>.patterns` is missing from the directory and pluk falls back to the bundled set, or when
+a custom regex fails to compile; without it the library stays silent as before.
 
 ### Pattern File Format
 
@@ -337,7 +345,8 @@ the directory passed to `--patterns-dir`. Each non-blank, non-comment line is
 comment, and blank lines are ignored. Every value is compiled as a JavaScript
 `RegExp` source string, so use `|` for alternation (as in the bundled files
 below). A key that is omitted, empty, or fails to compile is simply disabled
-(treated as `null`) rather than raising an error; an invalid regex is reported on stderr and its detector is disabled.
+(treated as `null`) rather than raising an error; the `pluk` CLI reports an invalid regex on stderr (library callers
+receive it through the warning callback) and its detector is disabled.
 
 Recognized keys:
 

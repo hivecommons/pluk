@@ -34,12 +34,12 @@ const PATTERN_KEYS: Record<string, keyof Omit<PatternSet, 'cli'>> = {
 
 export type PatternWarning = (msg: string) => void;
 
-function compileOptional(pattern: string | undefined, name: string, cli: string, warn?: PatternWarning): RegExp | null {
+function compileOptional(pattern: string | undefined, name: string, origin: string, warn?: PatternWarning): RegExp | null {
   if (!pattern) return null;
   try {
     return new RegExp(pattern);
   } catch (err) {
-    warn?.(`${name} in ${cli}.patterns is not a valid regular expression (${(err as Error).message}); detector disabled`);
+    warn?.(`${name} in ${origin} is not a valid regular expression (${(err as Error).message}); detector disabled`);
     return null;
   }
 }
@@ -51,6 +51,10 @@ export function loadPatterns(patternsDir: string, cli: string, warn?: PatternWar
 }
 
 export function parsePatternsContent(content: string, cli: string, warn?: PatternWarning): PatternSet {
+  return parsePatternsFrom(content, cli, `${cli}.patterns`, warn);
+}
+
+function parsePatternsFrom(content: string, cli: string, origin: string, warn?: PatternWarning): PatternSet {
   const vars: Record<string, string> = {};
 
   for (const line of content.split('\n')) {
@@ -83,7 +87,7 @@ export function parsePatternsContent(content: string, cli: string, warn?: Patter
   };
 
   for (const [varName, field] of Object.entries(PATTERN_KEYS)) {
-    (result[field] as RegExp | null) = compileOptional(vars[varName], varName, cli, warn);
+    (result[field] as RegExp | null) = compileOptional(vars[varName], varName, origin, warn);
   }
 
   return result;
@@ -251,11 +255,11 @@ export function getPatterns(cli: string, patternsDir?: string, warn?: PatternWar
   } catch {
     const inline = BUILTIN_PATTERNS[cli];
     if (inline) {
-      result = parsePatternsContent(inline, cli, warn);
+      result = parsePatternsFrom(inline, cli, `builtin patterns for ${cli}`, warn);
       source = 'using builtin patterns';
     } else {
-      result = { cli, idle: null, working: null, rateLimit: null, login: null, trustDialog: null, bypass: null, toolStart: null, toolEnd: null, error: null, model: null, sessionEnd: null };
-      source = 'no pattern set found';
+      // Nothing to fall back to: callers report the empty set themselves, so stay quiet here.
+      return { cli, idle: null, working: null, rateLimit: null, login: null, trustDialog: null, bypass: null, toolStart: null, toolEnd: null, error: null, model: null, sessionEnd: null };
     }
   }
   if (patternsDir) warn?.(`patterns-dir ${patternsDir} has no readable ${cli}.patterns; ${source}`);
