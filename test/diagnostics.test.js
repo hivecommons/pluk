@@ -8,7 +8,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { watch, emptyWatchStats } from '../dist/watch.js';
-import { Classifier } from '../dist/classifier.js';
+import { Classifier, STATE_DEBOUNCE_SECONDS } from '../dist/classifier.js';
 import { Subscriber } from '../dist/subscriber.js';
 import { startDiagnostics, log } from '../dist/diagnostics.js';
 
@@ -70,6 +70,38 @@ test('watch still counts classifier failures as classifyErrors', async () => {
   } finally {
     Classifier.prototype.classify = original;
   }
+});
+
+test('watch counts a classifier flush failure as classifyErrors instead of throwing from the timer', async t => {
+  // The deferred-verdict flush runs from a setTimeout callback (#419), and
+  // since #453 that timer is ref()'d at EOF. A throw escaping it is an
+  // uncaught exception in the timer — the process (and pipe-pane with it)
+  // dies — so it must land in classifyErrors like a throw from classify().
+  const original = Classifier.prototype.flush;
+  Classifier.prototype.flush = () => { throw new Error('flush blew up'); };
+  t.after(() => { Classifier.prototype.flush = original; });
+
+  // Mock only setTimeout so the flush window can be advanced without a
+  // multi-second wait; readline delivers 'line' via the stream's nextTick,
+  // which is unaffected, so one setImmediate turn is enough to arm the timer.
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const input = new PassThrough();
+  const events = [];
+  const handle = watch({ session: 'dtest', cli: 'claude', input, onEvent: e => events.push(e) });
+  input.write('esc to interrupt\n');
+  await new Promise(r => setImmediate(r));
+  assert.equal(handle.stats().linesSeen, 1, 'line was processed and armed the flush timer');
+  assert.equal(handle.stats().classifyErrors, 0, 'classify() itself did not fail');
+
+  // Firing the timer with a throwing flush() must not propagate out of tick().
+  const emittedBeforeFlush = events.length;
+  t.mock.timers.tick(STATE_DEBOUNCE_SECONDS * 1000 + 1000);
+
+  handle.stop();
+  const s = handle.stats();
+  assert.equal(s.classifyErrors, 1, 'the flush failure is counted');
+  assert.equal(s.emitErrors, 0, 'a classifier failure is not blamed on the sink');
+  assert.equal(events.length, emittedBeforeFlush, 'no verdict is emitted from a failed flush');
 });
 
 test('capture mode counts polls and failures when tmux is unavailable', async () => {
