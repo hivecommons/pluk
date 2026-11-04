@@ -114,15 +114,15 @@ function envPositiveInt(name: string, fallback: number): number {
   const raw = process.env[name];
   if (!raw) return fallback;
   const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-/** `PLUK_LOG_MAX_BYTES` overrides {@link DEFAULT_LOG_MAX_BYTES} when set to a positive number. */
+/** `PLUK_LOG_MAX_BYTES` overrides {@link DEFAULT_LOG_MAX_BYTES} when set to a positive integer. */
 export function logMaxBytes(): number {
   return envPositiveInt('PLUK_LOG_MAX_BYTES', DEFAULT_LOG_MAX_BYTES);
 }
 
-/** `PLUK_LOG_KEEP_LINES` overrides {@link DEFAULT_LOG_KEEP_LINES} when set to a positive number. */
+/** `PLUK_LOG_KEEP_LINES` overrides {@link DEFAULT_LOG_KEEP_LINES} when set to a positive integer. */
 export function logKeepLines(): number {
   return envPositiveInt('PLUK_LOG_KEEP_LINES', DEFAULT_LOG_KEEP_LINES);
 }

@@ -246,6 +246,13 @@ test('logMaxBytes/logKeepLines honor positive env overrides and ignore garbage',
   });
 });
 
+test('logMaxBytes/logKeepLines reject fractional values and fall back to defaults', () => {
+  withEnv({ PLUK_LOG_MAX_BYTES: '0.5', PLUK_LOG_KEEP_LINES: '2.9' }, () => {
+    assert.strictEqual(logMaxBytes(), DEFAULT_LOG_MAX_BYTES);
+    assert.strictEqual(logKeepLines(), DEFAULT_LOG_KEEP_LINES);
+  });
+});
+
 test('rotateLogFileIfNeeded leaves a log under the byte threshold untouched', () => {
   const base = tempBase();
   try {
