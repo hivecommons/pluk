@@ -1,0 +1,1 @@
+- Reject whitespace-only CLI value flags with exit code 2, preserving the existing `--run-dir` exception and whitespace in nonblank values.

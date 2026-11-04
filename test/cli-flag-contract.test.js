@@ -60,19 +60,42 @@ for (const [command, flags] of Object.entries(COMMAND_FLAGS)) {
         assert.equal(parseArgs([`--${flag}=`], flags, command).flags[flag], '');
       });
     } else {
-      test(`${command} rejects an empty --${flag}=`, t => {
-        const exit = new Error('parser exit');
-        let exitCode;
-        let diagnostic = '';
-        t.mock.method(process, 'exit', code => { exitCode = code; throw exit; });
-        t.mock.method(console, 'error', message => { diagnostic += message; });
-        assert.throws(() => parseArgs([`--${flag}=`], flags, command), error => error === exit);
-        assert.equal(exitCode, 2);
-        assert.ok(diagnostic.includes(`--${flag} requires a non-empty value`));
-      });
+      for (const value of ['', ' ', '\t', '\r\n', ' \t\n ', '\u00a0']) {
+        test(`${command} rejects blank --${flag}=${JSON.stringify(value)}`, t => {
+          const exit = new Error('parser exit');
+          let exitCode;
+          let diagnostic = '';
+          t.mock.method(process, 'exit', code => { exitCode = code; throw exit; });
+          t.mock.method(console, 'error', message => { diagnostic += message; });
+          assert.throws(() => parseArgs([`--${flag}=${value}`], flags, command), error => error === exit);
+          assert.equal(exitCode, 2);
+          assert.ok(diagnostic.includes(`--${flag} requires a non-empty value`));
+        });
+      }
     }
   }
 }
+
+test('parser preserves surrounding whitespace in nonblank values', () => {
+  for (const [command, flags] of Object.entries(COMMAND_FLAGS)) {
+    for (const flag of flags) {
+      if (!VALUE_FLAGS.has(flag)) continue;
+      const value = ' \tvalue with spaces\n ';
+      assert.equal(parseArgs([`--${flag}=${value}`], flags, command).flags[flag], value);
+    }
+  }
+});
+
+test('CLI rejects whitespace-only executable overrides and pane targets before doing work', () => {
+  for (const args of [
+    ['attach', 's', '--rationguard-bin= '],
+    ['watch', 's', '--capture', '--pane=\t'],
+  ]) {
+    const result = run(...args);
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /--(?:rationguard-bin|pane) requires a non-empty value/);
+  }
+});
 
 test('pluk sessions --run-dir= still falls back to the default run dir', () => {
   const result = run('sessions', '--run-dir=');
