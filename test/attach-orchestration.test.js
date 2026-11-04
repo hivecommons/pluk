@@ -121,7 +121,8 @@ function makeRunDir() {
 
 // --- rationguard flag validation ---------------------------------------------------
 
-for (const rebuttal of ['auto', '', 'SEND', 'true']) {
+// An empty --rebuttal= is rejected centrally by parseArgs (test/cli-flag-contract.test.js).
+for (const rebuttal of ['auto', 'SEND', 'true']) {
   for (const rationguard of [false, true]) {
     test(`attach rejects --rebuttal=${rebuttal} with rationguard=${rationguard} before touching tmux`, () => {
       const stubs = makeStubs({ which: ['tmux', 'pluk', 'rationguard'] });
@@ -141,7 +142,7 @@ for (const flags of [
   ['--rebuttal=log'],
   ['--rebuttal=send'],
   ['--rationguard-bin=missing-command'],
-  ['--rebuttal=send', '--rationguard-bin='],
+  ['--rebuttal=send', '--rationguard-bin=missing-command'],
 ]) {
   test(`attach warns and continues without a watcher for orphaned ${flags.join(' ')}`, () => {
     const stubs = makeStubs({ which: ['tmux', 'pluk', 'rationguard'] });

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { COMMAND_FLAGS, KNOWN_FLAGS, parseArgs } from '../dist/cli-args.js';
+import { COMMAND_FLAGS, EMPTY_VALUE_MEANS_DEFAULT, KNOWN_FLAGS, VALUE_FLAGS, parseArgs } from '../dist/cli-args.js';
 
 const CLI = new URL('../dist/cli.js', import.meta.url);
 function run(...args) {
@@ -50,6 +50,40 @@ for (const [command, flags] of documented) {
     });
   }
 }
+
+for (const [command, flags] of Object.entries(COMMAND_FLAGS)) {
+  for (const flag of flags) {
+    if (!VALUE_FLAGS.has(flag)) continue;
+    if (EMPTY_VALUE_MEANS_DEFAULT.has(flag)) {
+      test(`${command} treats an empty --${flag}= as the default`, t => {
+        t.mock.method(process, 'exit', code => { throw new Error(`unexpected exit ${code}`); });
+        assert.equal(parseArgs([`--${flag}=`], flags, command).flags[flag], '');
+      });
+    } else {
+      test(`${command} rejects an empty --${flag}=`, t => {
+        const exit = new Error('parser exit');
+        let exitCode;
+        let diagnostic = '';
+        t.mock.method(process, 'exit', code => { exitCode = code; throw exit; });
+        t.mock.method(console, 'error', message => { diagnostic += message; });
+        assert.throws(() => parseArgs([`--${flag}=`], flags, command), error => error === exit);
+        assert.equal(exitCode, 2);
+        assert.ok(diagnostic.includes(`--${flag} requires a non-empty value`));
+      });
+    }
+  }
+}
+
+test('pluk sessions --run-dir= still falls back to the default run dir', () => {
+  const result = run('sessions', '--run-dir=');
+  assert.notEqual(result.status, 2, result.stderr);
+});
+
+test('pluk watch --cli= exits 2 through the CLI', () => {
+  const result = run('watch', 's', '--cli=');
+  assert.equal(result.status, 2);
+  assert.ok(result.stderr.includes('--cli requires a non-empty value'));
+});
 
 test('CLI dispatch enforces command allowlists before doing work (including aliases)', () => {
   for (const command of [...documented.keys(), 'ls', 'classify']) {

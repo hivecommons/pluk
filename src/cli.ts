@@ -67,10 +67,6 @@ function installPipePaneErrorHandlers(): void {
 
 function parseFilter(raw: string | undefined): PlukEventType[] | undefined {
   if (raw === undefined) return undefined;
-  if (raw === '') {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} --filter requires at least one event type (valid: ${PLUK_EVENT_TYPES.join(', ')})`);
-    process.exit(2);
-  }
   const types = raw.split(',').map(t => t.trim());
   for (const t of types) {
     if (!(PLUK_EVENT_TYPES as readonly string[]).includes(t)) {
@@ -166,10 +162,6 @@ function cmdWatch(args: string[]): void {
   let captureIntervalMs: number | undefined;
   if (flags['pane'] !== undefined && !capture) {
     console.error('Warning: --pane is ignored without --capture');
-  }
-  if (capture && flags['pane'] === '') {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} --pane requires a non-empty tmux target`);
-    process.exit(2);
   }
   if (capture !== undefined && capture !== 'true') {
     captureIntervalMs = Number(capture);

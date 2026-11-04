@@ -128,7 +128,7 @@ test('watch --pane without --capture warns that --pane is ignored', () => {
 test('--pane= (empty) is rejected instead of capturing an arbitrary pane (#435)', () => {
   const { code, stderr } = run(CLI, ['watch', 'x', '--capture', '--pane=']);
   assert.equal(code, 2);
-  assert.match(stderr, /--pane requires a non-empty tmux target/);
+  assert.match(stderr, /--pane requires a non-empty value/);
 });
 
 // --- --filter validation ---------------------------------------------------------
@@ -147,7 +147,7 @@ for (const cmd of ['watch', 'subscribe']) {
   test(`${cmd} --filter= (empty value) exits 2 asking for an event type`, () => {
     const { code, stderr } = run(CLI, [cmd, 'x', '--filter=']);
     assert.equal(code, 2);
-    assert.match(stderr, /--filter requires at least one event type \(valid: raw_output, /);
+    assert.match(stderr, /--filter requires a non-empty value/);
   });
 }
 

@@ -330,8 +330,8 @@ test('--dir= (empty) is rejected instead of silently using cwd (#433)', () => {
     ['agent-emptydir', '--cli=claude', `--run-dir=${makeRunDir()}`, '--no-open', '--dir='],
     stubs,
   );
-  assert.equal(code, 1);
-  assert.match(stderr, /--dir requires a non-empty path/);
+  assert.equal(code, 2);
+  assert.match(stderr, /--dir requires a non-empty value/);
   assert.doesNotMatch(stubs.log('tmux'), /new-session/);
 });
 
