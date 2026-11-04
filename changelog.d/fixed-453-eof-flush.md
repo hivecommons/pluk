@@ -1,0 +1,1 @@
+- watch: when stdin reaches end of input while a state verdict is still deferred by the debounce, the process now waits for the flush and emits it instead of exiting with the verdict lost (#453).
