@@ -3,6 +3,7 @@ import { type PatternSet, getPatterns } from './patterns.js';
 import { type PlukEvent, type PlukEventType } from './event.js';
 import { createInterface } from 'node:readline';
 import { type Readable } from 'node:stream';
+import { MAX_INTERVAL_MS } from './diagnostics.js';
 import { exactTarget, tmuxCapturePane } from './tmux.js';
 
 const DEFAULT_CAPTURE_INTERVAL_MS = 1000;
@@ -102,7 +103,7 @@ export function watch(opts: WatchOptions): WatchHandle {
     const target = opts.pane ?? exactTarget(opts.session);
     const intervalMs =
       opts.captureIntervalMs !== undefined && Number.isFinite(opts.captureIntervalMs) && opts.captureIntervalMs > 0
-        ? opts.captureIntervalMs
+        ? Math.min(opts.captureIntervalMs, MAX_INTERVAL_MS) // larger delays become a 1 ms timer
         : DEFAULT_CAPTURE_INTERVAL_MS;
 
     const includeRaw = opts.includeRaw ?? false;
