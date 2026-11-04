@@ -47,8 +47,11 @@ export function defaultRunDir(): string {
 }
 
 export function resolveRunDir(runDir?: string): string {
-  // An empty value counts as unset: join('', 'logs') would resolve against the cwd.
-  return runDir || process.env['PLUK_RUN_DIR'] || defaultRunDir();
+  // An empty or whitespace-only value counts as unset: join('', 'logs')
+  // would resolve against the cwd, and a whitespace-only value would be
+  // passed to join as-is.
+  const trimmed = runDir?.trim();
+  return trimmed || process.env['PLUK_RUN_DIR'] || defaultRunDir();
 }
 
 export function ensurePrivateDirectory(dir: string): void {
