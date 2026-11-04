@@ -1,0 +1,1 @@
+- sessions: the "Run dir:" hint in the empty-sessions message now displays the resolved default instead of raw whitespace when `--run-dir` or `PLUK_RUN_DIR` contains only whitespace

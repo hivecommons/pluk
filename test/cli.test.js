@@ -180,6 +180,21 @@ test('sessions prints a friendly message when nothing is found', () => {
   assert.match(stdout, /No active pluk sessions found\./);
 });
 
+test('sessions prints resolved run dir when --run-dir is whitespace-only', () => {
+  const { code, stdout } = runCli(['sessions', '--run-dir=  ']);
+  assert.equal(code, 0);
+  assert.match(stdout, /No active pluk sessions found\./);
+  // The hint should print the resolved default, not the whitespace value
+  assert.match(stdout, /Run dir: /);
+  // Verify it doesn't print just whitespace
+  const lines = stdout.split('\n');
+  const runDirLine = lines.find(l => l.includes('Run dir:'));
+  assert.ok(runDirLine);
+  // After stripping ANSI codes, the run dir line should have actual path content after "Run dir: "
+  const stripped = runDirLine.replace(/\x1b\[[0-9;]*m/g, '');
+  assert.match(stripped, /Run dir: \//, 'Run dir hint should show resolved path starting with /');
+});
+
 test('sessions renders a table row per discovered session (ls alias)', () => {
   const dir = makeRunDir();
   writeFileSync(
