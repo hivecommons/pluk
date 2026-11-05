@@ -1,5 +1,5 @@
 import { type PlukEvent, type PlukEventType, createEvent } from './event.js';
-import { type PatternSet } from './patterns.js';
+import { PATTERN_KEYS, type PatternId, type PatternSet } from './patterns.js';
 
 export const STATE_DEBOUNCE_SECONDS = 2;
 const TRUNCATE_MAX_RUNES = 120;
@@ -86,6 +86,8 @@ export interface ClassifierOptions {
   patterns: PatternSet;
   /** Injectable clock returning epoch seconds. Defaults to Date.now()/1000. */
   clock?: () => number;
+  /** Detector observations, before event filtering/debounce; null means no pattern matched a nonblank line. */
+  onPattern?: (id: PatternId | null) => void;
 }
 
 export class Classifier {
@@ -109,13 +111,21 @@ export class Classifier {
   // it, so flush() can resolve it once the window has elapsed (issue #418).
   private lastIdleEvidenceTS = Number.NEGATIVE_INFINITY;
   private clock: () => number;
+  private onPattern?: (id: PatternId | null) => void;
 
   constructor(opts: ClassifierOptions) {
     this.patterns = opts.patterns;
+    this.onPattern = opts.onPattern;
     this.session = opts.session;
     this.pane = opts.pane ?? '0';
     this.source = opts.source ?? 'pipe-pane';
     this.clock = opts.clock ?? (() => Math.floor(Date.now() / 1000));
+  }
+
+  private matches(id: PatternId, line: string): boolean {
+    const matched = this.patterns[PATTERN_KEYS[id]]?.test(line) ?? false;
+    if (matched) this.onPattern?.(id);
+    return matched;
   }
 
   /** Current debounced state ('unknown' | 'idle' | 'working'). */
@@ -188,9 +198,13 @@ export class Classifier {
     for (const raw of rawLines) {
       const line = stripANSI(raw);
       if (!line) continue;
-      if (this.patterns.trustDialog?.test(line)) sawBlocked = true;
-      if (this.patterns.working?.test(line)) sawWorking = true;
-      if (this.patterns.idle?.test(line)) sawIdle = true;
+      const blocked = this.matches('TRUST_DIALOG_PATTERN', line);
+      const working = this.matches('WORKING_PATTERNS', line);
+      const idle = this.matches('IDLE_PATTERN', line);
+      if (blocked) sawBlocked = true;
+      if (working) sawWorking = true;
+      if (idle) sawIdle = true;
+      if (!blocked && !working && !idle) this.onPattern?.(null);
     }
 
     if (sawBlocked) {
@@ -224,48 +238,51 @@ export class Classifier {
     // only proposes idle if no working evidence has been seen within the
     // debounce window (issue #17).
     let proposedState = '';
-    if (this.patterns.working?.test(line)) {
+    let matchedState = false;
+    if (this.matches('WORKING_PATTERNS', line)) {
+      matchedState = true;
       proposedState = 'working';
       this.lastWorkingEvidenceTS = now;
-    } else if (this.patterns.idle?.test(line)) {
+    } else if (this.matches('IDLE_PATTERN', line)) {
+      matchedState = true;
       this.lastIdleEvidenceTS = now;
       if (now - this.lastWorkingEvidenceTS >= STATE_DEBOUNCE_SECONDS) {
         proposedState = 'idle';
       }
     }
 
-    const checks: Array<[RegExp | null, PlukEventType, () => Record<string, string>]> = [
-      [this.patterns.rateLimit, 'rate_limit', () => ({
+    const checks: Array<[PatternId, PlukEventType, () => Record<string, string>]> = [
+      ['RATE_LIMIT_PATTERN', 'rate_limit', () => ({
         cli: this.patterns.cli, message: line, resets_at: extractResetTime(line),
       })],
-      [this.patterns.login, 'login_required', () => ({
+      ['LOGIN_PATTERN', 'login_required', () => ({
         cli: this.patterns.cli, prompt: line,
       })],
-      [this.patterns.trustDialog, 'trust_dialog', () => ({
+      ['TRUST_DIALOG_PATTERN', 'trust_dialog', () => ({
         prompt: line, auto_approved: 'false',
       })],
-      [this.patterns.bypass, 'bypass_permissions', () => ({
+      ['BYPASS_PATTERN', 'bypass_permissions', () => ({
         prompt: line, auto_approved: 'false',
       })],
-      [this.patterns.toolStart, 'tool_call_started', () => ({
+      ['TOOL_START_PATTERN', 'tool_call_started', () => ({
         tool: extractTool(line), input_preview: truncate(line, TRUNCATE_MAX_RUNES),
       })],
-      [this.patterns.toolEnd, 'tool_call_completed', () => ({
+      ['TOOL_END_PATTERN', 'tool_call_completed', () => ({
         tool: extractTool(line), duration_ms: extractDuration(line),
       })],
-      [this.patterns.error, 'error', () => ({
+      ['ERROR_PATTERN', 'error', () => ({
         message: line, severity: 'error',
       })],
-      [this.patterns.model, 'model_changed', () => ({
+      ['MODEL_PATTERN', 'model_changed', () => ({
         from: '', to: line,
       })],
-      [this.patterns.sessionEnd, 'session_ended', () => ({
+      ['SESSION_END_PATTERN', 'session_ended', () => ({
         cli: this.patterns.cli,
       })],
     ];
 
-    for (const [re, type, dataFn] of checks) {
-      if (re && re.test(line)) {
+    for (const [id, type, dataFn] of checks) {
+      if (this.matches(id, line)) {
         // Keep the state evidence: an event line inside the debounce window
         // must not erase a pending state verdict.
         if (proposedState) this.pendingState = proposedState;
@@ -274,6 +291,7 @@ export class Classifier {
       }
     }
 
+    if (!matchedState) this.onPattern?.(null);
     return this.resolveState(proposedState, now);
   }
 

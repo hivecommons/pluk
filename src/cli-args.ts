@@ -1,4 +1,4 @@
-import { ANSI_RED, paintStderr } from './ansi.js';
+import { log } from './diagnostics.js';
 
 export const VALUE_FLAGS: ReadonlySet<string> = new Set([
   'text', 'session', 'run-dir', 'cli', 'command', 'cli-args', 'rebuttal',
@@ -30,7 +30,7 @@ export const KNOWN_FLAGS: ReadonlySet<string> = new Set(Object.values(COMMAND_FL
 
 function rejectUnknownFlag(name: string, allowed: ReadonlySet<string>, command: string): void {
   if (!allowed.has(name)) {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} unknown flag --${name} for "pluk ${command}" (see pluk ${command} --help)`);
+    log('error', `unknown flag --${name} for "pluk ${command}" (see pluk ${command} --help)`);
     process.exit(2);
   }
 }
@@ -47,11 +47,11 @@ export function parseArgs(args: string[], allowed: ReadonlySet<string>, command:
         const value = arg.slice(eqIdx + 1);
         rejectUnknownFlag(name, allowed, command);
         if (BOOL_FLAGS.has(name) && value !== 'true' && value !== 'false') {
-          console.error(`${paintStderr(ANSI_RED, 'Error:')} --${name} is a boolean flag: use --${name} or --${name}=false`);
+          log('error', `--${name} is a boolean flag: use --${name} or --${name}=false`);
           process.exit(2);
         }
         if (VALUE_FLAGS.has(name) && value.trim() === '' && !EMPTY_VALUE_MEANS_DEFAULT.has(name)) {
-          console.error(`${paintStderr(ANSI_RED, 'Error:')} --${name} requires a non-empty value`);
+          log('error', `--${name} requires a non-empty value`);
           process.exit(2);
         }
         flags[name] = value;
@@ -59,7 +59,7 @@ export function parseArgs(args: string[], allowed: ReadonlySet<string>, command:
         const name = arg.slice(2);
         rejectUnknownFlag(name, allowed, command);
         if (VALUE_FLAGS.has(name)) {
-          console.error(`${paintStderr(ANSI_RED, 'Error:')} --${name} requires a value: use --${name}=<value>`);
+          log('error', `--${name} requires a value: use --${name}=<value>`);
           process.exit(2);
         }
         flags[name] = 'true';

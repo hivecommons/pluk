@@ -18,7 +18,7 @@ export interface PatternSet {
   sessionEnd: RegExp | null;
 }
 
-const PATTERN_KEYS: Record<string, keyof Omit<PatternSet, 'cli'>> = {
+export const PATTERN_KEYS = Object.freeze({
   IDLE_PATTERN: 'idle',
   WORKING_PATTERNS: 'working',
   RATE_LIMIT_PATTERN: 'rateLimit',
@@ -30,7 +30,9 @@ const PATTERN_KEYS: Record<string, keyof Omit<PatternSet, 'cli'>> = {
   ERROR_PATTERN: 'error',
   MODEL_PATTERN: 'model',
   SESSION_END_PATTERN: 'sessionEnd',
-};
+} as const satisfies Record<string, keyof Omit<PatternSet, 'cli'>>);
+
+export type PatternId = keyof typeof PATTERN_KEYS;
 
 export type PatternWarning = (msg: string) => void;
 
