@@ -1,9 +1,15 @@
 import { ANSI_RED, ANSI_DIM, paintStderr } from './ansi.js';
 
 /** Write a leveled diagnostic line to stderr; colour only on a TTY without NO_COLOR. */
-export function log(level: 'error' | 'info', msg: string): void {
-  const tag = level === 'error' ? paintStderr(ANSI_RED, 'Error:') : paintStderr(ANSI_DIM, '[pluk]');
-  console.error(`${tag} ${msg}`);
+export function log(level: 'error' | 'warn' | 'info', msg: string, prefix?: string): void {
+  if (process.env.PLUK_LOG_FORMAT === 'json') {
+    console.error(JSON.stringify({ level, message: msg }));
+    return;
+  }
+  // Optional text prefixes preserve existing CLI diagnostics for humans and scripts.
+  const label = prefix ?? (level === 'error' ? 'Error:' : level === 'warn' ? 'Warning:' : '[pluk]');
+  const tag = paintStderr(level === 'error' ? ANSI_RED : ANSI_DIM, label);
+  console.error(label ? `${tag} ${msg}` : msg);
 }
 
 /** Default period for `--diagnostics` health summaries. */

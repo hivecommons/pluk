@@ -122,11 +122,12 @@ tmux attach -t my-agent
 |----------|---------|---------------|
 | `PLUK_RUN_DIR` | `$XDG_RUNTIME_DIR/pluk`, else `<tmpdir>/pluk-<uid>` | Directory for session metadata and JSONL event logs |
 | `PLUK_LOG_MAX_BYTES` | `10485760` (10 MiB) | Positive integer byte cap for a session's event log: once exceeded, the log is trimmed to the newest lines that fit under it |
+| `PLUK_LOG_FORMAT` | `text` | Set exactly `json` for one `{"level":"info","message":"..."}` JSON object per pluk stderr diagnostic; other values retain human-readable text. `--diagnostics` health summaries keep their existing JSON schema |
 | `PLUK_LOG_KEEP_LINES` | `5000` | Positive integer; keep up to this many trailing lines across rotation, within the `PLUK_LOG_MAX_BYTES` cap |
 | `PLUK_RATIONGUARD_BIN` | *(unset)* | Rationguard command for `pluk attach --rationguard` when it is not on `PATH`; same as `--rationguard-bin` |
 | `NO_COLOR` | *(unset)* | When set, `pluk --help`, `pluk sessions`, `pluk patterns` and all stderr diagnostics are written without ANSI colour codes even on a TTY (colour is already off when the stream is not a TTY) |
 
-`PLUK_LOG_MAX_BYTES` and `PLUK_LOG_KEEP_LINES` are read by the `pluk watch` that writes the log. `tmux pipe-pane` runs that watcher under the tmux server's environment, not your shell's, so `pluk attach` forwards both on the pipe-pane command line (alongside `PLUK_RUN_DIR`) when they are set in the shell that runs it. When wiring `pipe-pane` by hand as above, prefix them onto the command yourself, e.g. `"PLUK_RUN_DIR=$PLUK_RUN_DIR PLUK_LOG_MAX_BYTES=1000000 pluk watch ..."`.
+`PLUK_LOG_MAX_BYTES`, `PLUK_LOG_KEEP_LINES` and `PLUK_LOG_FORMAT` are read by the `pluk watch` that writes the log. `tmux pipe-pane` runs that watcher under the tmux server's environment, not your shell's, so `pluk attach` forwards all three on the pipe-pane command line (alongside `PLUK_RUN_DIR`) when they are set in the shell that runs it. When wiring `pipe-pane` by hand as above, prefix them onto the command yourself, e.g. `"PLUK_RUN_DIR=$PLUK_RUN_DIR PLUK_LOG_MAX_BYTES=1000000 pluk watch ..."`.
 
 </details>
 
@@ -204,6 +205,37 @@ The same counters are available programmatically via `watch(...).stats()` and
 period above 2147483.647 seconds (about 24.9 days) have it capped at that value
 to stay within Node's timer limit; the CLI rejects out-of-range values as
 described above.
+
+`pluk watch <session>` also publishes `<run-dir>/stats/watch.json` initially,
+every 30 seconds, and on normal exit, without requiring `--diagnostics`.
+It includes the existing health counters plus `patternMatches` and
+`classifierMisses`. The pattern keys are the fixed keys in the
+[pattern file format](#pattern-file-format), including `WORKING_PATTERNS`.
+Matches count detector hits before event filtering and debounce, so repeated
+idle/working evidence counts even when no new event is emitted. A nonblank
+line matching no detector counts as a miss; blank lines and suppressed state
+matches do not. Capture mode counts each polled frame's nonblank lines and
+checks only idle, working and trust-dialog detectors, as its classifier does.
+Library callers can inspect these additional counters with
+`watch(...).classificationStats()`; `stats()` remains unchanged.
+
+The shared tmux send seam publishes `<run-dir>/stats/send.json` after each
+send-keys attempt, including attach's CLI launch. `tmuxSendFailures` counts
+failed attempts in that process; a fresh successful send process writes zero.
+`pluk send` resolves the directory from `PLUK_RUN_DIR` or the default, while
+attach uses its selected run directory. A watcher does not send tmux keys.
+
+Each file is a **latest process snapshot**, not an aggregate across processes
+or sessions. Concurrent writers replace the same fixed file; use a separate
+run directory per watcher when all watchers need to be scraped independently.
+`pluk_stats: 1`, `command`, `pid` and `updated_at` identify the schema, writer
+and last update; counters reset when that process starts. No counter labels
+contain session names, paths, CLI names or raw output. Snapshots use private
+0700 directories and 0600 files, replace complete JSON atomically, and retain
+one file per command. Files remain after exit; check `updated_at` for freshness.
+Sessionless or unsafe-session watches skip filesystem snapshots. Writes are
+best effort: an unsafe or unwritable run directory never interrupts events or
+sending. Nothing is sent to an external backend.
 
 </details>
 

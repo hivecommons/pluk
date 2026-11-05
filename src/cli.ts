@@ -10,7 +10,8 @@ import { discoverSessions } from './sessions.js';
 import { resolveRunDir, rotateLogFileIfNeeded, validateSessionName } from './run-dir.js';
 import { attach, splitShellWords } from './attach.js';
 import { send } from './send.js';
-import { ANSI_RED, ANSI_GREEN, ANSI_CYAN, ANSI_DIM, ANSI_BOLD, ANSI_RESET, paintStderr, paintStdout } from './ansi.js';
+import { ANSI_GREEN, ANSI_CYAN, ANSI_DIM, ANSI_BOLD, ANSI_RESET, paintStdout } from './ansi.js';
+import { writeLocalStats } from './local-stats.js';
 import { packageVersion } from './version.js';
 import { COMMAND_FLAGS, parseArgs } from './cli-args.js';
 
@@ -70,7 +71,7 @@ function parseFilter(raw: string | undefined): PlukEventType[] | undefined {
   const types = raw.split(',').map(t => t.trim());
   for (const t of types) {
     if (!(PLUK_EVENT_TYPES as readonly string[]).includes(t)) {
-      console.error(`${paintStderr(ANSI_RED, 'Error:')} unknown event type "${t}" (valid: ${PLUK_EVENT_TYPES.join(', ')})`);
+      log('error', `unknown event type "${t}" (valid: ${PLUK_EVENT_TYPES.join(', ')})`);
       process.exit(2);
     }
   }
@@ -84,11 +85,11 @@ function parseDiagnosticsFlag(raw: string | undefined): string | undefined {
   if (raw === undefined || raw === 'true') return raw;
   const seconds = Number(raw);
   if (!Number.isFinite(seconds) || seconds <= 0) {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} --diagnostics expects a positive number of seconds (or a bare --diagnostics for the 60s default)`);
+    log('error', `--diagnostics expects a positive number of seconds (or a bare --diagnostics for the 60s default)`);
     process.exit(2);
   }
   if (seconds > MAX_DIAGNOSTICS_SECONDS) {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} --diagnostics must be at most ${MAX_DIAGNOSTICS_SECONDS} seconds`);
+    log('error', `--diagnostics must be at most ${MAX_DIAGNOSTICS_SECONDS} seconds`);
     process.exit(2);
   }
   return raw;
@@ -99,8 +100,8 @@ function cmdSubscribe(args: string[]): void {
   const session = positional[0];
 
   if (!session) {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} session name is required`);
-    console.error('  pluk subscribe <session>');
+    log('error', `session name is required`);
+    log('info', '  pluk subscribe <session>', '');
     process.exit(1);
   }
 
@@ -122,7 +123,7 @@ function cmdSubscribe(args: string[]): void {
   const stopDiagnostics = startDiagnostics('subscribe', () => ({ ...sub.stats() }), diagnosticsFlag);
 
   sub.on('error', err => {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} ${(err as Error).message}`);
+    log('error', `${(err as Error).message}`);
     stopDiagnostics();
     process.exit(1);
   });
@@ -134,7 +135,7 @@ function cmdSubscribe(args: string[]): void {
   });
 
   sub.start().catch(err => {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} ${(err as Error).message}`);
+    log('error', `${(err as Error).message}`);
     process.exit(1);
   });
 }
@@ -161,16 +162,16 @@ function cmdWatch(args: string[]): void {
   const capture = flags['capture'];
   let captureIntervalMs: number | undefined;
   if (flags['pane'] !== undefined && !capture) {
-    console.error('Warning: --pane is ignored without --capture');
+    log('warn', '--pane is ignored without --capture');
   }
   if (capture !== undefined && capture !== 'true') {
     captureIntervalMs = Number(capture);
     if (!Number.isInteger(captureIntervalMs) || captureIntervalMs <= 0) {
-      console.error(`${paintStderr(ANSI_RED, 'Error:')} --capture expects a positive integer number of milliseconds`);
+      log('error', `--capture expects a positive integer number of milliseconds`);
       process.exit(2);
     }
     if (captureIntervalMs > MAX_INTERVAL_MS) {
-      console.error(`${paintStderr(ANSI_RED, 'Error:')} --capture must be at most ${MAX_INTERVAL_MS} milliseconds`);
+      log('error', `--capture must be at most ${MAX_INTERVAL_MS} milliseconds`);
       process.exit(2);
     }
   }
@@ -203,17 +204,26 @@ function cmdWatch(args: string[]): void {
   try {
     if (positional[0] === undefined) throw new Error('no session');
     validateSessionName(session);
-    const logFile = join(resolveRunDir(flags['run-dir']), 'logs', `${session}.jsonl`);
+    const runDir = resolveRunDir(flags['run-dir']);
+    const logFile = join(runDir, 'logs', `${session}.jsonl`);
+    const reportStats = (): void => writeLocalStats('watch', {
+      ...watcher.stats(), ...watcher.classificationStats(),
+    }, runDir);
+    reportStats();
     const rotateInterval = setInterval(() => {
       try {
         rotateLogFileIfNeeded(logFile);
       } catch {
         // Never let rotation crash pipe-pane
       }
+      reportStats();
     }, LOG_ROTATE_CHECK_INTERVAL_MS);
     rotateInterval.unref();
 
-    process.on('exit', () => clearInterval(rotateInterval));
+    process.on('exit', () => {
+      clearInterval(rotateInterval);
+      reportStats();
+    });
   } catch {
     // No explicit session (placeholder label) or an unsafe session name —
     // skip rotation rather than derive a log path from it.
@@ -234,14 +244,14 @@ function cmdAttach(args: string[]): void {
   const session = positional[0];
 
   if (!session) {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} session name is required`);
-    console.error('  pluk attach my-agent --cli=claude --rationguard');
+    log('error', `session name is required`);
+    log('info', '  pluk attach my-agent --cli=claude --rationguard', '');
     process.exit(1);
   }
 
   const rebuttal = flags['rebuttal'];
   if (rebuttal !== undefined && rebuttal !== 'log' && rebuttal !== 'send') {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} --rebuttal must be one of: log, send`);
+    log('error', `--rebuttal must be one of: log, send`);
     process.exit(2);
   }
 
@@ -251,7 +261,7 @@ function cmdAttach(args: string[]): void {
     try {
       splitShellWords(value);
     } catch (err) {
-      console.error(`${paintStderr(ANSI_RED, 'Error:')} --${flag}: ${(err as Error).message}`);
+      log('error', `--${flag}: ${(err as Error).message}`);
       process.exit(2);
     }
   }
@@ -259,7 +269,7 @@ function cmdAttach(args: string[]): void {
   if (flags['rationguard'] !== 'true') {
     for (const flag of ['rebuttal', 'rationguard-bin']) {
       if (flags[flag] !== undefined) {
-        console.error(`Warning: --${flag} is ignored without --rationguard`);
+        log('warn', `--${flag} is ignored without --rationguard`);
       }
     }
   }
@@ -370,15 +380,15 @@ function cmdSend(args: string[]): void {
   const text = flags['text'] ?? positional.slice(sessionFromFlag ? 0 : 1).join(' ');
 
   if (!session) {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} session name is required`);
-    console.error('  pluk send <session> --text="hello"');
-    console.error('  pluk-send --session=my-agent --text="hello" --enter');
+    log('error', `session name is required`);
+    log('info', '  pluk send <session> --text="hello"', '');
+    log('info', '  pluk-send --session=my-agent --text="hello" --enter', '');
     process.exit(1);
   }
 
   if (!text) {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} text is required`);
-    console.error('  pluk send <session> --text="hello"');
+    log('error', `text is required`);
+    log('info', '  pluk send <session> --text="hello"', '');
     process.exit(1);
   }
 
@@ -390,7 +400,7 @@ function cmdSend(args: string[]): void {
       literal: flags['literal'] === 'true',
     });
   } catch (err) {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} failed to send to session "${session}": ${(err as Error).message}`);
+    log('error', `failed to send to session "${session}": ${(err as Error).message}`);
     process.exit(1);
   }
 }
@@ -465,12 +475,12 @@ function main(): void {
         usage();
         break;
       default:
-        console.error(`${paintStderr(ANSI_RED, 'Unknown command:')} ${command}`);
+        log('error', `Unknown command: ${command}`, '');
         usage();
         process.exit(1);
     }
   } catch (err) {
-    console.error(`${paintStderr(ANSI_RED, 'Error:')} ${(err as Error).message}`);
+    log('error', `${(err as Error).message}`);
     process.exit(1);
   }
 }

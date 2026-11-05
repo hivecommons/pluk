@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { writeLocalStats } from './local-stats.js';
 
 /**
  * Shared seam for every synchronous `tmux` invocation in pluk.
@@ -39,8 +40,22 @@ export function tmuxNewSession(session: string, workDir: string): void {
 }
 
 /** Runs an arbitrary `send-keys`-style argv with output passed through to the parent. */
-export function tmuxRunInherited(args: string[]): void {
-  execFileSync('tmux', args, { stdio: 'inherit' });
+export function tmuxRunInherited(args: string[], runDir?: string): void {
+  runWithSendStats(args, 'inherit', runDir);
+}
+
+let tmuxSendFailures = 0;
+
+/** Both attach's launch keys and pluk send use this process-local counter. */
+function runWithSendStats(args: string[], stdio: 'pipe' | 'inherit', runDir?: string): void {
+  try {
+    execFileSync('tmux', args, { stdio });
+  } catch (err) {
+    if (args[0] === 'send-keys') tmuxSendFailures++;
+    throw err;
+  } finally {
+    if (args[0] === 'send-keys') writeLocalStats('send', { tmuxSendFailures }, runDir);
+  }
 }
 
 /** Size of tmux's strftime buffer in format_expand1 (format.c `expanded[8192]`), 3.0 through 3.5a. */
@@ -100,7 +115,7 @@ export function tmuxAttach(session: string): void {
 
 /** Runs a `send-keys`-style argv with stdio captured (not shown to the user). */
 export function tmuxSendKeys(args: string[]): void {
-  execFileSync('tmux', args, { stdio: 'pipe' });
+  runWithSendStats(args, 'pipe');
 }
 
 export function tmuxListSessionNames(): string[] {

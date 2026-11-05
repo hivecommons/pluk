@@ -1,5 +1,5 @@
 import { Classifier, STATE_DEBOUNCE_SECONDS, stripANSI } from './classifier.js';
-import { type PatternSet, type PatternWarning, getPatterns } from './patterns.js';
+import { PATTERN_KEYS, type PatternId, type PatternSet, type PatternWarning, getPatterns } from './patterns.js';
 import { type PlukEvent, type PlukEventType } from './event.js';
 import { createInterface } from 'node:readline';
 import { type Readable } from 'node:stream';
@@ -45,6 +45,13 @@ export function emptyWatchStats(): WatchStats {
   };
 }
 
+export interface ClassificationStats {
+  /** Detector matches, including repeated or debounced state evidence. */
+  patternMatches: Record<PatternId, number>;
+  /** Nonblank input lines matching no detector (capture mode tests only state/modal detectors). */
+  classifierMisses: number;
+}
+
 export interface WatchOptions {
   session: string;
   cli?: string;
@@ -73,6 +80,8 @@ export interface WatchHandle {
   stop: () => void;
   /** Snapshot of the health counters accumulated so far. */
   stats: () => WatchStats;
+  /** Bounded detector counters, before filtering and debounce. */
+  classificationStats: () => ClassificationStats;
 }
 
 export function watch(opts: WatchOptions): WatchHandle {
@@ -81,6 +90,17 @@ export function watch(opts: WatchOptions): WatchHandle {
   const filterSet = opts.filter ? new Set(opts.filter) : null;
   const stats = emptyWatchStats();
   const snapshot = (): WatchStats => ({ ...stats });
+  const classification: ClassificationStats = {
+    patternMatches: Object.fromEntries(Object.keys(PATTERN_KEYS).map(id => [id, 0])) as Record<PatternId, number>,
+    classifierMisses: 0,
+  };
+  const onPattern = (id: PatternId | null): void => {
+    if (id === null) classification.classifierMisses++;
+    else classification.patternMatches[id]++;
+  };
+  const classificationSnapshot = (): ClassificationStats => ({
+    ...classification, patternMatches: { ...classification.patternMatches },
+  });
   const emit = (event: PlukEvent): void => {
     if (filterSet && !filterSet.has(event.type)) {
       stats.eventsFiltered++;
@@ -101,6 +121,7 @@ export function watch(opts: WatchOptions): WatchHandle {
       pane: opts.pane,
       patterns,
       source: 'capture-pane',
+      onPattern,
     });
     const target = opts.pane ?? exactTarget(opts.session);
     const intervalMs =
@@ -142,6 +163,7 @@ export function watch(opts: WatchOptions): WatchHandle {
         clearInterval(timer);
       },
       stats: snapshot,
+      classificationStats: classificationSnapshot,
     };
   }
 
@@ -149,6 +171,7 @@ export function watch(opts: WatchOptions): WatchHandle {
     session: opts.session,
     patterns,
     source: 'watch',
+    onPattern,
   });
 
   const input = opts.input ?? process.stdin;
@@ -218,5 +241,6 @@ export function watch(opts: WatchOptions): WatchHandle {
       input.off('error', onInputError);
     },
     stats: snapshot,
+    classificationStats: classificationSnapshot,
   };
 }
