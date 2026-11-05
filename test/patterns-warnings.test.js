@@ -54,6 +54,17 @@ test('pluk watch --patterns-dir with an unknown --cli warns exactly once on stde
   assert.match(lines[0], /no pattern set for --cli=no-such-cli/);
 });
 
+test('pluk watch --patterns-dir lacking the file warns once on stderr and falls back to bundled', t => {
+  const dir = emptyDir(t);
+  const r = spawnSync(process.execPath, [cliPath, 'watch', 'w', '--cli=claude', `--patterns-dir=${dir}`], { encoding: 'utf-8', input: '' });
+  assert.equal(r.status, 0);
+  const lines = r.stderr.split('\n').filter(l => l.includes('pattern'));
+  assert.equal(lines.length, 1, r.stderr);
+  assert.match(lines[0], /has no readable claude\.patterns; using bundled patterns/);
+  assert.ok(lines[0].includes(dir));
+  assert.doesNotMatch(r.stderr, /no pattern set/);
+});
+
 test('getPatterns without a callback does not throw and is unchanged', t => {
   const dir = emptyDir(t);
   assert.deepEqual(getPatterns('claude', dir), getPatterns('claude'));
