@@ -1,8 +1,12 @@
 # Advisory mutation-testing report (#405, #420). Report-only: stryker
-# thresholds.break is null, the job is continue-on-error and is not a
-# required check. Pull requests mutate only the changed src files; the
-# nightly run mutates everything from scratch (no incremental restore, so a
-# result is always a fresh measurement). A ratchet is a separate decision.
+# thresholds.break is null, every Stryker job is continue-on-error and none is
+# a required check. Each source file is mutated in its own matrix job because
+# the command runner replays the whole suite (30-50 s) per mutant, so a single
+# job for the whole tree (or even for one large file) never finished inside
+# its timeout and no report was ever written. Pull requests mutate only the
+# changed src files; the nightly run mutates every file from scratch (no
+# incremental restore, so a result is always a fresh measurement). A ratchet
+# is a separate decision.
 name: Mutation (advisory)
 
 on:
@@ -20,14 +24,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  mutation:
+  select:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
-    continue-on-error: true
+    timeout-minutes: 5
+    outputs:
+      files: ${{ steps.files.outputs.files }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+
+      - name: Select files to mutate (one matrix entry per file)
+        id: files
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            list=$(git diff --name-only "origin/$BASE_REF...HEAD" -- 'src/*.ts' 'src/**/*.ts' | { grep -v '\.test\.ts$' || true; })
+          else
+            list=$(git ls-files 'src/*.ts' 'src/**/*.ts' | { grep -v '\.test\.ts$' || true; })
+          fi
+          files=$(printf '%s\n' "$list" | sed '/^$/d' | sort -u | jq -R . | jq -sc .)
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+          echo "Mutating: $files"
+          [ "$files" != "[]" ] || echo "No changed src files; skipping mutation run."
+
+  mutation:
+    needs: select
+    if: needs.select.outputs.files != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        file: ${{ fromJSON(needs.select.outputs.files) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -39,58 +73,26 @@ jobs:
 
       - run: npm ci
 
-      - name: Select files to mutate
-        id: files
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref }}
-        run: |
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            files=$(git diff --name-only "origin/$BASE_REF...HEAD" -- 'src/*.ts' 'src/**/*.ts' | { grep -v '\.test\.ts$' || true; } | sort -u | paste -sd, -)
-          else
-            files="src/**/*.ts"
-          fi
-          echo "files=$files" >> "$GITHUB_OUTPUT"
-          [ -n "$files" ] || echo "No changed src files; skipping mutation run."
-
-      - name: Stryker (pull request, changed files, 20 min budget)
-        if: github.event_name == 'pull_request' && steps.files.outputs.files != ''
-        id: pr
-        timeout-minutes: 20
+      - name: Stryker (${{ matrix.file }}, fresh measurement)
+        id: stryker
+        timeout-minutes: 170
         continue-on-error: true
         env:
-          FILES: ${{ steps.files.outputs.files }}
-        run: npx stryker run --mutate "$FILES" --force
-
-      - name: Stryker (nightly, full tree, fresh measurement)
-        if: github.event_name != 'pull_request'
-        id: nightly
-        timeout-minutes: 230
-        continue-on-error: true
-        run: npx stryker run --force
+          FILE: ${{ matrix.file }}
+        run: npx stryker run --mutate "$FILE" --force
 
       - name: Summary
         if: always()
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          FILES: ${{ steps.files.outputs.files }}
-          PR_OUTCOME: ${{ steps.pr.outcome }}
-          NIGHTLY_OUTCOME: ${{ steps.nightly.outcome }}
+          FILE: ${{ matrix.file }}
+          OUTCOME: ${{ steps.stryker.outcome }}
         run: |
           {
-            echo "## Mutation report (advisory)"
-            if [ "$EVENT_NAME" = "pull_request" ]; then
-              case "$PR_OUTCOME" in
-                skipped) echo "Skipped: no changed src files." ;;
-                success) echo "Measured: changed files \`$FILES\`." ;;
-                *) echo "Not measured: Stryker exited \`$PR_OUTCOME\` (timed out or failed); no score is reported." ;;
-              esac
-            else
-              case "$NIGHTLY_OUTCOME" in
-                success) echo "Measured: full tree." ;;
-                *) echo "Not measured: Stryker exited \`$NIGHTLY_OUTCOME\` (timed out or failed); no score is reported." ;;
-              esac
-            fi
+            echo "## Mutation report (advisory) — \`$FILE\`"
+            case "$OUTCOME" in
+              success) echo "Measured." ;;
+              *) echo "Not measured: Stryker exited \`$OUTCOME\` (timed out or failed); no score is reported." ;;
+            esac
             if [ -f reports/mutation/mutation.json ]; then
               node -e 'const r=require("./reports/mutation/mutation.json");let k=0,s=0,t=0;for(const f of Object.values(r.files))for(const m of f.mutants){t++;if(m.status==="Killed"||m.status==="Timeout")k++;if(m.status==="Survived"||m.status==="NoCoverage")s++;}console.log(`\n${t} mutants: ${k} killed, ${s} survived/uncovered`)'
             fi
@@ -99,7 +101,7 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
-          name: mutation-report-${{ github.run_id }}
+          name: mutation-report-${{ github.run_id }}-${{ strategy.job-index }}
           path: reports/
           if-no-files-found: ignore
           retention-days: 14
