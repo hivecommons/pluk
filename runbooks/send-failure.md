@@ -28,6 +28,10 @@ without the rebuttal or command it was meant to receive; pluk does not retry.
    `--enter` to press Enter afterwards.
 5. Text arrived mangled: use `--literal` so tmux types it verbatim instead of
    looking up key names.
+6. Check the send snapshot `<run-dir>/stats/send.json` (same run dir as the
+   failing command): `tmuxSendFailures` > 0 with a fresh `updated_at` confirms
+   tmux rejected the send-keys attempt rather than the agent ignoring the text.
+   It is the latest process only, so a later successful `pluk send` resets it to 0.
 
 ## Common causes
 
