@@ -4,28 +4,15 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { step, outputs } from './helpers/workflow-steps.js';
 
 const workflow = readFileSync(new URL('../.github/workflows/mutation.yml', import.meta.url), 'utf8');
 
 // Execute the actual workflow shell against a scratch git repository.
-function step(name) {
-  const section = workflow.split(`      - name: ${name}\n`)[1];
-  assert.ok(section, `missing step: ${name}`);
-  return section.split('        run: |\n')[1]
-    .split('\n').reduce((lines, line) => {
-      if (lines.done) return lines;
-      if (line.startsWith('          ')) lines.push(line.slice(10));
-      else lines.done = true;
-      return lines;
-    }, []).join('\n');
-}
-
-function outputs(file) {
-  return Object.fromEntries(readFileSync(file, 'utf8').split('\n').filter(Boolean).map(l => l.split(/=(.*)/s).slice(0, 2)));
-}
+const isolatedEnv = { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' };
 
 function git(cwd, ...args) {
-  const r = spawnSync('git', args, { cwd, encoding: 'utf8', env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' } });
+  const r = spawnSync('git', args, { cwd, encoding: 'utf8', env: isolatedEnv });
   assert.equal(r.status, 0, `git ${args.join(' ')}: ${r.stderr}`);
   return r.stdout;
 }
@@ -65,9 +52,9 @@ function repo() {
 function select(cwd, env) {
   const output = join(cwd, 'github-output');
   writeFileSync(output, '');
-  const r = spawnSync('bash', ['-euo', 'pipefail', '-c', step('Select files to mutate (one matrix entry per file)')], {
+  const r = spawnSync('bash', ['-euo', 'pipefail', '-c', step(workflow, 'Select files to mutate (one matrix entry per file)')], {
     cwd,
-    env: { ...process.env, GITHUB_OUTPUT: output, ...env },
+    env: { ...isolatedEnv, GITHUB_OUTPUT: output, ...env },
     encoding: 'utf8',
   });
   assert.equal(r.status, 0, r.stderr);
