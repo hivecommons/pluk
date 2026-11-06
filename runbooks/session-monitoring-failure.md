@@ -38,7 +38,17 @@ to an idle agent, so rate limits, errors and stalls go unnoticed.
    | `malformedLines` (subscribe) | The log contains lines that are not pluk events |
    | `linesSeen` stuck at 0 (watch, stream mode) | Nothing reaches stdin; re-attach so `pipe-pane` is re-established |
    | `linesRead` = 0 (subscribe) | Log is empty or the subscriber reads the wrong run dir |
-5. Does `pluk sessions` show the session with the expected CLI and state?
+5. Is the watcher itself alive and classifying? `pluk watch <session>` keeps a
+   latest-process snapshot at `<run-dir>/stats/watch.json` (no `--diagnostics`
+   needed). Check `updated_at` is within the last ~30 s and `pid` is running;
+   a stale file means the watcher exited or hung (the file outlives the process).
+   ```sh
+   cat "<run-dir>/stats/watch.json"; kill -0 "$(sed -n 's/.*"pid":\([0-9]*\).*/\1/p' "<run-dir>/stats/watch.json")" && echo alive
+   ```
+   `classifierMisses` rising with `patternMatches` flat means lines arrive but no
+   pattern fits this CLI (`pluk patterns --cli=<cli>`). Concurrent watchers on one
+   run dir overwrite the same file; use a run dir per watcher to tell them apart.
+6. Does `pluk sessions` show the session with the expected CLI and state?
 
 ## Common causes
 
