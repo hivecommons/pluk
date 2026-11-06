@@ -4,29 +4,14 @@ import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { step, outputs } from './helpers/workflow-steps.js';
 
 const workflow = readFileSync(new URL('../.github/workflows/auto-release.yml', import.meta.url), 'utf8');
 // Execute the actual workflow shell, without invoking git remotes or GitHub.
-function step(name) {
-  const section = workflow.split(`      - name: ${name}\n`)[1];
-  assert.ok(section, `missing step: ${name}`);
-  return section.split('        run: |\n')[1]
-    .split('\n').reduce((lines, line) => {
-      if (lines.done) return lines;
-      if (line.startsWith('          ')) lines.push(line.slice(10));
-      else lines.done = true;
-      return lines;
-    }, []).join('\n');
-}
-
-function outputs(file) {
-  return Object.fromEntries(readFileSync(file, 'utf8').split('\n').filter(Boolean).map(l => l.split(/=(.*)/s).slice(0, 2)));
-}
-
 test('auto-release decision step: invalid version, existing tag, remote errors, changelog gate', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'pluk-auto-release-'));
   const output = join(cwd, 'github-output');
-  const script = step('Decide whether this version needs a release').replaceAll('/tmp/auto-release-notes.md', 'auto-release-notes.md');
+  const script = step(workflow, 'Decide whether this version needs a release').replaceAll('/tmp/auto-release-notes.md', 'auto-release-notes.md');
   const run = ({ version, changelog = '', lsRemote = 2 }) => {
     writeFileSync(join(cwd, 'package.json'), JSON.stringify({ version }));
     writeFileSync(join(cwd, 'CHANGELOG.md'), changelog);
@@ -91,11 +76,11 @@ test('auto-release tag and dispatch steps address the decided tag and the curren
   };
   const stub = `gh() { printf '%s\\n' "$@"; }`;
 
-  let r = spawnSync('bash', ['-e', '-c', `${stub}\n${step('Create tag')}`], { env, encoding: 'utf8' });
+  let r = spawnSync('bash', ['-e', '-c', `${stub}\n${step(workflow, 'Create tag')}`], { env, encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
   assert.equal(r.stdout, 'api\n-X\nPOST\nrepos/hivecommons/pluk/git/refs\n-f\nref=refs/tags/v0.10.0\n-f\nsha=abc123\n');
 
-  r = spawnSync('bash', ['-e', '-c', `${stub}\n${step('Dispatch publish.yml on the tag')}`], { env, encoding: 'utf8' });
+  r = spawnSync('bash', ['-e', '-c', `${stub}\n${step(workflow, 'Dispatch publish.yml on the tag')}`], { env, encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
   assert.equal(r.stdout, 'workflow\nrun\npublish.yml\n--repo\nhivecommons/pluk\n--ref\nrefs/tags/v0.10.0\n');
 
