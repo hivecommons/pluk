@@ -67,3 +67,42 @@ test('eventCount ignores malformed and blank log lines', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// Exact bucket boundaries. The offsets above leave slack for wall-clock drift,
+// so they cannot tell `<` from `<=` at the edge; here Date is mocked so the
+// age is exactly the boundary value.
+const NOW_MS = Date.parse('2026-01-02T00:00:00.000Z');
+
+function agoAtExactly(ageSeconds) {
+  const dir = makeRunDir();
+  try {
+    const ts = new Date(NOW_MS - ageSeconds * 1000).toISOString();
+    writeFileSync(join(dir, 'logs', 'a.jsonl'), eventLine(ts));
+    return discoverSessions(dir)[0].lastActivityAgo;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test('lastActivityAgo reports "0s ago", not "just now", for an age of exactly zero', (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: NOW_MS });
+  assert.equal(agoAtExactly(0), '0s ago');
+});
+
+test('lastActivityAgo rolls over to minutes at exactly 60 seconds', (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: NOW_MS });
+  assert.equal(agoAtExactly(59), '59s ago');
+  assert.equal(agoAtExactly(60), '1m ago');
+});
+
+test('lastActivityAgo rolls over to hours at exactly 3600 seconds', (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: NOW_MS });
+  assert.equal(agoAtExactly(3599), '59m ago');
+  assert.equal(agoAtExactly(3600), '1h ago');
+});
+
+test('lastActivityAgo rolls over to days at exactly 86400 seconds', (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: NOW_MS });
+  assert.equal(agoAtExactly(86399), '23h ago');
+  assert.equal(agoAtExactly(86400), '1d ago');
+});

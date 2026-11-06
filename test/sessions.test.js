@@ -26,7 +26,9 @@ test('discoverSessions skips empty and non-jsonl files', () => {
   const dir = makeRunDir();
   try {
     writeFileSync(join(dir, 'logs', 'empty.jsonl'), '');
-    writeFileSync(join(dir, 'logs', 'noise.txt'), 'not a log\n');
+    // A well-formed event line: only the .jsonl extension filter can exclude this file.
+    writeFileSync(join(dir, 'logs', 'noise.txt'), eventLine({ ts: '2026-01-01T00:00:00.000Z' }) + '\n');
+    writeFileSync(join(dir, 'logs', 'rotated.jsonl.1'), eventLine({ ts: '2026-01-01T00:00:00.000Z' }) + '\n');
     assert.deepEqual(discoverSessions(dir), []);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -79,16 +81,87 @@ test('discoverSessions ignores cli:"unknown" markers and tolerates malformed lin
   }
 });
 
+test('discoverSessions keeps the last real cli when a later event reports cli:"unknown"', () => {
+  const dir = makeRunDir();
+  try {
+    const lines = [
+      eventLine({ ts: '2026-01-01T00:00:00.000Z', type: 'tool_call', data: { tool: 'bash', cli: 'copilot' } }),
+      eventLine({ ts: '2026-01-01T00:00:01.000Z', type: 'tool_call', data: { tool: 'bash', cli: 'unknown' } }),
+    ];
+    writeFileSync(join(dir, 'logs', 'agent3.jsonl'), lines.join('\n') + '\n');
+
+    assert.equal(discoverSessions(dir)[0].cli, 'copilot');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('discoverSessions does not treat cli:"unknown" inside the tail window as the cli marker', () => {
+  const dir = makeRunDir();
+  try {
+    // The real cli sits past the 50-event window, on an event that is not the
+    // state_change. If cli:"unknown" counted as "cli seen", the scan would stop
+    // at the state_change and report unknown.
+    const lines = [
+      eventLine({ ts: '2026-01-01T00:00:00.000Z', type: 'rate_limit', data: { cli: 'claude' } }),
+      eventLine({ ts: '2026-01-01T00:00:01.000Z', type: 'state_change', data: { to: 'working' } }),
+    ];
+    for (let i = 0; i < 60; i++) {
+      lines.push(eventLine({ ts: `2026-01-01T00:10:${String(i % 60).padStart(2, '0')}.000Z`, type: 'tool_call', data: { tool: 'bash', cli: 'unknown' } }));
+    }
+    writeFileSync(join(dir, 'logs', 'unknown-flood.jsonl'), lines.join('\n') + '\n');
+
+    const s = discoverSessions(dir)[0];
+    assert.equal(s.cli, 'claude');
+    assert.equal(s.state, 'working');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('discoverSessions reports state "unknown" for a state_change without a "to" field', () => {
+  const dir = makeRunDir();
+  try {
+    writeFileSync(join(dir, 'logs', 'agent4.jsonl'),
+      eventLine({ ts: '2026-01-01T00:00:00.000Z', type: 'state_change', data: { from: 'idle' } }) + '\n');
+
+    assert.equal(discoverSessions(dir)[0].state, 'unknown');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('discoverSessions takes lastActivity from the newest ts, not the last line, when lines are out of order', () => {
+  const dir = makeRunDir();
+  try {
+    // tool_call rather than raw_output: only the newest raw_output line is retained.
+    const lines = [
+      eventLine({ ts: '2026-01-01T00:00:05.000Z', type: 'tool_call', data: { tool: 'bash' } }),
+      eventLine({ ts: '2026-01-01T00:00:09.000Z', type: 'tool_call', data: { tool: 'bash' } }),
+      eventLine({ ts: '2026-01-01T00:00:02.000Z', type: 'tool_call', data: { tool: 'bash' } }),
+    ];
+    writeFileSync(join(dir, 'logs', 'skewed.jsonl'), lines.join('\n') + '\n');
+
+    assert.equal(discoverSessions(dir)[0].lastActivity, '2026-01-01T00:00:09.000Z');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('discoverSessions sorts sessions by most recent activity first', () => {
   const dir = makeRunDir();
   try {
-    writeFileSync(join(dir, 'logs', 'older.jsonl'),
+    // Named so that directory order (a-, b-, c-) is the reverse of activity order:
+    // readdirSync already yields 'newer' before 'older', which would pass without the sort.
+    writeFileSync(join(dir, 'logs', 'a-oldest.jsonl'),
       eventLine({ ts: '2026-01-01T00:00:00.000Z' }) + '\n');
-    writeFileSync(join(dir, 'logs', 'newer.jsonl'),
+    writeFileSync(join(dir, 'logs', 'b-middle.jsonl'),
+      eventLine({ ts: '2026-03-01T00:00:00.000Z' }) + '\n');
+    writeFileSync(join(dir, 'logs', 'c-newest.jsonl'),
       eventLine({ ts: '2026-06-01T00:00:00.000Z' }) + '\n');
 
     const names = discoverSessions(dir).map(s => s.session);
-    assert.deepEqual(names, ['newer', 'older']);
+    assert.deepEqual(names, ['c-newest', 'b-middle', 'a-oldest']);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
