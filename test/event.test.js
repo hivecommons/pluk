@@ -49,6 +49,14 @@ test('parseEvent rejects objects missing type, ts, or data', () => {
   assert.equal(parseEvent('{"type":"error","ts":"2026-01-01T00:00:00.000Z","data":[1]}'), null);
 });
 
+test('parseEvent rejects a missing or non-string ts even when type and data are valid', () => {
+  // Every other field is well-formed here, so only the ts guard can reject
+  // these; sessions.ts feeds e.ts to Date.parse and subscribers print it.
+  assert.equal(parseEvent('{"type":"error","data":{"message":"boom"}}'), null);
+  assert.equal(parseEvent('{"type":"error","ts":1762430400000,"data":{"message":"boom"}}'), null);
+  assert.equal(parseEvent('{"type":"error","ts":null,"data":{"message":"boom"}}'), null);
+});
+
 test('parseEvent rejects non-string data values', () => {
   assert.equal(parseEvent('{"type":"error","ts":"2026-01-01T00:00:00.000Z","data":{"n":5}}'), null);
 });
