@@ -4,26 +4,15 @@ import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { step } from './helpers/workflow-steps.js';
 
 const workflow = readFileSync(new URL('../.github/workflows/publish.yml', import.meta.url), 'utf8');
 // Execute the actual workflow shell, without invoking npm or GitHub.
-function step(name) {
-  const section = workflow.split(`      - name: ${name}\n`)[1];
-  assert.ok(section, `missing step: ${name}`);
-  return section.split('        run: |\n')[1]
-    .split('\n').reduce((lines, line) => {
-      if (lines.done) return lines;
-      if (line.startsWith('          ')) lines.push(line.slice(10));
-      else lines.done = true;
-      return lines;
-    }, []).join('\n');
-}
-
 for (const name of ['CHANGELOG has a section for this version', 'Extract release notes from CHANGELOG.md']) {
   test(`${name}: exact version, section boundary, and missing/empty notes`, () => {
     const cwd = mkdtempSync(join(tmpdir(), 'pluk-release-'));
     // Keep the guard's temporary output isolated from other test runs.
-    const script = step(name).replaceAll('/tmp/release-notes.md', 'release-notes.md');
+    const script = step(workflow, name).replaceAll('/tmp/release-notes.md', 'release-notes.md');
     const run = (changelog) => {
       writeFileSync(join(cwd, 'CHANGELOG.md'), changelog);
       return spawnSync('bash', ['-e', '-c', script], {
@@ -45,7 +34,7 @@ for (const name of ['CHANGELOG has a section for this version', 'Extract release
 }
 
 test('release creation verifies the tag and preserves existing releases', () => {
-  const script = step('Create GitHub release');
+  const script = step(workflow, 'Create GitHub release');
   for (const exists of [true, false]) {
     const result = spawnSync('bash', ['-e', '-c', `
       gh() {
