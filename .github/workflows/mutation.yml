@@ -41,7 +41,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: |
           if [ "$EVENT_NAME" = "pull_request" ]; then
-            list=$(git diff --name-only "origin/$BASE_REF...HEAD" -- 'src/*.ts' 'src/**/*.ts' | { grep -v '\.test\.ts$' || true; })
+            list=$(git diff --name-only --diff-filter=d "origin/$BASE_REF...HEAD" -- 'src/*.ts' 'src/**/*.ts' | { grep -v '\.test\.ts$' || true; })
           else
             list=$(git ls-files 'src/*.ts' 'src/**/*.ts' | { grep -v '\.test\.ts$' || true; })
           fi
