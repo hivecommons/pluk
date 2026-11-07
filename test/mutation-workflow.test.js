@@ -105,6 +105,29 @@ test('mutation select step: schedule/dispatch mutates every tracked src file, so
   }
 });
 
+test('mutation select step: splits src/subscriber.ts into two line-range matrix entries', () => {
+  const cwd = repo();
+  try {
+    git(cwd, 'checkout', '-q', 'main');
+    git(cwd, 'checkout', '-q', '-b', 'subscriber-edit');
+    writeFileSync(join(cwd, 'src', 'subscriber.ts'), 'export const sub = 1;\n');
+    commitAll(cwd, 'touch subscriber');
+    const { files: prFiles } = select(cwd, { EVENT_NAME: 'pull_request', BASE_REF: 'main' });
+    assert.deepEqual(prFiles, ['src/subscriber.ts:1-200', 'src/subscriber.ts:201-9999']);
+
+    const { files: schedFiles } = select(cwd, { EVENT_NAME: 'schedule', BASE_REF: '' });
+    assert.deepEqual(schedFiles, [
+      'src/a.ts',
+      'src/b.ts',
+      'src/nested/deep.ts',
+      'src/subscriber.ts:1-200',
+      'src/subscriber.ts:201-9999',
+    ]);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
 test('mutation job only runs when the select step produced files', () => {
   assert.match(workflow, /\n  mutation:\n    needs: select\n    if: needs\.select\.outputs\.files != '\[\]'\n/);
   assert.match(workflow, /file: \$\{\{ fromJSON\(needs\.select\.outputs\.files\) \}\}/);
