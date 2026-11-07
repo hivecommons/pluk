@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import ts from 'typescript';
 import { step, outputs } from './helpers/workflow-steps.js';
 
 const workflow = readFileSync(new URL('../.github/workflows/mutation.yml', import.meta.url), 'utf8');
@@ -131,4 +132,54 @@ test('mutation select step: splits src/subscriber.ts into two line-range matrix 
 test('mutation job only runs when the select step produced files', () => {
   assert.match(workflow, /\n  mutation:\n    needs: select\n    if: needs\.select\.outputs\.files != '\[\]'\n/);
   assert.match(workflow, /file: \$\{\{ fromJSON\(needs\.select\.outputs\.files\) \}\}/);
+});
+
+// Stryker only mutates a node that lies entirely inside one --mutate line
+// range, so a statement or class member crossing a range boundary would lose
+// its mutants from every shard without any signal.
+function lineRangeBoundaries(file) {
+  const re = new RegExp(`${file.replace(/[.]/g, '\\.')}:(\\d+)-(\\d+)`, 'g');
+  const ranges = [...new Set([...workflow.matchAll(re)].map((m) => m[0]))].map((r) => r.split(':')[1].split('-').map(Number));
+  ranges.sort((a, b) => a[0] - b[0]);
+  return ranges.slice(1).map(([start]) => start - 1);
+}
+
+function straddlingNodes(path, boundaries) {
+  const sf = ts.createSourceFile(path, readFileSync(path, 'utf8'), ts.ScriptTarget.Latest, true);
+  const found = [];
+  const check = (node) => {
+    const start = sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
+    const end = sf.getLineAndCharacterOfPosition(node.getEnd()).line + 1;
+    for (const b of boundaries) {
+      if (start <= b && end > b) {
+        if (ts.isClassLike(node)) node.members.forEach(check);
+        else found.push(`${ts.SyntaxKind[node.kind]} at lines ${start}-${end} straddles the cut after line ${b}`);
+      }
+    }
+  };
+  sf.statements.forEach(check);
+  return found;
+}
+
+test('mutation select step: the src/subscriber.ts line-range cut does not split a statement or class member', () => {
+  const boundaries = lineRangeBoundaries('src/subscriber.ts');
+  assert.ok(boundaries.length > 0, 'expected src/subscriber.ts to be split into line ranges in mutation.yml');
+  const url = new URL('../src/subscriber.ts', import.meta.url);
+  assert.deepEqual(
+    straddlingNodes(url.pathname, boundaries),
+    [],
+    'Stryker drops mutants for nodes crossing a --mutate line range; move the cut in mutation.yml to a gap between members',
+  );
+});
+
+test('line-range guard flags a node that crosses the cut', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pluk-mutation-straddle-'));
+  try {
+    const file = join(dir, 'x.ts');
+    writeFileSync(file, 'class A {\n  m() {\n    return 1;\n  }\n  n() {}\n}\n');
+    assert.deepEqual(straddlingNodes(file, [4]), []);
+    assert.equal(straddlingNodes(file, [3]).length, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
