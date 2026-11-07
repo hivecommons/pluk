@@ -1,7 +1,7 @@
 // Tests for src/subscriber.ts — JSONL log tailing.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Subscriber, subscribe } from '../dist/subscriber.js';
@@ -401,13 +401,16 @@ test('rotation: a kept tail spanning several read chunks is read whole and the t
     await waitFor(() => events.length === 300);
 
     // 300 more lines land and the log is rotated down to the newest 500
-    // before the next poll. The kept tail (seq 100..599, ~65 KB) is several
+    // before the next poll. The kept tail (seq 100..599, ~63 KB) is several
     // 16 KiB read chunks long, so the re-read from byte 0 must accumulate
     // every chunk to find the marker (seq 299) and deliver 300..599 once.
+    // maxBytes also caps the kept tail, so it sits between the tail (~63 KB)
+    // and the full log (~75 KB): rotation fires and all 500 lines survive.
     let extra = '';
     for (let i = 300; i < 600; i++) extra += seqLine(i);
     appendFileSync(log, extra);
-    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 10_000, keepLines: 500 }), true);
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 70_000, keepLines: 500 }), true);
+    assert.ok(statSync(log).size > 3 * 16 * 1024, 'kept tail must span several read chunks');
 
     await waitFor(() => events.length >= 600);
     await new Promise(r => setTimeout(r, 300));
