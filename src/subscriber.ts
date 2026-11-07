@@ -133,10 +133,7 @@ export class Subscriber extends EventEmitter {
         // read mid-way through the new tail. Detect the rewrite by identity.
         if (position > 0 && !this.resumePending && (await this.headChanged(fh))) {
           this.log('log file head changed; resuming after rotation');
-          const resumed = await this.resumeAfterRotation(fh);
-          position = resumed.position;
-          partial = resumed.partial;
-          decoder = resumed.decoder;
+          ({ position, partial, decoder } = await this.resumeAfterRotation(fh));
           continue;
         }
         const buf = Buffer.alloc(READ_CHUNK_BYTES);
@@ -153,10 +150,7 @@ export class Subscriber extends EventEmitter {
           const size = (await fh.stat()).size;
           if (size < position) {
             this.log(`log file shrank (${position} → ${size} bytes); resuming after rotation`);
-            const resumed = await this.resumeAfterRotation(fh);
-            position = resumed.position;
-            partial = resumed.partial;
-            decoder = resumed.decoder;
+            ({ position, partial, decoder } = await this.resumeAfterRotation(fh));
             continue;
           }
           await sleep(POLL_INTERVAL_MS);
@@ -164,10 +158,7 @@ export class Subscriber extends EventEmitter {
         }
 
         if (this.resumePending) {
-          const resumed = await this.resumeAfterRotation(fh);
-          position = resumed.position;
-          partial = resumed.partial;
-          decoder = resumed.decoder;
+          ({ position, partial, decoder } = await this.resumeAfterRotation(fh));
           continue;
         }
 
@@ -177,10 +168,7 @@ export class Subscriber extends EventEmitter {
         // replays from the last consumed line, so nothing is lost.
         if (position > 0 && (await this.headChanged(fh))) {
           this.log('log file head changed during read; resuming after rotation');
-          const resumed = await this.resumeAfterRotation(fh);
-          position = resumed.position;
-          partial = resumed.partial;
-          decoder = resumed.decoder;
+          ({ position, partial, decoder } = await this.resumeAfterRotation(fh));
           continue;
         }
 
@@ -206,17 +194,26 @@ export class Subscriber extends EventEmitter {
    * A file with no complete line yet is treated as a rotation still in
    * progress: it is re-read a bounded number of times, and if it is still
    * empty the resume is deferred until content appears, so the kept tail is
-   * never replayed from byte 0 without the marker check.
+   * never replayed from byte 0 without the marker check. A read that the file
+   * shrank or was rewritten under (a cross-process rotation not yet truncated)
+   * is retried the same bounded number of times.
    *
    * The marker is the last consumed line, or — if nothing was consumed yet —
    * the line seeded by {@link seedResumeMarker} at start-up.
    */
   private async resumeAfterRotation(fh: FileHandle): Promise<{ position: number; partial: string; decoder: StringDecoder }> {
-    this.head = await readHead(fh);
-    let { position, text } = await readFromStart(fh);
-    for (let attempt = 0; !text.includes('\n') && attempt < ROTATION_RETRY_LIMIT && !this.aborted; attempt++) {
-      await sleep(POLL_INTERVAL_MS);
+    let position: number;
+    let text: Buffer;
+    for (let attempt = 0; ; attempt++) {
+      this.head = await readHead(fh);
       ({ position, text } = await readFromStart(fh));
+      if (attempt >= ROTATION_RETRY_LIMIT || this.aborted) break;
+      await sleep(POLL_INTERVAL_MS);
+      // A rotation in another process writes the kept tail over the old bytes
+      // and truncates last, so a read inside that window ends with leftover
+      // old bytes. Accept it only once the file is still at least as long as
+      // what was read and its head is unchanged.
+      if (text.includes('\n') && (await fh.stat()).size >= position && !(await this.headChanged(fh))) break;
     }
 
     const decoder = new StringDecoder('utf8');
