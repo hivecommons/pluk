@@ -655,6 +655,45 @@ test('rotation: an empty log that fills within the retry window resumes after th
   }
 });
 
+test('rotation: a resume that reads a half-rotated log (tail written, not yet truncated) is retried', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot-half.jsonl');
+  writeFileSync(log, '');
+  const logged = [];
+  const orig = console.error;
+  console.error = msg => logged.push(String(msg));
+  const { sub, events, done } = await startTail(dir, 'rot-half', { verbose: true });
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    const sent = Array.from({ length: 100 }, (_, i) => seqLine(i));
+    appendFileSync(log, sent.join(''));
+    await waitFor(() => events.length === 100);
+
+    // Another process's rotation: the kept tail lands at offset 0 over the old
+    // bytes, and the truncate only arrives after the subscriber has already
+    // noticed the head change and started its resume read.
+    const tail = Buffer.from(sent.slice(50).join(''));
+    const fd = await open(log, 'r+');
+    await fd.write(tail, 0, tail.length, 0);
+    await waitFor(() => logged.some(m => m.includes('resuming after rotation')));
+    await new Promise(r => setTimeout(r, 60));
+    await fd.truncate(tail.length);
+    await fd.close();
+    appendFileSync(log, seqLine(100, 'error'));
+
+    await waitFor(() => events.length >= 101);
+    await new Promise(r => setTimeout(r, 500));
+    assert.equal(events.length, 101, 'leftover old bytes must not be replayed');
+    assert.equal(events[100].seq, 100);
+    assert.equal(sub.stats().malformedLines, 0);
+  } finally {
+    console.error = orig;
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('rotation: a kept tail that preserves the head fingerprint is still detected by the size check', async () => {
   // Every line starts with the same 300-byte prefix (a long session field
   // placed first), so after rotation the leading HEAD_FINGERPRINT_BYTES are
