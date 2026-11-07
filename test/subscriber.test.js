@@ -1,7 +1,7 @@
 // Tests for src/subscriber.ts — JSONL log tailing.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Subscriber, subscribe } from '../dist/subscriber.js';
@@ -381,6 +381,49 @@ test('rotation: when the last seen line was trimmed away, the whole kept tail is
     assert.equal(events.length, 350);
     assert.equal(events[300].seq, 350);
     assert.equal(events[349].seq, 399);
+  } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('rotation: a kept tail spanning several read chunks is read whole and the tail continues after it', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot-chunks.jsonl');
+  writeFileSync(log, '');
+  const { sub, events, done } = await startTail(dir, 'rot-chunks');
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    let body = '';
+    for (let i = 0; i < 300; i++) body += seqLine(i);
+    appendFileSync(log, body);
+    await waitFor(() => events.length === 300);
+
+    // 300 more lines land and the log is rotated down to the newest 500
+    // before the next poll. The kept tail (seq 100..599, ~63 KB) is several
+    // 16 KiB read chunks long, so the re-read from byte 0 must accumulate
+    // every chunk to find the marker (seq 299) and deliver 300..599 once.
+    // maxBytes also caps the kept tail, so it sits between the tail (~63 KB)
+    // and the full log (~75 KB): rotation fires and all 500 lines survive.
+    let extra = '';
+    for (let i = 300; i < 600; i++) extra += seqLine(i);
+    appendFileSync(log, extra);
+    assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 70_000, keepLines: 500 }), true);
+    assert.ok(statSync(log).size > 3 * 16 * 1024, 'kept tail must span several read chunks');
+
+    await waitFor(() => events.length >= 600);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 600, 'kept lines must not be replayed');
+    assert.deepEqual(events.slice(300).map(e => e.seq), Array.from({ length: 300 }, (_, i) => 300 + i));
+    assert.equal(sub.stats().malformedLines, 0, 'no chunk-boundary fragment parsed');
+
+    // The resumed offset is the end of the kept tail: a later append is tailed, not re-read.
+    appendFileSync(log, seqLine(600, 'bypass_permissions'));
+    await waitFor(() => events.length >= 601);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 601);
+    assert.equal(events[600].seq, 600);
   } finally {
     sub.stop();
     await done;
