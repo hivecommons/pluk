@@ -17,84 +17,21 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createAttachHarness, writeStub } from './helpers/attach-stubs.js';
 import { splitShellWords, buildCliCommand, buildPipePaneCommand, resolveRationguardBin } from '../dist/attach.js';
 
 const CLI = join(process.cwd(), 'dist', 'cli.js');
 const ATTACH = join(process.cwd(), 'dist', 'attach.js');
 const scratch = mkdtempSync(join(tmpdir(), 'pluk-attach-gaps-'));
+// Unlike the other attach files, its fake npx succeeds and `which` resolves stub paths.
+const { makeStubs, runAttach, makeRunDir } = createAttachHarness(scratch, { npxOk: true, whichEchoesStubPaths: true });
 
 after(() => {
   rmSync(scratch, { recursive: true, force: true });
 });
-
-function writeStub(dir, name, script) {
-  const file = join(dir, name);
-  writeFileSync(file, script);
-  chmodSync(file, 0o755);
-}
-
-// Same stub layout as attach-orchestration.test.js: each stub appends its
-// argv to <name>.log so tests can assert on what attach() executed.
-function makeStubs({ which = ['tmux'] } = {}) {
-  const dir = mkdtempSync(join(scratch, 'stub-'));
-  const logFor = name => join(dir, `${name}.log`);
-
-  writeStub(dir, 'tmux', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('tmux')}'
-[ "$1" = "has-session" ] && exit 1
-exit 0
-`);
-  writeStub(dir, 'which', `#!/bin/sh
-case "$1" in
-  ${which.join('|') || 'nothing-resolves'}) echo '${dir}'/"$1"; exit 0 ;;
-  '${dir}'/*) echo "$1"; exit 0 ;;
-  *) exit 1 ;;
-esac
-`);
-  writeStub(dir, 'npx', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('npx')}'
-exit 0
-`);
-  writeStub(dir, 'pgrep', '#!/bin/sh\nexit 1\n');
-  writeStub(dir, 'pluk', '#!/bin/sh\nexit 0\n');
-  writeStub(dir, 'rationguard', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('rationguard')}'
-exit 0
-`);
-
-  return {
-    dir,
-    log: name => {
-      try { return readFileSync(logFor(name), 'utf-8'); } catch { return ''; }
-    },
-  };
-}
-
-function runAttach(args, stubs, env = {}) {
-  const childEnv = {
-    ...process.env,
-    PATH: `${stubs.dir}:${process.env.PATH}`,
-    TERM_PROGRAM: '',
-    ...env,
-  };
-  // An explicit `undefined` value means "delete this variable".
-  for (const [key, value] of Object.entries(env)) {
-    if (value === undefined) delete childEnv[key];
-  }
-  const res = spawnSync(process.execPath, [CLI, 'attach', ...args], {
-    encoding: 'utf-8',
-    timeout: 15000,
-    env: childEnv,
-  });
-  return { code: res.status, stdout: res.stdout ?? '', stderr: res.stderr ?? '' };
-}
-
-function makeRunDir() {
-  return mkdtempSync(join(scratch, 'run-'));
-}
 
 // --- splitShellWords edge arms -------------------------------------------------------
 
