@@ -296,9 +296,17 @@ async function readHead(fh: FileHandle): Promise<Buffer> {
 }
 
 async function readFromStart(fh: FileHandle): Promise<{ position: number; text: Buffer }> {
+  // Bounded by the size at entry as well as by an empty read. With the empty
+  // read as the only exit, a single flipped comparison (or `+=` → `-=` on the
+  // offset) spins at EOF allocating a chunk per iteration and holding every
+  // one in `chunks`; that is off-heap memory no V8 heap limit caps, and it
+  // exhausts the host faster than any test timeout can fire (#479). Bytes
+  // appended after the stat are picked up by the caller's next read from
+  // the returned position, exactly as before.
+  const { size } = await fh.stat();
   const chunks: Buffer[] = [];
   let position = 0;
-  for (;;) {
+  while (position < size) {
     const buf = Buffer.alloc(READ_CHUNK_BYTES);
     const { bytesRead } = await fh.read(buf, 0, buf.length, position);
     if (bytesRead === 0) break;
