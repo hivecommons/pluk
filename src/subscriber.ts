@@ -171,6 +171,19 @@ export class Subscriber extends EventEmitter {
           continue;
         }
 
+        // The head check above and this read are not atomic: a rotation
+        // landing between them leaves a chunk of the new file read at a stale
+        // offset, mid-way through the kept tail. Discard it — the resume path
+        // replays from the last consumed line, so nothing is lost.
+        if (position > 0 && (await this.headChanged(fh))) {
+          this.log('log file head changed during read; resuming after rotation');
+          const resumed = await this.resumeAfterRotation(fh);
+          position = resumed.position;
+          partial = resumed.partial;
+          decoder = resumed.decoder;
+          continue;
+        }
+
         position += bytesRead;
         const chunk = partial + decoder.write(buf.subarray(0, bytesRead));
         const lines = chunk.split('\n');
