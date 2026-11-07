@@ -45,6 +45,9 @@ jobs:
           else
             list=$(git ls-files 'src/*.ts' 'src/**/*.ts' | { grep -v '\.test\.ts$' || true; })
           fi
+          # subscriber.ts is the one shard that has never finished; mutate it as two
+          # line ranges so each job stays well inside the window a runner survives.
+          list=$(printf '%s\n' "$list" | sed 's|^src/subscriber\.ts$|src/subscriber.ts:1-200\nsrc/subscriber.ts:201-9999|')
           files=$(printf '%s\n' "$list" | sed '/^$/d' | sort -u | jq -R . | jq -sc .)
           echo "files=$files" >> "$GITHUB_OUTPUT"
           echo "Mutating: $files"
