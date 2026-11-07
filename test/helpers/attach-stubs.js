@@ -30,7 +30,6 @@ export function createAttachHarness(scratch, defaults = {}) {
       rgPidFile = '',            // file the fake rationguard writes its PID to (then sleeps)
       killFailPid = '',          // PID the fake kill reports as already gone (exit 1)
       killDenyPid = '',          // PID the fake kill refuses with EPERM (exit 1)
-      plukClassify = false,      // also stub a pluk-classify binary
       dirName = '',              // fixed stub-dir name, for hostile-path tests
     } = { ...defaults, ...options };
     let dir;
@@ -76,7 +75,6 @@ printf '%s\\n' "$*" >> '${logFor('osascript')}'
 exit ${osascriptOk ? 0 : 1}
 `);
     writeStub(dir, 'pluk', '#!/bin/sh\nexit 0\n');
-    if (plukClassify) writeStub(dir, 'pluk-classify', '#!/bin/sh\nexit 0\n');
     writeStub(dir, 'rationguard', `#!/bin/sh
 printf '%s\\n' "$*" >> '${logFor('rationguard')}'
 ${rgPidFile ? `echo $$ > '${rgPidFile}'\nexec sleep 10` : `sleep ${rgSleep}\nexit 0`}
