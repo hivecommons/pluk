@@ -15,109 +15,23 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import {
-  chmodSync,
-  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
-  writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createAttachHarness } from './helpers/attach-stubs.js';
 import { splitShellWords } from '../dist/attach.js';
 
 const CLI = join(process.cwd(), 'dist', 'cli.js');
 const pkgVersion = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8')).version;
 const scratch = mkdtempSync(join(tmpdir(), 'pluk-attach-'));
+const { makeStubs, runAttach, makeRunDir } = createAttachHarness(scratch);
 
 after(() => {
   rmSync(scratch, { recursive: true, force: true });
 });
-
-function writeStub(dir, name, script) {
-  const file = join(dir, name);
-  writeFileSync(file, script);
-  chmodSync(file, 0o755);
-}
-
-// Builds a fresh stub-bin dir. Every stub appends its argv to <name>.log so
-// tests can assert on exactly what attach() executed.
-function makeStubs({
-  hasSession = false,   // fake tmux `has-session` result
-  which = ['tmux'],     // names the fake `which` resolves (to their stubs)
-  npxOk = false,        // fake npx exit status (pluk npx fallback probe)
-  pgrepPids = '',       // fake pgrep stdout ('' => exit 1, "no watchers")
-  osascriptOk = true,   // fake osascript exit status
-  tmuxAttachOk = true,  // fake tmux `attach` result
-  rgSleep = 0,          // seconds the fake rationguard stays alive
-  killFailPid = '',     // PID the fake kill reports as already gone (exit 1)
-  killDenyPid = '',     // PID the fake kill refuses with EPERM (exit 1)
-} = {}) {
-  const dir = mkdtempSync(join(scratch, 'stub-'));
-  const logFor = name => join(dir, `${name}.log`);
-
-  writeStub(dir, 'tmux', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('tmux')}'
-[ "$1" = "has-session" ] && exit ${hasSession ? 0 : 1}
-[ "$1" = "attach" ] && exit ${tmuxAttachOk ? 0 : 1}
-exit 0
-`);
-  writeStub(dir, 'which', `#!/bin/sh
-case "$1" in
-  ${which.join('|') || 'nothing-resolves'}) echo '${dir}'/"$1"; exit 0 ;;
-  *) exit 1 ;;
-esac
-`);
-  writeStub(dir, 'npx', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('npx')}'
-exit ${npxOk ? 0 : 1}
-`);
-  writeStub(dir, 'pgrep', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('pgrep')}'
-${pgrepPids ? `printf '%s\\n' '${pgrepPids}'\nexit 0` : 'exit 1'}
-`);
-  writeStub(dir, 'kill', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('kill')}'
-${killFailPid ? `[ "$1" = '${killFailPid}' ] && { echo 'kill: (${killFailPid}) - No such process' >&2; exit 1; }` : ''}
-${killDenyPid ? `[ "$1" = '${killDenyPid}' ] && { echo 'kill: (${killDenyPid}) - Operation not permitted' >&2; exit 1; }` : ''}
-exit 0
-`);
-  writeStub(dir, 'osascript', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('osascript')}'
-exit ${osascriptOk ? 0 : 1}
-`);
-  writeStub(dir, 'pluk', '#!/bin/sh\nexit 0\n');
-  writeStub(dir, 'rationguard', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('rationguard')}'
-sleep ${rgSleep}
-exit 0
-`);
-
-  return {
-    dir,
-    log: name => {
-      try { return readFileSync(logFor(name), 'utf-8'); } catch { return ''; }
-    },
-  };
-}
-
-function runAttach(args, stubs, env = {}) {
-  const res = spawnSync(process.execPath, [CLI, 'attach', ...args], {
-    encoding: 'utf-8',
-    timeout: 15000,
-    env: {
-      ...process.env,
-      PATH: `${stubs.dir}:${process.env.PATH}`,
-      TERM_PROGRAM: '',
-      ...env,
-    },
-  });
-  return { code: res.status, stdout: res.stdout ?? '', stderr: res.stderr ?? '' };
-}
-
-function makeRunDir() {
-  return mkdtempSync(join(scratch, 'run-'));
-}
 
 // --- rationguard flag validation ---------------------------------------------------
 

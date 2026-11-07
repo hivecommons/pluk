@@ -34,100 +34,16 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createAttachHarness } from './helpers/attach-stubs.js';
 
 const CLI = join(process.cwd(), 'dist', 'cli.js');
 const ATTACH = join(process.cwd(), 'dist', 'attach.js');
 const scratch = mkdtempSync(join(tmpdir(), 'pluk-attach-mut-'));
+const { makeStubs, runAttach, makeRunDir } = createAttachHarness(scratch);
 
 after(() => {
   rmSync(scratch, { recursive: true, force: true });
 });
-
-function writeStub(dir, name, script) {
-  const file = join(dir, name);
-  writeFileSync(file, script);
-  chmodSync(file, 0o755);
-}
-
-// Every stub appends its argv to <name>.log so tests can assert on exactly
-// what attach() executed. `dirName` lets a test choose a hostile stub-dir name.
-function makeStubs({
-  hasSession = false,
-  which = ['tmux'],
-  npxOk = false,
-  pgrepPids = '',
-  dirName = '',
-  rgPidFile = '',
-} = {}) {
-  let dir;
-  if (dirName) {
-    dir = join(scratch, dirName);
-    mkdirSync(dir);
-  } else {
-    dir = mkdtempSync(join(scratch, 'stub-'));
-  }
-  const logFor = name => join(dir, `${name}.log`);
-
-  writeStub(dir, 'tmux', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('tmux')}'
-[ "$1" = "has-session" ] && exit ${hasSession ? 0 : 1}
-exit 0
-`);
-  writeStub(dir, 'which', `#!/bin/sh
-case "$1" in
-  ${which.join('|') || 'nothing-resolves'}) echo '${dir}'/"$1"; exit 0 ;;
-  *) exit 1 ;;
-esac
-`);
-  writeStub(dir, 'npx', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('npx')}'
-exit ${npxOk ? 0 : 1}
-`);
-  // $PPID is the attach process itself: pgrep is run from it via execFileSync.
-  writeStub(dir, 'pgrep', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('pgrep')}'
-${pgrepPids ? `printf '%s\\n' "${pgrepPids}"\nexit 0` : 'exit 1'}
-`);
-  writeStub(dir, 'kill', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('kill')}'
-exit 0
-`);
-  writeStub(dir, 'osascript', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('osascript')}'
-exit 0
-`);
-  writeStub(dir, 'pluk', '#!/bin/sh\nexit 0\n');
-  writeStub(dir, 'pluk-classify', '#!/bin/sh\nexit 0\n');
-  writeStub(dir, 'rationguard', `#!/bin/sh
-printf '%s\\n' "$*" >> '${logFor('rationguard')}'
-${rgPidFile ? `echo $$ > '${rgPidFile}'\nexec sleep 10` : 'exit 0'}
-`);
-
-  return {
-    dir,
-    log: name => {
-      try { return readFileSync(logFor(name), 'utf-8'); } catch { return ''; }
-    },
-  };
-}
-
-function runAttach(args, stubs, env = {}) {
-  const res = spawnSync(process.execPath, [CLI, 'attach', ...args], {
-    encoding: 'utf-8',
-    timeout: 15000,
-    env: {
-      ...process.env,
-      PATH: `${stubs.dir}:${process.env.PATH}`,
-      TERM_PROGRAM: '',
-      ...env,
-    },
-  });
-  return { code: res.status, stdout: res.stdout ?? '', stderr: res.stderr ?? '' };
-}
-
-function makeRunDir() {
-  return mkdtempSync(join(scratch, 'run-'));
-}
 
 function modeOf(path) {
   return statSync(path).mode & 0o777;
@@ -272,7 +188,7 @@ test('--rationguard without --rebuttal/--verbose spawns the watcher with exactly
 
 test('--rationguard never kills the attaching pluk process when pgrep reports its own PID', () => {
   // The pgrep stub echoes $PPID, which is the attach process, alongside a stale watcher.
-  const stubs = makeStubs({ which: ['tmux', 'pluk', 'rationguard'], pgrepPids: '$PPID\n4242' });
+  const stubs = makeStubs({ which: ['tmux', 'pluk', 'rationguard'], pgrepPids: '$PPID\n4242', pgrepExpandsVars: true });
   const { code, stderr } = runAttach(
     ['agent-self', `--run-dir=${makeRunDir()}`, '--no-open', '--rationguard', '--verbose'],
     stubs,
