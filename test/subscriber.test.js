@@ -1,7 +1,10 @@
 // Tests for src/subscriber.ts — JSONL log tailing.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, rmSync, statSync } from 'node:fs';
+import {
+  mkdtempSync, mkdirSync, writeFileSync, appendFileSync, rmSync, statSync,
+  openSync, writeSync, closeSync, truncateSync,
+} from 'node:fs';
 import { open } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -649,6 +652,52 @@ test('rotation: an empty log that fills within the retry window resumes after th
     assert.equal(events.length, 101, 'kept tail must not be replayed');
     assert.equal(events[100].seq, 100);
   } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('rotation: a resume that reads a half-rotated log (tail written, not yet truncated) is retried', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot-half.jsonl');
+  writeFileSync(log, '');
+  const logged = [];
+  const orig = console.error;
+  console.error = msg => logged.push(String(msg));
+  const { sub, events, done } = await startTail(dir, 'rot-half', { verbose: true });
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    const sent = Array.from({ length: 120 }, (_, i) => seqLine(i));
+    appendFileSync(log, sent.slice(0, 100).join(''));
+    await waitFor(() => events.length === 100);
+
+    // The subscriber must lag by more than the prefix the rotation drops, or
+    // its marker (seq 99) is also the last line of the leftover old bytes and
+    // nothing is replayed even without the retry. In one synchronous block,
+    // with no yield in between: lines 100..119 are appended, then another
+    // process's rotation writes the kept tail (lines 20..119) at offset 0 over
+    // the old bytes. The leftover after the tail is old lines 100..119 cut
+    // mid-line, and the marker now exists only inside the tail region.
+    appendFileSync(log, sent.slice(100).join(''));
+    const tail = Buffer.from(sent.slice(20).join(''));
+    const fd = openSync(log, 'r+');
+    writeSync(fd, tail, 0, tail.length, 0);
+    closeSync(fd);
+
+    // The truncate only arrives after the subscriber has noticed the head
+    // change and made its resume read of the half-rotated file.
+    await waitFor(() => logged.some(m => m.includes('resuming after rotation')));
+    await new Promise(r => setTimeout(r, 60));
+    truncateSync(log, tail.length);
+
+    await waitFor(() => events.length >= 120);
+    await new Promise(r => setTimeout(r, 500));
+    assert.equal(sub.stats().malformedLines, 0, 'a leftover line cut mid-way must not be read');
+    assert.equal(events.length, 120, 'leftover old bytes must not be replayed');
+    assert.deepEqual(events.map(e => e.seq), sent.map((_, i) => i), 'each of 0..119 must be delivered exactly once, in order');
+  } finally {
+    console.error = orig;
     sub.stop();
     await done;
     rmSync(dir, { recursive: true, force: true });

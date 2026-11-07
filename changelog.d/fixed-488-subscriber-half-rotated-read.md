@@ -1,0 +1,1 @@
+- subscribe: a resume that reads the log while another process is mid-rotation (kept tail written, old bytes not yet truncated) is re-checked and retried instead of replaying leftover old bytes as duplicate or malformed events (#488). A resume after rotation now waits one poll interval (~200 ms) before accepting the kept tail.
