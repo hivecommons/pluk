@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, rmSync, statSync } from 'node:fs';
+import { open } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Subscriber, subscribe } from '../dist/subscriber.js';
@@ -425,6 +426,60 @@ test('rotation: a kept tail spanning several read chunks is read whole and the t
     assert.equal(events.length, 601);
     assert.equal(events[600].seq, 600);
   } finally {
+    sub.stop();
+    await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('rotation: a rotation landing between the head check and the read is detected before the stale chunk is consumed', async () => {
+  const dir = makeRunDir();
+  const log = join(dir, 'logs', 'rot-race.jsonl');
+  writeFileSync(log, '');
+  // The race cannot be forced through the public API: rotate synchronously
+  // inside the first tail read issued after arming, i.e. after the
+  // subscriber's head check passed but before its pread runs.
+  const probe = await open(log, 'r');
+  const proto = Object.getPrototypeOf(probe);
+  await probe.close();
+  const originalRead = proto.read;
+  let armed = false;
+  proto.read = function (buffer, offset, length, position) {
+    if (armed && Buffer.isBuffer(buffer) && buffer.length === 16 * 1024 && typeof position === 'number' && position > 0) {
+      armed = false;
+      let extra = '';
+      for (let i = 300; i < 600; i++) extra += seqLine(i);
+      appendFileSync(log, extra);
+      assert.equal(rotateLogFileIfNeeded(log, { maxBytes: 70_000, keepLines: 500 }), true);
+    }
+    return originalRead.apply(this, arguments);
+  };
+  const { sub, events, done } = await startTail(dir, 'rot-race');
+  try {
+    await new Promise(r => setTimeout(r, 250));
+    let body = '';
+    for (let i = 0; i < 300; i++) body += seqLine(i);
+    appendFileSync(log, body);
+    await waitFor(() => events.length === 300);
+
+    // The kept tail (seq 100..599, ~63 KB) extends past the old offset
+    // (~37 KB), so a read at that offset returns a mid-line chunk of it.
+    armed = true;
+    await waitFor(() => !armed);
+
+    await waitFor(() => events.length >= 600);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 600, 'no line skipped or replayed');
+    assert.deepEqual(events.slice(300).map(e => e.seq), Array.from({ length: 300 }, (_, i) => 300 + i));
+    assert.equal(sub.stats().malformedLines, 0, 'no stale mid-line fragment parsed');
+
+    appendFileSync(log, seqLine(600, 'bypass_permissions'));
+    await waitFor(() => events.length >= 601);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(events.length, 601);
+    assert.equal(events[600].seq, 600);
+  } finally {
+    proto.read = originalRead;
     sub.stop();
     await done;
     rmSync(dir, { recursive: true, force: true });
