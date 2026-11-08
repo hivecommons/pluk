@@ -1,0 +1,1 @@
+- classifier: tool_call_completed duration_ms now parses minute-form durations such as (1m 23s) and yields '' instead of "NaN" for a malformed seconds field (#494).
