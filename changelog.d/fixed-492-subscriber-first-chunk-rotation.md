@@ -1,0 +1,1 @@
+- The subscriber now fingerprints the log head from the first chunk it reads on an initially empty log, so a rotation landing right after that read is detected instead of silently losing events (#492).
