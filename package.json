@@ -57,5 +57,13 @@
     "@stryker-mutator/typescript-checker": "10.1.1",
     "@types/node": "^26.1.0",
     "typescript": "^5.8.0"
+  },
+  "overrides": {
+    "@stryker-mutator/core": {
+      "minimatch": "^11.0.1",
+      "typed-rest-client": {
+        "qs": "^6.17.1"
+      }
+    }
   }
 }
