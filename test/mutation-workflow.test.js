@@ -161,7 +161,13 @@ function straddlingNodes(path, boundaries) {
   return found;
 }
 
-test('mutation select step: the src/subscriber.ts line-range cut does not split a statement or class member', () => {
+// Inside Stryker's sandbox ../src/subscriber.ts is the instrumented copy, whose
+// line layout differs from the real source, so the cut appears to straddle a
+// member and the dry run aborts before any subscriber mutant is measured. A
+// text guard cannot kill a mutant anyway; `npm test` still runs it (#425).
+test('mutation select step: the src/subscriber.ts line-range cut does not split a statement or class member', {
+  skip: process.env.PLUK_UNDER_STRYKER === '1' && 'reads src/subscriber.ts, which Stryker instruments in its sandbox',
+}, () => {
   const boundaries = lineRangeBoundaries('src/subscriber.ts');
   assert.ok(boundaries.length > 0, 'expected src/subscriber.ts to be split into line ranges in mutation.yml');
   const url = new URL('../src/subscriber.ts', import.meta.url);

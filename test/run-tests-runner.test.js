@@ -123,6 +123,32 @@ test('cli-support-matrix skips its src/attach.ts text guards under PLUK_UNDER_ST
   assert.match(sandboxed.stdout, /^# pass [1-9]/m, 'the README/bundled-patterns tests still run');
 });
 
+// Same shape for the src/subscriber.ts line-range guard in
+// test/mutation-workflow.test.js: it parses the real source with the
+// TypeScript compiler, so against the instrumented sandbox copy it reports a
+// straddling node and fails every subscriber shard's dry run.
+test('mutation-workflow skips its src/subscriber.ts line-range guard under PLUK_UNDER_STRYKER', {
+  skip: process.env.PLUK_UNDER_STRYKER === '1' && 'spawns the subscriber.ts line-range guard against instrumented source',
+}, () => {
+  const run = (env) => {
+    const childEnv = { ...process.env, ...env };
+    delete childEnv.NODE_TEST_CONTEXT;
+    return spawnSync(process.execPath, ['--test', '--test-reporter=tap', 'test/mutation-workflow.test.js'], {
+      env: childEnv,
+      encoding: 'utf-8',
+      timeout: 120_000,
+    });
+  };
+  const plain = run({ PLUK_UNDER_STRYKER: '' });
+  assert.equal(plain.status, 0, plain.stdout + plain.stderr);
+  assert.match(plain.stdout, /^# skipped 0$/m, 'the guard must run in a normal npm test');
+
+  const sandboxed = run({ PLUK_UNDER_STRYKER: '1' });
+  assert.equal(sandboxed.status, 0, sandboxed.stdout + sandboxed.stderr);
+  assert.match(sandboxed.stdout, /^# skipped 1$/m, 'only the subscriber.ts line-range guard should skip');
+  assert.match(sandboxed.stdout, /^# pass [1-9]/m, 'the select-step and synthetic straddle tests still run');
+});
+
 test('importing the runner as a module does not spawn the suite', () => {
   // If the import at the top of this file had executed main(), the suite
   // would have recursed into itself; reaching this assertion proves the
