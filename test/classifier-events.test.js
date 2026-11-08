@@ -147,6 +147,28 @@ test('tool_call_completed: non-seconds parenthetical yields empty duration', () 
   assert.equal(ev.data.duration_ms, '');
 });
 
+test('tool_call_completed: minute-form duration is converted to milliseconds', () => {
+  const ev = makeClassifier().classify('✓ Bash(npm test) (1m 23s)');
+  assert.ok(ev);
+  assert.equal(ev.type, 'tool_call_completed');
+  assert.equal(ev.data.duration_ms, '83000');
+});
+
+test('tool_call_completed: minute-form duration with fractional seconds', () => {
+  const ev = makeClassifier().classify('✓ Bash(npm test) (2m 5.5s)');
+  assert.ok(ev);
+  assert.equal(ev.data.duration_ms, '125500');
+});
+
+test('tool_call_completed: malformed seconds yield empty duration, never NaN', () => {
+  for (const d of ['(1.2.3s)', '(.s)', '(1..s)']) {
+    const ev = makeClassifier().classify('✓ Read(x) ' + d);
+    assert.ok(ev);
+    assert.equal(ev.type, 'tool_call_completed');
+    assert.equal(ev.data.duration_ms, '');
+  }
+});
+
 test('extractTool falls back to "unknown" when no paren or bullet matches', () => {
   // claude tool patterns always contain ●/✓ (bullet match); a custom pattern
   // set is the only way a tool line reaches the "unknown" fallback.

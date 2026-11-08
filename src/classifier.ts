@@ -61,14 +61,15 @@ function extractTool(line: string): string {
   return 'unknown';
 }
 
-const DURATION_RE = /\(([0-9.]+)s\)/;
+const DURATION_RE = /\((?:([0-9]+)m\s*)?([0-9]+(?:\.[0-9]+)?)s\)/;
 const RESET_TIME_RE = /[0-9]{1,2}(:[0-9]{2})?\s*[aApP][mM]/;
 const RESET_REL_RE = /in [0-9]+ (hour|minute|second)s?/;
 
 function extractDuration(line: string): string {
   const m = DURATION_RE.exec(line);
   // Terminal displays seconds; event duration_ms field expects milliseconds.
-  return m ? String(Math.round(Number(m[1]) * 1000)) : '';
+  // Strict number match so malformed input yields '' rather than NaN.
+  return m ? String(Math.round((Number(m[1] ?? 0) * 60 + Number(m[2])) * 1000)) : '';
 }
 
 function extractResetTime(line: string): string {
