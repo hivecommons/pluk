@@ -172,6 +172,12 @@ export class Subscriber extends EventEmitter {
           continue;
         }
 
+        // The first chunk read from offset 0 is the head: fingerprint it from
+        // the same read so no rotation can slip in between the data and the
+        // head check (a lazily adopted head would baseline the rotated file).
+        if (position === 0 && this.head.length === 0) {
+          this.head = Buffer.from(buf.subarray(0, Math.min(bytesRead, HEAD_FINGERPRINT_BYTES)));
+        }
         position += bytesRead;
         const chunk = partial + decoder.write(buf.subarray(0, bytesRead));
         const lines = chunk.split('\n');
