@@ -161,7 +161,7 @@ test('tool_call_completed: minute-form duration with fractional seconds', () => 
 });
 
 test('tool_call_completed: malformed seconds yield empty duration, never NaN', () => {
-  for (const d of ['(1.2.3s)', '(.s)', '(1..s)']) {
+  for (const d of ['(1.2.3s)', '(1.s)', '(1..s)', '(1m s)']) {
     const ev = makeClassifier().classify('✓ Read(x) ' + d);
     assert.ok(ev);
     assert.equal(ev.type, 'tool_call_completed');
