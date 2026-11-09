@@ -1,1 +1,0 @@
-- Dev-only: `package.json` now overrides `minimatch` (^11.0.1) and `typed-rest-client > qs` (^6.17.1) inside the `@stryker-mutator/core` subtree so `npm audit` is clean again; the published package has no runtime dependencies and is unaffected (#498).

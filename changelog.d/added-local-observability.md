@@ -1,2 +1,0 @@
-- Add opt-in `PLUK_LOG_FORMAT=json` for consistent pluk stderr diagnostics while preserving readable text output.
-- Publish bounded local watcher detector counters and process-local tmux send failures as private, atomic JSON snapshots under the run directory.

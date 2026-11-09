@@ -2,6 +2,58 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.12.0 - 2026-11-09
+
+### Added
+
+- Added a bundled `bob` (IBM Bob Shell) pattern set for `pluk watch --cli=bob` and `pluk attach --cli=bob` (`--dangerous` maps to `--approval-mode yolo`), derived from captured Bob Shell 1.0.6 sessions in `test/fixtures/bob/` (#400).
+- Add opt-in `PLUK_LOG_FORMAT=json` for consistent pluk stderr diagnostics while preserving readable text output.
+- Publish bounded local watcher detector counters and process-local tmux send failures as private, atomic JSON snapshots under the run directory.
+- Added an advisory `Mutation (advisory)` workflow that runs `stryker.config.json`: pull requests mutate only changed `src/` files, the nightly run mutates the full tree from scratch; report-only and not a required check (#405, #423).
+
+### Fixed
+
+- attach: an empty `--dir=` is now rejected with `--dir requires a non-empty path` instead of silently resolving to the current directory
+- watch: an empty `--pane=` is now rejected with `--pane requires a non-empty tmux target` instead of letting tmux resolve the empty target to the most recently active session
+- cli: every value flag now rejects an empty `--flag=` value centrally in the argument parser (exit 2, `--<flag> requires a non-empty value`); `--run-dir=` still means "use the default"
+- sessions: the "Run dir:" hint in the empty-sessions message now displays the resolved default instead of raw whitespace when `--run-dir` or `PLUK_RUN_DIR` contains only whitespace
+- `PLUK_LOG_MAX_BYTES` and `PLUK_LOG_KEEP_LINES` now require a positive integer; a fractional value such as `0.5` falls back to the default instead of silently keeping every line (#451).
+- watch: when stdin reaches end of input while a state verdict is still deferred by the debounce, the process now waits for the flush and emits it instead of exiting with the verdict lost (#453).
+- watch/patterns: a `--patterns-dir` whose `<cli>.patterns` is missing or unreadable, or a pattern that is not a valid regular expression, is now reported on stderr instead of silently falling back to the bundled set or disabling the detector (#457).
+- subscriber: the re-read after a log rotation is bounded by the file size seen at entry as well as by end-of-file, so no single faulty exit condition can turn it into an unbounded allocation loop; the nightly `src/subscriber.ts` mutation shard no longer takes its runner down before writing a report (#479).
+- subscribe/watch: a log rotation landing between the subscriber's head check and its read no longer consumes a stale chunk of the new tail, which skipped the lines between the old offset and the kept tail (#486).
+- subscribe: a resume that reads the log while another process is mid-rotation (kept tail written, old bytes not yet truncated) is re-checked and retried instead of replaying leftover old bytes as duplicate or malformed events (#488). A resume after rotation now waits one poll interval (~200 ms) before accepting the kept tail.
+- The subscriber now fingerprints the log head from the first chunk it reads on an initially empty log, so a rotation landing right after that read is detected instead of silently losing events (#492).
+- classifier: tool_call_completed duration_ms now parses minute-form durations such as (1m 23s) and yields '' instead of "NaN" for a malformed seconds field (#494).
+- attach: `--dir=<path>` now fails before creating the tmux session when the path is not an existing directory, instead of tmux silently starting the agent in `$HOME`; relative paths are resolved against the current working directory
+- attach: `PLUK_LOG_MAX_BYTES` and `PLUK_LOG_KEEP_LINES` set in the shell running `pluk attach` are now forwarded to the `tmux pipe-pane` watcher, which runs under the tmux server's environment; previously they were ignored and rotation always used the 10 MiB / 5000-line defaults (#406).
+- `pluk attach` now checks the pipe-pane command size before creating the tmux session, so an oversized `PLUK_LOG_MAX_BYTES` / `PLUK_LOG_KEEP_LINES` no longer leaves an orphaned session; the error message now names those variables.
+- Include `bob` in npm keywords so users can discover pluk by every bundled CLI name.
+- watch: `--capture` above 2147483647 ms is now rejected with exit 2 (and capped for library callers) instead of overflowing Node's timer limit into a 1 ms `tmux capture-pane` hot loop (#449)
+- `pluk watch --capture --pane=<target>` now stamps emitted events with that pane instead of the default `"0"`.
+- run dir: an empty `--run-dir=` or `PLUK_RUN_DIR` is treated as unset instead of resolving logs relative to the current directory
+- `pluk --help`'s manual `tmux pipe-pane` example no longer uses the `-o` toggle (which closes an existing pipe and opens nothing) and now prefixes `PLUK_RUN_DIR=` like the README example.
+- Fixed the `Mutation (advisory)` run aborting in Stryker's dry run: the `src/attach.ts` source-text guards in `test/cli-support-matrix.test.js` now skip under `PLUK_UNDER_STRYKER=1`, which `stryker.config.json` sets, so instrumented source no longer fails the initial test run before any mutant is measured (#425).
+- Fixed the `Mutation (advisory)` run never measuring `src/subscriber.ts`: the line-range guard in `test/mutation-workflow.test.js` now skips under `PLUK_UNDER_STRYKER=1`, so Stryker's instrumented copy of the file no longer fails the dry run of both subscriber shards before any mutant is tested.
+- Fail `pluk attach` with an error when the pipe-pane watcher command would not fit tmux's 8 KiB format buffer, instead of letting tmux pipe an empty command and silently turn event logging off.
+- `pluk sessions` no longer reports `STATE`/`CLI` as `unknown` for a working session when 50 or more tool or error events follow the last state change.
+- `pluk sessions` no longer slows to seconds per session on a rotation-sized log whose last state change has scrolled out of the tail window; the marker scan past the window keeps only the markers it is looking for (#403).
+- attach: `splitShellWords` keeps a backslash before ordinary characters inside double quotes (POSIX semantics) instead of dropping it (#387)
+- attach: `splitShellWords` treats a backslash-newline as a POSIX line continuation, removing both characters outside quotes and inside double quotes instead of keeping a literal newline (#391)
+- Stryker now type-checks mutants with `@stryker-mutator/typescript-checker` and runs tests against a `tsc --noCheck` build, so type-error mutants are reported as compile errors instead of killed (#421).
+- watch: sink (`onEvent`) failures are counted in a new `emitErrors` diagnostics counter instead of `classifyErrors` (#388)
+- `pluk watch` without a session name no longer rotates `logs/stdin.jsonl`; log rotation is now armed only when a session is given explicitly (#416).
+- `pluk watch` in stream mode now emits `working → idle` once the 2 s debounce window elapses; previously an end-of-turn repaint that landed inside the window left the state stuck on `working` until more output arrived (#418).
+- run dir: a whitespace-only `PLUK_RUN_DIR` environment variable is now treated as unset, matching `--run-dir`, so it resolves to the default run dir instead of a blank path
+- run dir: a whitespace-only `--run-dir=` is now treated as unset, matching the behavior of empty values, so `--run-dir=" "` now resolves to the default run dir instead of the current directory
+- Reject whitespace-only CLI value flags with exit code 2, preserving the existing `--run-dir` exception and whitespace in nonblank values.
+
+### Security
+
+- Preserve literal tmux formats in attach watcher commands, paths, and forwarded log rotation settings instead of expanding them before shell execution.
+- Keep hash and style-like literals intact on tmux 3.0/3.1 by using the older literal modifier instead of the tmux 3.2-only character modifier.
+- Dev-only: `package.json` now overrides `minimatch` (^11.0.1) and `typed-rest-client > qs` (^6.17.1) inside the `@stryker-mutator/core` subtree so `npm audit` is clean again; the published package has no runtime dependencies and is unaffected (#498).
+
 ## 0.11.0 - 2026-10-26
 
 ### Breaking: stricter CLI parsing

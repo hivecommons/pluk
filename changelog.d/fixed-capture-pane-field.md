@@ -1,1 +1,0 @@
-- `pluk watch --capture --pane=<target>` now stamps emitted events with that pane instead of the default `"0"`.

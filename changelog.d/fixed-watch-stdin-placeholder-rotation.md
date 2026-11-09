@@ -1,1 +1,0 @@
-- `pluk watch` without a session name no longer rotates `logs/stdin.jsonl`; log rotation is now armed only when a session is given explicitly (#416).

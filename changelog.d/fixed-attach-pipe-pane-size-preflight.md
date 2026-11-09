@@ -1,1 +1,0 @@
-- `pluk attach` now checks the pipe-pane command size before creating the tmux session, so an oversized `PLUK_LOG_MAX_BYTES` / `PLUK_LOG_KEEP_LINES` no longer leaves an orphaned session; the error message now names those variables.

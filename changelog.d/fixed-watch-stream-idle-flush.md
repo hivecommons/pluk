@@ -1,1 +1,0 @@
-- `pluk watch` in stream mode now emits `working → idle` once the 2 s debounce window elapses; previously an end-of-turn repaint that landed inside the window left the state stuck on `working` until more output arrived (#418).

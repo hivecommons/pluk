@@ -1,1 +1,0 @@
-- attach: `splitShellWords` treats a backslash-newline as a POSIX line continuation, removing both characters outside quotes and inside double quotes instead of keeping a literal newline (#391)

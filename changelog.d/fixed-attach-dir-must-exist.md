@@ -1,1 +1,0 @@
-- attach: `--dir=<path>` now fails before creating the tmux session when the path is not an existing directory, instead of tmux silently starting the agent in `$HOME`; relative paths are resolved against the current working directory
