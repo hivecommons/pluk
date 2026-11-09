@@ -1,1 +1,0 @@
-- Fail `pluk attach` with an error when the pipe-pane watcher command would not fit tmux's 8 KiB format buffer, instead of letting tmux pipe an empty command and silently turn event logging off.

@@ -1,1 +1,0 @@
-- attach: `PLUK_LOG_MAX_BYTES` and `PLUK_LOG_KEEP_LINES` set in the shell running `pluk attach` are now forwarded to the `tmux pipe-pane` watcher, which runs under the tmux server's environment; previously they were ignored and rotation always used the 10 MiB / 5000-line defaults (#406).

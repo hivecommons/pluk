@@ -1,1 +1,0 @@
-- Fixed the `Mutation (advisory)` run aborting in Stryker's dry run: the `src/attach.ts` source-text guards in `test/cli-support-matrix.test.js` now skip under `PLUK_UNDER_STRYKER=1`, which `stryker.config.json` sets, so instrumented source no longer fails the initial test run before any mutant is measured (#425).

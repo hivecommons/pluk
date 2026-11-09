@@ -1,1 +1,0 @@
-- watch/patterns: a `--patterns-dir` whose `<cli>.patterns` is missing or unreadable, or a pattern that is not a valid regular expression, is now reported on stderr instead of silently falling back to the bundled set or disabling the detector (#457).

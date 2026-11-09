@@ -1,1 +1,0 @@
-- `PLUK_LOG_MAX_BYTES` and `PLUK_LOG_KEEP_LINES` now require a positive integer; a fractional value such as `0.5` falls back to the default instead of silently keeping every line (#451).

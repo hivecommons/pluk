@@ -1,1 +1,0 @@
-- subscriber: the re-read after a log rotation is bounded by the file size seen at entry as well as by end-of-file, so no single faulty exit condition can turn it into an unbounded allocation loop; the nightly `src/subscriber.ts` mutation shard no longer takes its runner down before writing a report (#479).

@@ -1,1 +1,0 @@
-- Fixed the `Mutation (advisory)` run never measuring `src/subscriber.ts`: the line-range guard in `test/mutation-workflow.test.js` now skips under `PLUK_UNDER_STRYKER=1`, so Stryker's instrumented copy of the file no longer fails the dry run of both subscriber shards before any mutant is tested.

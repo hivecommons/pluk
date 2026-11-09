@@ -1,1 +1,0 @@
-- subscribe/watch: a log rotation landing between the subscriber's head check and its read no longer consumes a stale chunk of the new tail, which skipped the lines between the old offset and the kept tail (#486).

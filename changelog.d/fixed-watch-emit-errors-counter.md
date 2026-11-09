@@ -1,1 +1,0 @@
-- watch: sink (`onEvent`) failures are counted in a new `emitErrors` diagnostics counter instead of `classifyErrors` (#388)

@@ -1,1 +1,0 @@
-- Added a bundled `bob` (IBM Bob Shell) pattern set for `pluk watch --cli=bob` and `pluk attach --cli=bob` (`--dangerous` maps to `--approval-mode yolo`), derived from captured Bob Shell 1.0.6 sessions in `test/fixtures/bob/` (#400).
