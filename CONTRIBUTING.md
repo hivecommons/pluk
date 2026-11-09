@@ -51,6 +51,7 @@ Several files must agree on which CLIs pluk supports, and `test/cli-support-matr
 | `src/attach.ts` | Add the launch command to `CLI_COMMANDS`. If the CLI has a permission-skip flag, add it to `DANGEROUS_FLAGS` too. |
 | `README.md` | Add the name to the `--cli=` row of the Attach Flags table and the **Supported CLIs** list. Add any permission-skip flag to the `--dangerous` row. |
 | `test/patterns-semantics.test.js` | Add tests showing that real output from the CLI produces the right events. |
+| `package.json` | Add the name to `keywords` so npm search finds pluk for that CLI. |
 | `changelog.d/added-<cli>-patterns.md` | Add a changelog fragment. |
 
 PR #225, which added `omp`, is a complete worked example.

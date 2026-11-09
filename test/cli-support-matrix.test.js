@@ -26,6 +26,7 @@ import { listAvailableCLIs, bundledPatternsDir, getPatterns, BUILTIN_PATTERNS } 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const attachSource = readFileSync(join(repoRoot, 'src', 'attach.ts'), 'utf-8');
 const readme = readFileSync(join(repoRoot, 'README.md'), 'utf-8');
+const pkg = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8'));
 
 const sourceText = {
   skip: process.env.PLUK_UNDER_STRYKER === '1' && 'reads src/attach.ts, which Stryker instruments in its sandbox',
@@ -88,6 +89,14 @@ test('every CLI with a --dangerous flag or env is also launchable via CLI_COMMAN
 test('every CLI the README advertises for --cli has a bundled patterns file', () => {
   for (const cli of readmeCliNames(readme)) {
     assert.ok(bundled.includes(cli), `README advertises --cli=${cli} but patterns/${cli}.patterns is missing`);
+  }
+});
+
+// codex, aider and omp each reached package.json keywords only in a later
+// follow-up, and bob shipped without one, so npm search missed those CLIs.
+test('package.json keywords name every bundled CLI', () => {
+  for (const cli of bundled) {
+    assert.ok(pkg.keywords.includes(cli), `package.json keywords should include "${cli}" (patterns/${cli}.patterns is bundled)`);
   }
 });
 
