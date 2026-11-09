@@ -1,0 +1,1 @@
+- Include `bob` in npm keywords so users can discover pluk by every bundled CLI name.

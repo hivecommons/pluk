@@ -44,14 +44,15 @@ Pattern sets are the easiest way to start contributing to pluk. To report a misc
 
 Several files must agree on which CLIs pluk supports, and `test/cli-support-matrix.test.js` checks that they do. A new CLI touches all of them:
 
-| File | Change |
-|------|--------|
-| `patterns/<cli>.patterns` | The bundled pattern set. It needs at least `IDLE_PATTERN` and `ERROR_PATTERN`. |
-| `src/patterns.ts` | Add a `<CLI>_PATTERNS` constant with the same content as the bundled file and register it in `BUILTIN_PATTERNS`. |
-| `src/attach.ts` | Add the launch command to `CLI_COMMANDS`. If the CLI has a permission-skip flag, add it to `DANGEROUS_FLAGS` too. |
-| `README.md` | Add the name to the `--cli=` row of the Attach Flags table and the **Supported CLIs** list. Add any permission-skip flag to the `--dangerous` row. |
-| `test/patterns-semantics.test.js` | Add tests showing that real output from the CLI produces the right events. |
-| `changelog.d/added-<cli>-patterns.md` | Add a changelog fragment. |
+|                                  File |                                                                                                                                             Change |
+|--------------------------------------:|---------------------------------------------------------------------------------------------------------------------------------------------------:|
+|             `patterns/<cli>.patterns` |                                                                     The bundled pattern set. It needs at least `IDLE_PATTERN` and `ERROR_PATTERN`. |
+|                     `src/patterns.ts` |                                   Add a `<CLI>_PATTERNS` constant with the same content as the bundled file and register it in `BUILTIN_PATTERNS`. |
+|                       `src/attach.ts` |                                  Add the launch command to `CLI_COMMANDS`. If the CLI has a permission-skip flag, add it to `DANGEROUS_FLAGS` too. |
+|                        `package.json` |                                                                   Add the CLI name to `keywords` so npm search can find pluk by every bundled CLI. |
+|                           `README.md` | Add the name to the `--cli=` row of the Attach Flags table and the **Supported CLIs** list. Add any permission-skip flag to the `--dangerous` row. |
+|     `test/patterns-semantics.test.js` |                                                                         Add tests showing that real output from the CLI produces the right events. |
+| `changelog.d/added-<cli>-patterns.md` |                                                                                                                          Add a changelog fragment. |
 
 PR #225, which added `omp`, is a complete worked example.
 

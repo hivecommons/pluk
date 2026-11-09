@@ -91,6 +91,16 @@ test('every CLI the README advertises for --cli has a bundled patterns file', ()
   }
 });
 
+test('package.json keywords include every bundled CLI', () => {
+  const { keywords } = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8'));
+  for (const cli of bundled) {
+    assert.ok(
+      keywords.includes(cli),
+      `package.json keywords should include "${cli}" (patterns/${cli}.patterns is bundled)`,
+    );
+  }
+});
+
 test('README --cli row, CLI_COMMANDS, and bundled patterns agree on the supported set', sourceText, () => {
   const launchable = recordKeys(attachSource, 'CLI_COMMANDS').sort();
   assert.deepEqual(readmeCliNames(readme).sort(), launchable, 'README --cli row should list exactly the CLIs attach can launch');
