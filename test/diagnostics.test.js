@@ -155,6 +155,12 @@ for (const [flag, expectedMs] of [
   ['2147483.648', 2_147_483_647],
   ['2147484', 2_147_483_647],
   ['1e308', 2_147_483_647], // Finite seconds can overflow when converted to milliseconds.
+  // Library callers bypass the CLI's validation: a non-positive or non-finite
+  // period must fall back to the 60 s default, never a 0 ms (busy-loop) timer.
+  ['0', 60_000],
+  ['-5', 60_000],
+  ['abc', 60_000],
+  ['Infinity', 60_000],
 ]) {
   test(`startDiagnostics uses a safe delay for period ${flag}`, t => {
     const interval = t.mock.method(globalThis, 'setInterval');
