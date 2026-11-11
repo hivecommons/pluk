@@ -782,3 +782,33 @@ test('verbose log never echoes control characters from event fields to the termi
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('subscribe() does not raise unhandledRejection when the log never appears and no error listener is attached', async () => {
+  const dir = makeRunDir();
+  const rejections = [];
+  const onRejection = (err) => rejections.push(err);
+  process.on('unhandledRejection', onRejection);
+  try {
+    const sub = subscribe('never-appears', () => {}, { runDir: dir, fileWaitTimeoutMs: 50 });
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    sub.stop();
+    assert.deepEqual(rejections, []);
+  } finally {
+    process.off('unhandledRejection', onRejection);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('start() still emits error on log-file timeout when a listener is attached', async () => {
+  const dir = makeRunDir();
+  try {
+    const sub = new Subscriber({ session: 'never-appears', runDir: dir, fileWaitTimeoutMs: 50 });
+    const errors = [];
+    sub.on('error', (e) => errors.push(e));
+    await sub.start();
+    assert.equal(errors.length, 1);
+    assert.match(errors[0].message, /Timeout waiting for/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
