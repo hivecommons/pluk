@@ -281,6 +281,7 @@ const event = classifier.classify('● Read main.go');
 const sub = subscribe('my-agent', (event) => {
   console.log(event.type, event.data);
 }, { filter: ['rate_limit', 'error'] });
+sub.on('error', (err) => console.error(err)); // e.g. log file never appeared
 
 // Watch stdin for events
 const watcher = watch({

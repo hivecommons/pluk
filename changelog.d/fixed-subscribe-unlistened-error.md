@@ -1,0 +1,1 @@
+- `subscribe()` no longer crashes the host process when the log file never appears and no `'error'` listener is attached; the error is logged instead.

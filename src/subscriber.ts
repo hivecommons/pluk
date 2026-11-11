@@ -37,6 +37,8 @@ export interface SubscriberOptions {
   filter?: PlukEventType[];
   fromBeginning?: boolean;
   verbose?: boolean;
+  /** How long start() waits for the log file to appear. Defaults to 60s. */
+  fileWaitTimeoutMs?: number;
 }
 
 export class Subscriber extends EventEmitter {
@@ -46,6 +48,7 @@ export class Subscriber extends EventEmitter {
   private fromBeginning: boolean;
   private aborted = false;
   private verbose: boolean;
+  private fileWaitTimeoutMs: number;
   private counters: SubscriberStats = { linesRead: 0, malformedLines: 0, eventsFiltered: 0, eventsEmitted: 0 };
   private eventCount = 0;
   /**
@@ -79,11 +82,21 @@ export class Subscriber extends EventEmitter {
     this.filterSet = opts.filter ? new Set(opts.filter) : null;
     this.fromBeginning = opts.fromBeginning ?? false;
     this.verbose = opts.verbose ?? false;
+    this.fileWaitTimeoutMs = opts.fileWaitTimeoutMs ?? FILE_WAIT_TIMEOUT_MS;
   }
 
   private log(msg: string): void {
     if (this.verbose) {
       log('info', msg, '[pluk:sub]');
+    }
+  }
+
+  /** Emits 'error' only if someone listens; an unlistened 'error' would throw and crash the host. */
+  reportError(err: unknown): void {
+    if (this.listenerCount('error') > 0) {
+      this.emit('error', err);
+    } else {
+      log('error', err instanceof Error ? err.message : String(err), '[pluk:sub]');
     }
   }
 
@@ -95,7 +108,7 @@ export class Subscriber extends EventEmitter {
     const path = this.logFile;
     this.log(`waiting for log file: ${path}`);
 
-    const deadline = Date.now() + FILE_WAIT_TIMEOUT_MS;
+    const deadline = Date.now() + this.fileWaitTimeoutMs;
     while (!this.aborted) {
       try {
         const info = await stat(path);
@@ -103,7 +116,7 @@ export class Subscriber extends EventEmitter {
         break;
       } catch {
         if (Date.now() > deadline) {
-          this.emit('error', new Error(`Timeout waiting for ${path}`));
+          this.reportError(new Error(`Timeout waiting for ${path}`));
           return;
         }
         await sleep(FILE_WAIT_POLL_MS);
@@ -343,6 +356,6 @@ export function subscribe(
 ): Subscriber {
   const sub = new Subscriber({ session, ...opts });
   sub.on('event', callback);
-  sub.start().catch(err => sub.emit('error', err));
+  sub.start().catch(err => sub.reportError(err));
   return sub;
 }

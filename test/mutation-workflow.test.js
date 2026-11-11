@@ -114,15 +114,15 @@ test('mutation select step: splits src/subscriber.ts into two line-range matrix 
     writeFileSync(join(cwd, 'src', 'subscriber.ts'), 'export const sub = 1;\n');
     commitAll(cwd, 'touch subscriber');
     const { files: prFiles } = select(cwd, { EVENT_NAME: 'pull_request', BASE_REF: 'main' });
-    assert.deepEqual(prFiles, ['src/subscriber.ts:1-200', 'src/subscriber.ts:201-9999']);
+    assert.deepEqual(prFiles, ['src/subscriber.ts:1-205', 'src/subscriber.ts:206-9999']);
 
     const { files: schedFiles } = select(cwd, { EVENT_NAME: 'schedule', BASE_REF: '' });
     assert.deepEqual(schedFiles, [
       'src/a.ts',
       'src/b.ts',
       'src/nested/deep.ts',
-      'src/subscriber.ts:1-200',
-      'src/subscriber.ts:201-9999',
+      'src/subscriber.ts:1-205',
+      'src/subscriber.ts:206-9999',
     ]);
   } finally {
     rmSync(cwd, { recursive: true, force: true });
