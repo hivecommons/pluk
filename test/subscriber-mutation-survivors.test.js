@@ -13,12 +13,17 @@
 //     line is otherwise counted as read and malformed
 //   - the verbose default (`?? false` → `?? true`): a subscriber constructed
 //     without `verbose` must stay silent on stderr
+//   - reportError's no-listener fallback (#509) dropping its `[pluk:sub]`
+//     prefix: the only Stryker survivor on the lines #509 added. The `pluk`
+//     CLI always attaches an 'error' listener, so nothing else observes the
+//     library-level fallback; a host that greps stderr for the subscriber tag
+//     would otherwise lose the timeout line
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Subscriber } from '../dist/subscriber.js';
+import { Subscriber, subscribe } from '../dist/subscriber.js';
 
 function makeRunDir() {
   const dir = mkdtempSync(join(tmpdir(), 'pluk-sub-mut-'));
@@ -133,6 +138,25 @@ test('a subscriber constructed without verbose writes nothing to stderr', async 
     console.error = orig;
     sub.stop();
     await done;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('subscribe() without an error listener reports a log-file timeout on stderr under the [pluk:sub] prefix', async () => {
+  const dir = makeRunDir();
+  const written = [];
+  const orig = console.error;
+  console.error = (msg) => written.push(String(msg));
+  let sub;
+  try {
+    sub = subscribe('never-appears', () => {}, { runDir: dir, fileWaitTimeoutMs: 50 });
+    await waitFor(() => written.some(l => l.includes('Timeout waiting for')));
+    const line = written.find(l => l.includes('Timeout waiting for'));
+    assert.ok(line.includes('[pluk:sub]'), `fallback line must carry the subscriber prefix: ${line}`);
+    assert.ok(line.includes(join(dir, 'logs', 'never-appears.jsonl')), `fallback line must name the log: ${line}`);
+  } finally {
+    console.error = orig;
+    sub?.stop();
     rmSync(dir, { recursive: true, force: true });
   }
 });
