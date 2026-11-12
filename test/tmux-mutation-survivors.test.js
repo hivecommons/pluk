@@ -52,7 +52,7 @@ test('assertPipePaneCommandFits reports the strftime size, so %% pairs count onc
   const tooLong = `${'x'.repeat(TMUX_FORMAT_BUFFER_BYTES - 2)}#`;
   assert.throws(
     () => assertPipePaneCommandFits(tooLong),
-    new RegExp(`^pipe-pane command is ${TMUX_FORMAT_BUFFER_BYTES} bytes after tmux format escaping`),
+    { message: new RegExp(`^pipe-pane command is ${TMUX_FORMAT_BUFFER_BYTES} bytes after tmux format escaping`) },
   );
 });
 
