@@ -2,6 +2,17 @@
 
 Thanks for helping improve pluk. This project follows the same lightweight contribution expectations as other hivecommons tools.
 
+See [ROADMAP.md](ROADMAP.md) for what has shipped, what is planned next and what is out of scope for now.
+
+## Finding something to work on
+
+- Browse [`good first issue`](https://github.com/hivecommons/pluk/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) for small, well-scoped tasks, or [`help wanted`](https://github.com/hivecommons/pluk/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) for work maintainers would welcome help with.
+- pluk misclassified an agent CLI's output, or you want a new CLI supported? Use the [pattern request form](https://github.com/hivecommons/pluk/issues/new?template=pattern_request.yml) (`.github/ISSUE_TEMPLATE/pattern_request.yml`), or send the fix yourself by following [Adding or fixing a pattern set](#adding-or-fixing-a-pattern-set).
+- Found a bug? Use the [bug report form](https://github.com/hivecommons/pluk/issues/new?template=bug_report.yml) (`.github/ISSUE_TEMPLATE/bug_report.yml`).
+- Have an idea for a new feature? Use the [feature request form](https://github.com/hivecommons/pluk/issues/new?template=feature_request.yml) (`.github/ISSUE_TEMPLATE/feature_request.yml`).
+- Ask setup and contributor questions on [Discord](https://hivecommons.dev/discord).
+- Meet the maintainers at the biweekly [Hive Commons community meeting](https://docs.hivecommons.dev/docs/community/meetings).
+
 ## Local development
 
 Requirements:
