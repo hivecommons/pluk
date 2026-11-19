@@ -1,3 +1,4 @@
+import { writeLocalStats } from './local-stats.js';
 import { exactTarget, tmuxSendKeys } from './tmux.js';
 
 export interface SendOptions {
@@ -34,11 +35,29 @@ export function buildSendCommands(opts: SendOptions): string[][] {
   return commands;
 }
 
+let tmuxSendFailures = 0;
+
+/**
+ * Runs one tmux call and, for `send-keys`, counts a failure and publishes the
+ * `send` stats snapshot. Both pluk send and attach's launch keys use this
+ * process-local counter, so the transport seam in tmux.ts stays a pure wrapper.
+ */
+export function runWithSendStats(args: string[], run: (args: string[]) => void, runDir?: string): void {
+  try {
+    run(args);
+  } catch (err) {
+    if (args[0] === 'send-keys') tmuxSendFailures++;
+    throw err;
+  } finally {
+    if (args[0] === 'send-keys') writeLocalStats('send', { tmuxSendFailures }, runDir);
+  }
+}
+
 export function send(opts: SendOptions): void {
   // execFileSync passes argv directly — no shell, so no escaping and no
   // corruption of characters like `!`, `$`, backslash, or quotes, and a
   // session name with spaces or metacharacters cannot break the command.
   for (const args of buildSendCommands(opts)) {
-    tmuxSendKeys(args);
+    runWithSendStats(args, tmuxSendKeys);
   }
 }

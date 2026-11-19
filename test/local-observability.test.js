@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { PassThrough } from 'node:stream';
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Classifier } from '../dist/classifier.js';
@@ -12,6 +12,7 @@ import { watch } from '../dist/watch.js';
 import { writeLocalStats } from '../dist/local-stats.js';
 import { buildPipePaneCommand } from '../dist/attach.js';
 import { tmuxRunInherited, tmuxSendKeys } from '../dist/tmux.js';
+import { runWithSendStats } from '../dist/send.js';
 import { Subscriber } from '../dist/subscriber.js';
 
 const CLI = join(process.cwd(), 'dist', 'cli.js');
@@ -264,16 +265,16 @@ test('shared tmux seam counts inherited send failures and preserves errors even 
   const dir = scratch(t);
   withEnv(t, { PATH: dir, PLUK_RUN_DIR: dir });
   writeFileSync(join(dir, 'tmux'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
-  assert.throws(() => tmuxRunInherited(['send-keys', '-t', '=s:', 'Enter'], dir));
+  assert.throws(() => runWithSendStats(['send-keys', '-t', '=s:', 'Enter'], tmuxRunInherited, dir));
   assert.equal(JSON.parse(readFileSync(join(dir, 'stats', 'send.json'), 'utf8')).tmuxSendFailures, 1);
-  assert.throws(() => tmuxRunInherited(['other-command'], dir));
+  assert.throws(() => runWithSendStats(['other-command'], tmuxRunInherited, dir));
   assert.equal(JSON.parse(readFileSync(join(dir, 'stats', 'send.json'), 'utf8')).tmuxSendFailures, 1);
   const blocked = join(dir, 'blocked');
   writeFileSync(blocked, 'not a directory');
   process.env.PLUK_RUN_DIR = blocked;
-  assert.throws(() => tmuxSendKeys(['send-keys', '-t', '=s:', 'Enter']), /Command failed/);
+  assert.throws(() => runWithSendStats(['send-keys', '-t', '=s:', 'Enter'], tmuxSendKeys), /Command failed/);
   writeFileSync(join(dir, 'tmux'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
-  assert.doesNotThrow(() => tmuxRunInherited(['other-command'], dir));
+  assert.doesNotThrow(() => runWithSendStats(['other-command'], tmuxRunInherited, dir));
 });
 
 test('watch events survive an unusable snapshot directory', t => {
@@ -286,4 +287,13 @@ test('watch events survive an unusable snapshot directory', t => {
   assert.equal(result.status, 0, result.stderr);
   assert.equal(parseLines(result.stdout)[0].type, 'error');
   assert.equal(result.stderr, '');
+});
+
+test('the tmux seam is a pure wrapper: it never writes send stats itself', t => {
+  const dir = scratch(t);
+  withEnv(t, { PATH: dir, PLUK_RUN_DIR: dir });
+  writeFileSync(join(dir, 'tmux'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+  assert.throws(() => tmuxSendKeys(['send-keys', '-t', '=s:', 'Enter']));
+  assert.throws(() => tmuxRunInherited(['send-keys', '-t', '=s:', 'Enter']));
+  assert.ok(!existsSync(join(dir, 'stats', 'send.json')));
 });
