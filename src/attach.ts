@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { ensurePrivateDirectory, ensurePrivateLogFile, resolveRunDir, validateSessionName } from './run-dir.js';
 import { log as diagnosticLog } from './diagnostics.js';
 import { assertPipePaneCommandFits, exactTarget, tmuxAttach, tmuxHasSession, tmuxNewSession, tmuxPipePane, tmuxRunInherited } from './tmux.js';
+import { runWithSendStats } from './send.js';
 import { plukPackageSpec } from './version.js';
 
 // Re-exported for existing consumers; the validator lives with the other
@@ -409,7 +410,7 @@ export function attach(opts: AttachOptions): void {
     diagnosticLog('info', `Starting ${cli}: ${fullCmd}`, '');
     const sendArgs = ['send-keys', '-t', exactTarget(session), '--', fullCmd, 'Enter'];
     log(`execFile: tmux ${sendArgs.map(shellQuote).join(' ')}`);
-    tmuxRunInherited(sendArgs, runDir);
+    runWithSendStats(sendArgs, tmuxRunInherited, runDir);
   } else {
     diagnosticLog('info', `Attaching to existing tmux session: ${session}`, '');
     if (opts.dangerouslySkipPermissions) {

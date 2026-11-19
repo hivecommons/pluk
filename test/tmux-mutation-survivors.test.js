@@ -13,6 +13,7 @@ import {
   tmuxListSessionNames,
   tmuxRunInherited,
 } from '../dist/tmux.js';
+import { runWithSendStats } from '../dist/send.js';
 
 function scratch(t) {
   const dir = mkdtempSync(join(tmpdir(), 'pluk-tmux-survivors-'));
@@ -59,14 +60,14 @@ test('assertPipePaneCommandFits reports the strftime size, so %% pairs count onc
 test('a failing non-send-keys command does not count against the send-failure counter', t => {
   const dir = scratch(t);
   stubTmux(t, dir, 'exit 0');
-  tmuxRunInherited(['send-keys', '-t', '=s:', 'Enter'], dir);
+  runWithSendStats(['send-keys', '-t', '=s:', 'Enter'], tmuxRunInherited, dir);
   const before = sendFailures(dir);
 
   writeFileSync(join(dir, 'tmux'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
-  assert.throws(() => tmuxRunInherited(['pipe-pane', '-t', '=s:', 'cat'], dir));
+  assert.throws(() => runWithSendStats(['pipe-pane', '-t', '=s:', 'cat'], tmuxRunInherited, dir));
 
   writeFileSync(join(dir, 'tmux'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
-  tmuxRunInherited(['send-keys', '-t', '=s:', 'Enter'], dir);
+  runWithSendStats(['send-keys', '-t', '=s:', 'Enter'], tmuxRunInherited, dir);
   assert.equal(sendFailures(dir), before, 'only a failing send-keys increments the counter');
 });
 

@@ -1,0 +1,1 @@
+- `pluk send` and `pluk attach` now persist their own send stats; the tmux transport module no longer writes to the run directory. Stats files are unchanged.
