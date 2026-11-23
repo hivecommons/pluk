@@ -1,0 +1,1 @@
+npm init -y   # CI scratch-project setup for an install smoke test, not a contributor command
