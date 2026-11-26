@@ -223,6 +223,7 @@ test('the prose-list matcher rejects a line that omits a CLI', () => {
   assert.ok(proseNames(line, 'claude'));
   assert.ok(proseNames(line, 'omp'));
   assert.equal(proseNames(line, 'bob'), false, 'a line without IBM Bob or `bob` must not pass for bob');
-  assert.equal(proseNames('Built-in sets for Bobcat', 'bob'), false, 'a CLI name inside another word must not count');
+  assert.equal(proseNames('Built-in sets for Claudette', 'claude'), false, 'a CLI name inside another word must not count');
+  assert.equal(proseNames('Built-in sets for newclix', 'newcli'), false, 'an unmapped CLI name inside another word must not count');
   assert.ok(proseNames('Built-in sets for newcli', 'newcli'), 'an unmapped CLI matches under its own name');
 });
