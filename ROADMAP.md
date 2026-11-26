@@ -10,7 +10,7 @@ Logs use JSONL: one JSON record per line.
 
 - TypeScript CLI and library support for attaching tmux sessions, classifying
   output, subscribing to JSONL logs, and sending text back into sessions.
-- Built-in pattern sets for Claude, Copilot, Gemini, Goose, Codex, Aider, and Oh My Pi (`omp`).
+- Built-in pattern sets for Claude, Copilot, Gemini, Goose, Codex, Aider, Oh My Pi (`omp`), and IBM Bob (`bob`).
 - Rationguard integration through `pluk attach --rationguard` and stable event
   fields consumed by companion tools.
 - A versioned JSONL event envelope (`v: 1`) with documented compatibility
