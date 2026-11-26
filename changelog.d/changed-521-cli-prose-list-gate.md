@@ -1,0 +1,1 @@
+- `test/cli-support-matrix.test.js` now fails when the ROADMAP "Recently shipped" or README pattern-files prose list omits a bundled CLI; the ROADMAP line now names IBM Bob (`bob`) (#521).

@@ -161,3 +161,68 @@ test('every builtin and bundled CLI has a non-empty DANGEROUS_FLAGS or DANGEROUS
     assert.ok(flags[cli], `neither DANGEROUS_FLAGS nor DANGEROUS_ENV has an entry for ${cli}; attach --dangerous would silently no-op (#360)`);
   }
 });
+
+// --- Prose lists of bundled CLIs ---------------------------------------------
+//
+// ROADMAP.md "Recently shipped" and the README pattern-files sentence each
+// name every bundled CLI in prose. The ROADMAP line drifted three times
+// (#276, #316, #521: codex/aider, then omp, then bob were bundled without it),
+// so both lines are pinned to patterns/ here.
+
+// Names a prose list may use for a CLI. A CLI not in this map must appear
+// under its own name; add an entry when its display name differs.
+const PROSE_NAMES = {
+  claude: ['Claude'],
+  copilot: ['Copilot'],
+  gemini: ['Gemini'],
+  goose: ['Goose'],
+  codex: ['Codex'],
+  aider: ['Aider'],
+  omp: ['Oh My Pi', '`omp`'],
+  bob: ['IBM Bob', '`bob`'],
+};
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// proseNames reports whether line names cli under any of its accepted names,
+// as a whole word and case-insensitively.
+function proseNames(line, cli) {
+  return (PROSE_NAMES[cli] ?? [cli]).some((name) =>
+    new RegExp(`(^|[^A-Za-z0-9])${escapeRegExp(name)}($|[^A-Za-z0-9])`, 'i').test(line),
+  );
+}
+
+function lineStartingWith(text, prefix, file) {
+  const line = text.split('\n').find((l) => l.startsWith(prefix));
+  assert.ok(line, `${file} should still have a line starting "${prefix}"`);
+  return line;
+}
+
+const roadmap = readFileSync(join(repoRoot, 'ROADMAP.md'), 'utf-8');
+
+for (const [file, text, prefix] of [
+  ['ROADMAP.md', roadmap, '- Built-in pattern sets for'],
+  ['README.md', readme, 'Built-in event-classification pattern files exist for:'],
+]) {
+  test(`${file} prose list of built-in pattern sets names every bundled CLI`, () => {
+    const line = lineStartingWith(text, prefix, file);
+    for (const cli of bundled) {
+      assert.ok(
+        proseNames(line, cli),
+        `${file} "${prefix}" line should name ${cli} (patterns/${cli}.patterns is bundled); ` +
+          `accepted names: ${(PROSE_NAMES[cli] ?? [cli]).join(', ')}`,
+      );
+    }
+  });
+}
+
+test('the prose-list matcher rejects a line that omits a CLI', () => {
+  const line = '- Built-in pattern sets for Claude, Copilot, and Oh My Pi (`omp`).';
+  assert.ok(proseNames(line, 'claude'));
+  assert.ok(proseNames(line, 'omp'));
+  assert.equal(proseNames(line, 'bob'), false, 'a line without IBM Bob or `bob` must not pass for bob');
+  assert.equal(proseNames('Built-in sets for Bobcat', 'bob'), false, 'a CLI name inside another word must not count');
+  assert.ok(proseNames('Built-in sets for newcli', 'newcli'), 'an unmapped CLI matches under its own name');
+});
